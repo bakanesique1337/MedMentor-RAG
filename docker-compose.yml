@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  postgres-pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: medmentor-postgres
+    environment:
+      POSTGRES_DB: medmentor
+      POSTGRES_USER: medmentor
+      POSTGRES_PASSWORD: medmentor123
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medmentor -d medmentor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medmentor-network
+
+  postgresml:
+    image: ghcr.io/postgresml/postgresml:2.10.0
+    container_name: medmentor-postgresml
+    command: sleep infinity
+    ports:
+      - "5433:5432"
+      - "8000:8000"
+    volumes:
+      - postgresml-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - medmentor-network
+    shm_size: 1g
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medmentor-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-pgvector:5432/medmentor
+      SPRING_DATASOURCE_USERNAME: medmentor
+      SPRING_DATASOURCE_PASSWORD: medmentor123
+      SPRING_AI_POSTGRESML_EMBEDDING_DATASOURCE_URL: jdbc:postgresql://postgresml:5432/postgres
+      SPRING_AI_POSTGRESML_EMBEDDING_DATASOURCE_USERNAME: postgres
+      SPRING_AI_POSTGRESML_EMBEDDING_DATASOURCE_PASSWORD: postgresml
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      LOG_DIR: /app/logs
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/logs:/app/logs
+    depends_on:
+      postgres-pgvector:
+        condition: service_healthy
+      postgresml:
+        condition: service_healthy
+    networks:
+      - medmentor-network
+    restart: unless-stopped
+
+volumes:
+  postgresml-data:
+
+networks:
+  medmentor-network:
+    driver: bridge
