@@ -1,0 +1,53 @@
+{
+    "name": "medmentor-rag-frontend",
+    "version": "0.0.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "run-p type-check \"build-only {@}\" --",
+        "start": "node .output/server/index.mjs",
+        "preview": "vite preview",
+        "build-only": "vite build",
+        "type-check": "vue-tsc --build",
+        "el:check": "eslint .",
+        "tsc:check": "vue-tsc --noEmit",
+        "sl:check": "stylelint \"**/*.{scss,vue}\"",
+        "el:fix": "eslint . --fix",
+        "sl:fix": "stylelint \"**/*.{scss,vue}\" --fix"
+    },
+    "dependencies": {
+        "@tailwindcss/vite": "^4.2.0",
+        "@vueuse/core": "^13.0.0",
+        "lighthouse": "^12.8.2",
+        "pinia": "^3.0.4",
+        "scroll-lock": "^2.1.5",
+        "tailwindcss": "^4.2.0",
+        "vue": "^3.5.28",
+        "vue-router": "^5.0.2"
+    },
+    "devDependencies": {
+        "@tsconfig/node24": "^24.0.4",
+        "@types/node": "^24.10.13",
+        "@vitejs/plugin-vue": "^6.0.4",
+        "@vue/eslint-config-typescript": "^14.6.0",
+        "@vue/tsconfig": "^0.8.1",
+        "dotenv": "^17.2.2",
+        "eslint": "^9.39.2",
+        "eslint-plugin-vue": "~10.8.0",
+        "jiti": "^2.6.1",
+        "npm-run-all2": "^8.0.4",
+        "postcss-html": "^1.8.0",
+        "stylelint": "^17.3.0",
+        "stylelint-config-standard": "^40.0.0",
+        "stylelint-config-tailwindcss": "^1.0.1",
+        "stylelint-order": "^6.0.4",
+        "typescript": "~5.9.3",
+        "vite": "^7.3.1",
+        "vite-plugin-vue-devtools": "^8.0.6",
+        "vue-tsc": "^3.2.4"
+    },
+    "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+    }
+}
