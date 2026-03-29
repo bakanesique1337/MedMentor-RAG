@@ -37,7 +37,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         // Add request ID to response headers
         response.setHeader(REQUEST_ID_HEADER, requestId);
 
-        long startTime = System.currentTimeMillis();
+        final long startTime = System.currentTimeMillis();
 
         try {
             logger.info("Incoming request: method={}, uri={}, remoteAddr={}",
@@ -48,7 +48,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } finally {
-            long duration = System.currentTimeMillis() - startTime;
+            final long duration = System.currentTimeMillis() - startTime;
 
             logger.info("Completed request: method={}, uri={}, status={}, duration={}ms",
                     request.getMethod(),
