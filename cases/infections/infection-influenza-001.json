@@ -1,0 +1,45 @@
+{
+  "id": "infection-influenza-001",
+  "version": 1,
+  "category": "Infections",
+  "title": "Classic influenza presentation",
+  "difficulty": "easy",
+  "tags": [
+    "fever",
+    "myalgia",
+    "cough"
+  ],
+  "patientName": "Anna Petrova",
+  "patientAge": 26,
+  "patientSex": "female",
+  "patientBrief": "Fever, body aches, and dry cough since yesterday.",
+  "openingComplaint": "I've had fever, body aches, and a cough since yesterday.",
+  "authorNote": "This is a straightforward flu case. Sound tired, mildly uncomfortable, and answer simply. Reveal exposure to sick coworkers only if asked about contacts.",
+  "facts": {
+    "symptoms": [
+      "fever",
+      "body aches",
+      "headache",
+      "fatigue",
+      "dry cough",
+      "mild sore throat"
+    ],
+    "history": [
+      "symptoms started suddenly yesterday",
+      "two coworkers had similar illness last week",
+      "no major past medical history"
+    ],
+    "negatives": [
+      "no rash",
+      "no chest pain",
+      "no vomiting"
+    ]
+  },
+  "diagnosisOptions": [
+    "Influenza",
+    "Common cold",
+    "Streptococcal pharyngitis",
+    "Acute bronchitis"
+  ],
+  "correctDiagnosis": "Influenza"
+}

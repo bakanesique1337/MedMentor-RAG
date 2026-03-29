@@ -20,24 +20,22 @@ services:
     networks:
       - medmentor-network
 
-  postgresml:
-    image: ghcr.io/postgresml/postgresml:2.10.0
-    container_name: medmentor-postgresml
-    command: sleep infinity
+  ollama:
+    image: ollama/ollama:latest
+    container_name: medmentor-ollama
     ports:
-      - "5433:5432"
-      - "8000:8000"
+      - "11434:11434"
     volumes:
-      - postgresml-data:/var/lib/postgresql
+      - ollama-data:/root/.ollama
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
+      test: ["CMD", "ollama", "list"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
     networks:
       - medmentor-network
-    shm_size: 1g
+    restart: unless-stopped
 
   backend:
     build:
@@ -48,26 +46,26 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-pgvector:5432/medmentor
       SPRING_DATASOURCE_USERNAME: medmentor
       SPRING_DATASOURCE_PASSWORD: medmentor123
-      SPRING_AI_POSTGRESML_EMBEDDING_DATASOURCE_URL: jdbc:postgresql://postgresml:5432/postgres
-      SPRING_AI_POSTGRESML_EMBEDDING_DATASOURCE_USERNAME: postgres
-      SPRING_AI_POSTGRESML_EMBEDDING_DATASOURCE_PASSWORD: postgresml
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      SPRING_AI_OLLAMA_BASE_URL: http://ollama:11434
+      MEDMENTOR_CASES_PATH: /cases
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
       LOG_DIR: /app/logs
     ports:
       - "8080:8080"
     volumes:
       - ./backend/logs:/app/logs
+      - ./cases:/cases:ro
     depends_on:
       postgres-pgvector:
         condition: service_healthy
-      postgresml:
+      ollama:
         condition: service_healthy
     networks:
       - medmentor-network
     restart: unless-stopped
 
 volumes:
-  postgresml-data:
+  ollama-data:
 
 networks:
   medmentor-network:

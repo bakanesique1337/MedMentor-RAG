@@ -10,14 +10,14 @@ import org.springframework.stereotype.Component;
 public class AiProperties {
 
     /**
-     * AI provider (anthropic, openai, etc.)
+     * AI provider (gemini, anthropic, openai, etc.)
      */
-    private String provider = "anthropic";
+    private String provider = "gemini";
 
     /**
      * Model to use for chat completions
      */
-    private String model = "claude-haiku-4-5-20251001";
+    private String model = "gemini-2.5-flash";
 
     /**
      * Temperature for response generation (0.0 - 1.0)
@@ -38,4 +38,12 @@ public class AiProperties {
      * Constant context text to be added to every request
      */
     private String constantContext = "";
+
+    private String promptGlobalSystem = "classpath:prompts/global-system.txt";
+
+    private String promptPatientRole = "classpath:prompts/patient-role.txt";
+
+    private String promptSessionOpening = "classpath:prompts/session-opening.txt";
+
+    private String promptScoreReview = "classpath:prompts/score-review.txt";
 }

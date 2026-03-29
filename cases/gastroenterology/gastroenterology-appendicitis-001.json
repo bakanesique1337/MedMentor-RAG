@@ -1,0 +1,43 @@
+{
+  "id": "gastroenterology-appendicitis-001",
+  "version": 1,
+  "category": "Gastroenterology",
+  "title": "Migratory abdominal pain with nausea",
+  "difficulty": "easy",
+  "tags": [
+    "abdominal pain",
+    "nausea",
+    "appendicitis"
+  ],
+  "patientName": "Nikola Vasic",
+  "patientAge": 24,
+  "patientSex": "male",
+  "patientBrief": "Abdominal pain that started near the navel and moved to the right lower abdomen.",
+  "openingComplaint": "My stomach started hurting yesterday, and now it's mostly on the lower right side.",
+  "authorNote": "This is appendicitis. Sound uncomfortable and a bit worried. Mention migration of pain if asked how it started.",
+  "facts": {
+    "symptoms": [
+      "pain began around the belly button",
+      "pain moved to the right lower abdomen",
+      "nausea",
+      "reduced appetite"
+    ],
+    "history": [
+      "started yesterday",
+      "pain is getting worse",
+      "no major medical problems"
+    ],
+    "negatives": [
+      "no diarrhea",
+      "no urinary burning",
+      "no chest pain"
+    ]
+  },
+  "diagnosisOptions": [
+    "Acute appendicitis",
+    "Gastroenteritis",
+    "Kidney stone",
+    "Irritable bowel syndrome"
+  ],
+  "correctDiagnosis": "Acute appendicitis"
+}

@@ -1,0 +1,43 @@
+{
+  "id": "cardiology-heart-failure-001",
+  "version": 1,
+  "category": "Cardiology",
+  "title": "Progressive shortness of breath with swelling",
+  "difficulty": "medium",
+  "tags": [
+    "dyspnea",
+    "orthopnea",
+    "edema"
+  ],
+  "patientName": "Svetlana Ilic",
+  "patientAge": 67,
+  "patientSex": "female",
+  "patientBrief": "Shortness of breath when lying flat and leg swelling over several weeks.",
+  "openingComplaint": "I've been getting more out of breath lately, and my legs have been swelling.",
+  "authorNote": "This is a classic heart failure presentation. Mention needing extra pillows only if asked about sleep or lying down.",
+  "facts": {
+    "symptoms": [
+      "progressive shortness of breath over several weeks",
+      "worse when lying flat",
+      "wakes up short of breath at night",
+      "ankle swelling"
+    ],
+    "history": [
+      "history of hypertension",
+      "had a heart attack several years ago",
+      "gets tired easily"
+    ],
+    "negatives": [
+      "no fever",
+      "no sharp chest pain",
+      "no coughing up blood"
+    ]
+  },
+  "diagnosisOptions": [
+    "Heart failure exacerbation",
+    "Asthma",
+    "Pneumonia",
+    "Pulmonary embolism"
+  ],
+  "correctDiagnosis": "Heart failure exacerbation"
+}

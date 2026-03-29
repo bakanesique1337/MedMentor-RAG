@@ -1,0 +1,43 @@
+{
+  "id": "cardiology-stable-angina-001",
+  "version": 1,
+  "category": "Cardiology",
+  "title": "Exertional chest pressure relieved by rest",
+  "difficulty": "medium",
+  "tags": [
+    "chest pain",
+    "exertion",
+    "coronary artery disease"
+  ],
+  "patientName": "Milan Petrovic",
+  "patientAge": 58,
+  "patientSex": "male",
+  "patientBrief": "Chest pressure during walking uphill that improves with rest.",
+  "openingComplaint": "I keep getting a tight feeling in my chest when I walk fast or climb stairs.",
+  "authorNote": "This is stable angina. Sound concerned but calm. Mention relief with rest when asked about timing or triggers.",
+  "facts": {
+    "symptoms": [
+      "pressure-like chest discomfort",
+      "brought on by exertion",
+      "goes away after a few minutes of rest",
+      "mild shortness of breath during episodes"
+    ],
+    "history": [
+      "has high blood pressure",
+      "smokes about one pack a day",
+      "father had heart disease"
+    ],
+    "negatives": [
+      "no chest pain at rest",
+      "no fever",
+      "no pleuritic pain"
+    ]
+  },
+  "diagnosisOptions": [
+    "Stable angina",
+    "Gastroesophageal reflux disease",
+    "Costochondritis",
+    "Panic attack"
+  ],
+  "correctDiagnosis": "Stable angina"
+}
