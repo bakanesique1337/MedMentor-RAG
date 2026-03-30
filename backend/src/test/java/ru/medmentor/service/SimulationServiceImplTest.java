@@ -6,8 +6,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import ru.medmentor.dto.ResultDto;
 import ru.medmentor.dto.SimulationCommandResponseDto;
+import ru.medmentor.dto.SimulationSessionDto;
 import ru.medmentor.model.ConversationMessage;
 import ru.medmentor.model.MedicalCase;
 import ru.medmentor.model.MedicalCaseFacts;
@@ -22,12 +22,12 @@ import ru.medmentor.repository.SimulationResultRepository;
 import ru.medmentor.repository.SimulationSessionRepository;
 import ru.medmentor.repository.UserScoreRepository;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -111,37 +111,99 @@ class SimulationServiceImplTest {
     }
 
     @Test
-    void scoreSessionPersistsScoresAndResult() {
+    void submitDiagnosisPersistsScoresAndResult() {
         final UserAccount user = user(1L, "doctor");
-        final SimulationSession session = session(200L, user, "case-1", SimulationState.SCORING, OpeningStatus.OPENING_READY);
-        session.setSelectedDiagnosis("Influenza");
+        final SimulationSession session = session(200L, user, "case-1", SimulationState.IN_PROGRESS, OpeningStatus.OPENING_READY);
         final MedicalCase medicalCase = medicalCaseOf("case-1", "Influenza");
+        final LocalDateTime createdAt = LocalDateTime.now();
+        final UserScore persistedScore = UserScore.builder()
+                .session(session)
+                .politeness(0.80)
+                .questioningStructure(0.70)
+                .thoroughness(0.60)
+                .empathy(0.90)
+                .diagnosisCorrect(1.00)
+                .createdAt(createdAt)
+                .build();
+        final SimulationResult persistedResult = SimulationResult.builder()
+                .session(session)
+                .summary("Good structure")
+                .createdAt(createdAt)
+                .build();
 
         when(userAccountService.getByUsername("doctor")).thenReturn(user);
         when(simulationSessionRepository.findById(200L)).thenReturn(Optional.of(session));
-        when(simulationResultRepository.findBySessionId(200L)).thenReturn(Optional.empty());
         when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
+        when(simulationInFlightRegistry.isAnyResponseInFlight(200L)).thenReturn(false);
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(200L)).thenReturn(List.of());
         when(simulationAiService.generateScoreReview(eq(medicalCase), any(), eq("Influenza")))
                 .thenReturn(new ScoreReviewPayload(
                         new ScoreReviewPayload.ScorePayload(0.8, 0.7, 0.6, 0.9, 0.0),
                         "Good structure"
                 ));
-        when(userScoreRepository.findBySessionId(200L)).thenReturn(Optional.empty());
+        when(userScoreRepository.findBySessionId(200L)).thenReturn(Optional.empty(), Optional.of(persistedScore));
+        when(simulationResultRepository.findBySessionId(200L)).thenReturn(Optional.empty(), Optional.of(persistedResult));
+        when(simulationResultRepository.save(any(SimulationResult.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final SimulationSessionDto response = simulationService.submitDiagnosis("doctor", 200L, "Influenza");
+
+        assertEquals(SimulationState.COMPLETED, response.state());
+        assertNotNull(response.result());
+        assertEquals("Good structure", response.result().summary());
+        final ArgumentCaptor<UserScore> scoreCaptor = ArgumentCaptor.forClass(UserScore.class);
+        verify(userScoreRepository).save(scoreCaptor.capture());
+        assertEquals(1.00, scoreCaptor.getValue().getDiagnosisCorrect());
+        assertEquals(SimulationState.COMPLETED, session.getState());
+    }
+
+    @Test
+    void submitDiagnosisCompletesSessionAndReturnsScoreData() {
+        final UserAccount user = user(1L, "doctor");
+        final SimulationSession session = session(300L, user, "case-1", SimulationState.DIAGNOSIS_SELECT, OpeningStatus.OPENING_READY);
+        final MedicalCase medicalCase = medicalCaseOf("case-1", "Influenza");
+        final LocalDateTime createdAt = LocalDateTime.now();
+        final UserScore persistedScore = UserScore.builder()
+                .session(session)
+                .politeness(0.80)
+                .questioningStructure(0.70)
+                .thoroughness(0.60)
+                .empathy(0.90)
+                .diagnosisCorrect(1.00)
+                .createdAt(createdAt)
+                .build();
+        final SimulationResult persistedResult = SimulationResult.builder()
+                .session(session)
+                .summary("Good structure")
+                .createdAt(createdAt)
+                .build();
+
+        when(userAccountService.getByUsername("doctor")).thenReturn(user);
+        when(simulationSessionRepository.findById(300L)).thenReturn(Optional.of(session));
+        when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
+        when(simulationInFlightRegistry.isAnyResponseInFlight(300L)).thenReturn(false);
+        when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(300L)).thenReturn(List.of());
+        when(simulationAiService.generateScoreReview(eq(medicalCase), any(), eq("Influenza")))
+                .thenReturn(new ScoreReviewPayload(
+                        new ScoreReviewPayload.ScorePayload(0.8, 0.7, 0.6, 0.9, 0.0),
+                        "Good structure"
+                ));
+        when(userScoreRepository.findBySessionId(300L)).thenReturn(Optional.empty(), Optional.of(persistedScore));
+        when(simulationResultRepository.findBySessionId(300L)).thenReturn(Optional.empty(), Optional.of(persistedResult));
         when(simulationResultRepository.save(any(SimulationResult.class))).thenAnswer(invocation -> {
             final SimulationResult result = invocation.getArgument(0);
-            result.setCreatedAt(LocalDateTime.now());
+            result.setCreatedAt(createdAt);
             return result;
         });
         when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final ResultDto result = simulationService.scoreSession("doctor", 200L);
+        final SimulationSessionDto response = simulationService.submitDiagnosis("doctor", 300L, "Influenza");
 
-        assertEquals("Good structure", result.summary());
-        final ArgumentCaptor<UserScore> scoreCaptor = ArgumentCaptor.forClass(UserScore.class);
-        verify(userScoreRepository).save(scoreCaptor.capture());
-        assertEquals(new BigDecimal("1.00"), scoreCaptor.getValue().getDiagnosisCorrect());
-        assertEquals(SimulationState.COMPLETED, session.getState());
+        assertEquals(SimulationState.COMPLETED, response.state());
+        assertNotNull(response.score());
+        assertNotNull(response.result());
+        assertEquals("Good structure", response.result().summary());
+        assertEquals("Influenza", response.selectedDiagnosis());
     }
 
     private UserAccount user(Long id, String username) {

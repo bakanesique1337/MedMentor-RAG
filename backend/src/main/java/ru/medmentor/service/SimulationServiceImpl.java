@@ -26,8 +26,6 @@ import ru.medmentor.repository.SimulationResultRepository;
 import ru.medmentor.repository.SimulationSessionRepository;
 import ru.medmentor.repository.UserScoreRepository;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.*;
 
 @Service
@@ -114,7 +112,7 @@ public class SimulationServiceImpl implements SimulationService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public SimulationSessionDto getSession(String username, Long sessionId, boolean retryOpening) {
         final UserAccount userAccount = userAccountService.getByUsername(username);
         final SimulationSession session = getOwnedSession(userAccount, sessionId);
@@ -183,20 +181,6 @@ public class SimulationServiceImpl implements SimulationService {
 
     @Override
     @Transactional
-    public SimulationSessionDto finishExamination(String username, Long sessionId) {
-        final UserAccount userAccount = userAccountService.getByUsername(username);
-        final SimulationSession session = getOwnedSession(userAccount, sessionId);
-        ensureState(session, EnumSet.of(SimulationState.IN_PROGRESS));
-        ensureOpeningReady(session);
-
-        session.setState(SimulationState.DIAGNOSIS_SELECT);
-        final SimulationSession savedSession = simulationSessionRepository.save(session);
-        final MedicalCase medicalCase = caseLoaderService.getCaseById(savedSession.getCaseId());
-        return buildSessionDto(savedSession, medicalCase);
-    }
-
-    @Override
-    @Transactional
     public SimulationSessionDto submitDiagnosis(String username, Long sessionId, String diagnosis) {
         if (diagnosis == null || diagnosis.isBlank()) {
             throw new IllegalArgumentException("Diagnosis must not be blank");
@@ -205,7 +189,11 @@ public class SimulationServiceImpl implements SimulationService {
         final UserAccount userAccount = userAccountService.getByUsername(username);
         final SimulationSession session = getOwnedSession(userAccount, sessionId);
         final MedicalCase medicalCase = caseLoaderService.getCaseById(session.getCaseId());
-        ensureState(session, EnumSet.of(SimulationState.DIAGNOSIS_SELECT));
+        ensureState(session, EnumSet.of(SimulationState.IN_PROGRESS, SimulationState.DIAGNOSIS_SELECT));
+        ensureOpeningReady(session);
+        if (simulationInFlightRegistry.isAnyResponseInFlight(sessionId)) {
+            throw new IllegalStateException("AI response is already in flight for this session");
+        }
 
         if (!session.getShuffledDiagnosisOptions().contains(diagnosis)) {
             throw new IllegalArgumentException("Diagnosis is not available for this session");
@@ -213,57 +201,9 @@ public class SimulationServiceImpl implements SimulationService {
 
         session.setSelectedDiagnosis(diagnosis);
         session.setState(SimulationState.SCORING);
-        final SimulationSession savedSession = simulationSessionRepository.save(session);
-        return buildSessionDto(savedSession, medicalCase);
-    }
-
-    @Override
-    @Transactional
-    public ResultDto scoreSession(String username, Long sessionId) {
-        final UserAccount userAccount = userAccountService.getByUsername(username);
-        final SimulationSession session = getOwnedSession(userAccount, sessionId);
-
-        final Optional<SimulationResult> existingResult = simulationResultRepository.findBySessionId(sessionId);
-        if (session.getState() == SimulationState.COMPLETED && existingResult.isPresent()) {
-            return new ResultDto(existingResult.get().getSummary(), existingResult.get().getCreatedAt());
-        }
-
-        ensureState(session, EnumSet.of(SimulationState.SCORING));
-        if (session.getSelectedDiagnosis() == null || session.getSelectedDiagnosis().isBlank()) {
-            throw new IllegalStateException("Diagnosis must be selected before scoring");
-        }
-
-        final MedicalCase medicalCase = caseLoaderService.getCaseById(session.getCaseId());
-        final List<ConversationMessage> conversationHistory = conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(sessionId);
-        final ScoreReviewPayload payload = simulationAiService.generateScoreReview(
-                medicalCase,
-                conversationHistory,
-                session.getSelectedDiagnosis()
-        );
-        final BigDecimal diagnosisCorrectScore = medicalCase.correctDiagnosis().equals(session.getSelectedDiagnosis())
-                ? BigDecimal.ONE.setScale(2)
-                : BigDecimal.ZERO.setScale(2);
-
-        userScoreRepository.findBySessionId(sessionId).ifPresent(userScoreRepository::delete);
-        simulationResultRepository.findBySessionId(sessionId).ifPresent(simulationResultRepository::delete);
-
-        userScoreRepository.save(UserScore.builder()
-                .session(session)
-                .politeness(toScore(payload.score().politeness()))
-                .questioningStructure(toScore(payload.score().questioningStructure()))
-                .thoroughness(toScore(payload.score().thoroughness()))
-                .empathy(toScore(payload.score().empathy()))
-                .diagnosisCorrect(diagnosisCorrectScore)
-                .build());
-
-        final SimulationResult result = simulationResultRepository.save(SimulationResult.builder()
-                .session(session)
-                .summary(payload.summary().trim())
-                .build());
-
-        session.setState(SimulationState.COMPLETED);
         simulationSessionRepository.save(session);
-        return new ResultDto(result.getSummary(), result.getCreatedAt());
+        generateAndPersistScore(session, medicalCase);
+        return buildSessionDto(session, medicalCase);
     }
 
     @Override
@@ -347,9 +287,43 @@ public class SimulationServiceImpl implements SimulationService {
         }
     }
 
-    private BigDecimal toScore(double value) {
+    private Double toScore(double value) {
         final double clampedValue = Math.max(0.0, Math.min(1.0, value));
-        return BigDecimal.valueOf(clampedValue).setScale(2, RoundingMode.HALF_UP);
+        return round2(clampedValue);
+    }
+
+    private SimulationResult generateAndPersistScore(SimulationSession session, MedicalCase medicalCase) {
+        final Long sessionId = session.getId();
+        final List<ConversationMessage> conversationHistory = conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(sessionId);
+        final ScoreReviewPayload payload = simulationAiService.generateScoreReview(
+                medicalCase,
+                conversationHistory,
+                session.getSelectedDiagnosis()
+        );
+        final Double diagnosisCorrectScore = medicalCase.correctDiagnosis().equals(session.getSelectedDiagnosis())
+                ? 1.00
+                : 0.00;
+
+        userScoreRepository.findBySessionId(sessionId).ifPresent(userScoreRepository::delete);
+        simulationResultRepository.findBySessionId(sessionId).ifPresent(simulationResultRepository::delete);
+
+        userScoreRepository.save(UserScore.builder()
+                .session(session)
+                .politeness(toScore(payload.score().politeness()))
+                .questioningStructure(toScore(payload.score().questioningStructure()))
+                .thoroughness(toScore(payload.score().thoroughness()))
+                .empathy(toScore(payload.score().empathy()))
+                .diagnosisCorrect(diagnosisCorrectScore)
+                .build());
+
+        final SimulationResult result = simulationResultRepository.save(SimulationResult.builder()
+                .session(session)
+                .summary(payload.summary().trim())
+                .build());
+
+        session.setState(SimulationState.COMPLETED);
+        simulationSessionRepository.save(session);
+        return result;
     }
 
     private SimulationSessionDto buildSessionDto(SimulationSession session, MedicalCase medicalCase) {
@@ -364,11 +338,7 @@ public class SimulationServiceImpl implements SimulationService {
                 medicalCase.patientName(),
                 session.getState(),
                 session.getOpeningStatus(),
-                session.getState() == SimulationState.DIAGNOSIS_SELECT
-                        || session.getState() == SimulationState.SCORING
-                        || session.getState() == SimulationState.COMPLETED
-                        ? List.copyOf(session.getShuffledDiagnosisOptions())
-                        : List.of(),
+                List.copyOf(session.getShuffledDiagnosisOptions()),
                 session.getSelectedDiagnosis(),
                 messages.stream()
                         .map(message -> new ConversationMessageDto(
@@ -400,12 +370,16 @@ public class SimulationServiceImpl implements SimulationService {
         );
     }
 
-    private BigDecimal average(List<BigDecimal> values) {
+    private Double average(List<Double> values) {
         if (values.isEmpty()) {
-            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+            return 0.00;
         }
-        final BigDecimal sum = values.stream()
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        return sum.divide(BigDecimal.valueOf(values.size()), 2, RoundingMode.HALF_UP);
+        final double sum = values.stream()
+                .reduce(0.0, Double::sum);
+        return round2(sum / values.size());
+    }
+
+    private Double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 }
