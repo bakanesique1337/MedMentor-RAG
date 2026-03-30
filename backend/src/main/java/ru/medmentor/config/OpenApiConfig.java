@@ -16,8 +16,8 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("MedMentor RAG API")
-                        .description("Medical testing AI chat application with RAG capabilities")
-                        .version("1.0.0"))
+                        .description("Medical testing AI chat application with RAG capabilities. Powered by Google Gemini AI and Ollama embeddings.")
+                        .version("2.0.0"))
                 .servers(List.of(
                         new Server()
                                 .url("http://localhost:8080")

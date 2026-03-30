@@ -1,0 +1,43 @@
+{
+  "id": "gastroenterology-biliary-colic-001",
+  "version": 1,
+  "category": "Gastroenterology",
+  "title": "Right upper quadrant pain after fatty meals",
+  "difficulty": "medium",
+  "tags": [
+    "abdominal pain",
+    "right upper quadrant",
+    "postprandial"
+  ],
+  "patientName": "Ivana Markovic",
+  "patientAge": 42,
+  "patientSex": "female",
+  "patientBrief": "Episodes of right upper abdominal pain after eating greasy food.",
+  "openingComplaint": "I keep getting this pain under my right ribs after heavy meals.",
+  "authorNote": "This is biliary colic. Be uncomfortable during episodes but currently stable. Mention greasy food trigger when asked.",
+  "facts": {
+    "symptoms": [
+      "right upper quadrant abdominal pain",
+      "episodes last about one hour",
+      "nausea during attacks",
+      "pain sometimes goes to the right shoulder"
+    ],
+    "history": [
+      "worse after fried or fatty foods",
+      "has had similar episodes before",
+      "no previous abdominal surgery"
+    ],
+    "negatives": [
+      "no fever",
+      "no jaundice",
+      "no diarrhea"
+    ]
+  },
+  "diagnosisOptions": [
+    "Biliary colic",
+    "Peptic ulcer disease",
+    "Acute pancreatitis",
+    "Acute appendicitis"
+  ],
+  "correctDiagnosis": "Biliary colic"
+}

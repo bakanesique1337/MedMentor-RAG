@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medmentor.local/schemas/case.schema.json",
+  "title": "MedMentor Case File",
+  "description": "Schema for authored medical simulation case files stored under the cases directory.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "version",
+    "category",
+    "title",
+    "difficulty",
+    "tags",
+    "patientName",
+    "patientAge",
+    "patientSex",
+    "patientBrief",
+    "openingComplaint",
+    "authorNote",
+    "facts",
+    "diagnosisOptions",
+    "correctDiagnosis"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable unique case identifier used by the backend and frontend."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Positive integer revision number for the case definition."
+    },
+    "category": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable category label used for filtering and display."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short author-facing case title."
+    },
+    "difficulty": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Simple difficulty label such as easy, medium, or hard."
+    },
+    "tags": {
+      "type": "array",
+      "description": "Short topical tags used for future filtering, search, or authoring support.",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "patientName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Displayed patient name."
+    },
+    "patientAge": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Patient age in years."
+    },
+    "patientSex": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Simple patient sex label used in UI and prompts."
+    },
+    "patientBrief": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short frontend-safe patient summary shown on the case card."
+    },
+    "openingComplaint": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Seed complaint that guides the opening patient message."
+    },
+    "authorNote": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Hidden authoring guidance for the model; keep this case-specific."
+    },
+    "facts": {
+      "type": "object",
+      "description": "Structured interview facts grouped into simple buckets.",
+      "additionalProperties": false,
+      "required": [
+        "symptoms",
+        "history",
+        "negatives"
+      ],
+      "properties": {
+        "symptoms": {
+          "type": "array",
+          "description": "Positive symptoms the patient can reveal when questioned.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "history": {
+          "type": "array",
+          "description": "Relevant history or context facts the patient can reveal when questioned.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "negatives": {
+          "type": "array",
+          "description": "Explicit negative findings or absent symptoms.",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "diagnosisOptions": {
+      "type": "array",
+      "description": "Plausible final diagnosis choices presented to the user.",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "correctDiagnosis": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Exact correct diagnosis string. It should match one item from diagnosisOptions."
+    }
+  }
+}

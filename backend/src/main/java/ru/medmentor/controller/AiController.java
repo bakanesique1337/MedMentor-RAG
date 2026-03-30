@@ -28,9 +28,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/ai")
+@RequestMapping("/api/ai")
 @RequiredArgsConstructor
-@Tag(name = "AI Chat", description = "AI chat endpoints for medical conversation simulation")
+@Tag(name = "AI Chat", description = "AI chat endpoints for medical conversation simulation (REST - non-streaming). For streaming responses, use WebSocket at /ws")
 public class AiController {
 
     private static final Logger logger = LoggerFactory.getLogger(AiController.class);
@@ -39,8 +39,8 @@ public class AiController {
 
     @PostMapping
     @Operation(
-            summary = "Process AI chat request",
-            description = "Sends a user message to the AI and receives a response. The AI simulates a patient for medical diagnostic practice."
+            summary = "Process AI chat request (Non-streaming)",
+            description = "Sends a user message to the AI and receives a complete response. The AI simulates a patient for medical diagnostic practice. For real-time streaming responses, use WebSocket endpoint at /ws"
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -61,21 +61,21 @@ public class AiController {
     })
     public ResponseEntity<AiResponseDto> processAiRequest(@Valid @RequestBody AiRequestDto request) {
         logger.info("Received AI request via REST endpoint");
-        AiResponseDto response = aiService.processRequest(request);
+        final AiResponseDto response = aiService.processRequest(request);
         return ResponseEntity.ok(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<Map<String, Object>> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, Object> errors = new HashMap<>();
+        final Map<String, Object> errors = new HashMap<>();
         errors.put("error", "Validation failed");
         errors.put("status", HttpStatus.BAD_REQUEST.value());
 
-        Map<String, String> fieldErrors = new HashMap<>();
+        final Map<String, String> fieldErrors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            String errorMessage = error.getDefaultMessage();
+            final String fieldName = ((FieldError) error).getField();
+            final String errorMessage = error.getDefaultMessage();
             fieldErrors.put(fieldName, errorMessage);
         });
 
@@ -89,7 +89,7 @@ public class AiController {
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
-        Map<String, Object> error = new HashMap<>();
+        final Map<String, Object> error = new HashMap<>();
         error.put("error", "Internal server error");
         error.put("message", ex.getMessage());
         error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
@@ -102,7 +102,7 @@ public class AiController {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
-        Map<String, Object> error = new HashMap<>();
+        final Map<String, Object> error = new HashMap<>();
         error.put("error", "Unexpected error occurred");
         error.put("message", ex.getMessage());
         error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());

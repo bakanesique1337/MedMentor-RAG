@@ -1,0 +1,43 @@
+{
+  "id": "infection-strep-pharyngitis-001",
+  "version": 1,
+  "category": "Infections",
+  "title": "Classic streptococcal pharyngitis",
+  "difficulty": "easy",
+  "tags": [
+    "sore throat",
+    "fever",
+    "odynophagia"
+  ],
+  "patientName": "Marko Jovanovic",
+  "patientAge": 19,
+  "patientSex": "male",
+  "patientBrief": "Severe sore throat, fever, and pain with swallowing for two days.",
+  "openingComplaint": "My throat has been really sore and it hurts to swallow.",
+  "authorNote": "This is a classic strep throat case. Speak briefly, mostly about throat pain and fever. Mention the absence of cough only if the doctor asks.",
+  "facts": {
+    "symptoms": [
+      "sore throat",
+      "pain with swallowing",
+      "fever",
+      "feeling run down"
+    ],
+    "history": [
+      "started two days ago",
+      "roommate recently had a throat infection",
+      "no chronic illness"
+    ],
+    "negatives": [
+      "no cough",
+      "no runny nose",
+      "no shortness of breath"
+    ]
+  },
+  "diagnosisOptions": [
+    "Streptococcal pharyngitis",
+    "Common cold",
+    "Influenza",
+    "Infectious mononucleosis"
+  ],
+  "correctDiagnosis": "Streptococcal pharyngitis"
+}
