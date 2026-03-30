@@ -48,6 +48,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: medmentor123
       SPRING_AI_OLLAMA_BASE_URL: http://ollama:11434
       MEDMENTOR_CASES_PATH: /cases
+      MEDMENTOR_RAG_SOURCE_PATH: /rag-data
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       LOG_DIR: /app/logs
     ports:
@@ -55,6 +56,7 @@ services:
     volumes:
       - ./backend/logs:/app/logs
       - ./cases:/cases:ro
+      - ./rag-data:/rag-data:ro
     depends_on:
       postgres-pgvector:
         condition: service_healthy

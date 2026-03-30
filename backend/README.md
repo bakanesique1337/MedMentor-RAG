@@ -2,9 +2,12 @@
 
 Medical testing AI chat application where doctors practice diagnostics. The AI emulates a patient, and the doctor must reach a correct diagnosis within 10 messages.
 
-## Phase 1 - Basic RAG Pipeline Setup
+## Current Status
 
-This is the initial MVP phase focused on setting up the backend infrastructure with AI chat capabilities.
+Core simulation backend is implemented, including:
+- auth + simulation flow APIs
+- AI patient chat + scoring
+- RAG ingestion pipeline with pgvector retrieval
 
 ## Technology Stack
 
@@ -79,6 +82,30 @@ Local-first auth direction:
 - **Swagger UI:** http://localhost:8080/swagger-ui.html
 - **API Docs:** http://localhost:8080/api-docs
 - **Health Check:** http://localhost:8080/actuator/health
+
+## RAG Pipeline Overview
+
+RAG source files live in top-level `rag-data/` and are mounted into backend at `/rag-data`.
+
+Supported extensions:
+- `txt`
+- `md`
+- `markdown`
+- `json`
+- `csv`
+
+Pipeline behavior:
+- startup sync indexes all source files
+- scheduled sync updates vectors when files change
+- deleted source files are removed from vector store
+
+Main RAG properties:
+```properties
+medmentor.rag.enabled=true
+medmentor.rag.source-path=../rag-data
+medmentor.rag.sync-interval-ms=30000
+medmentor.rag.top-k=5
+```
 
 ## Running Locally (Backend only)
 
@@ -228,6 +255,33 @@ function sendMessage(text) {
 
 **Note:** Swagger UI does not support WebSocket testing. Use the Vue.js examples above or a WebSocket testing tool like Postman or websocat.
 
+### RAG Endpoints (Authenticated)
+
+Login first (cookie session):
+```bash
+curl -i -c /tmp/medmentor.cookies \
+  -H "Content-Type: application/json" \
+  -d '{"username":"doctor","password":"change_me"}' \
+  http://localhost:8080/api/auth/login
+```
+
+Search vectors:
+```bash
+curl -b /tmp/medmentor.cookies \
+  "http://localhost:8080/api/rag/search?query=heart%20failure%20dyspnea&topK=3"
+```
+
+Trigger manual reindex:
+```bash
+curl -X POST -b /tmp/medmentor.cookies \
+  http://localhost:8080/api/rag/sync
+```
+
+Why these endpoints exist:
+- `GET /api/rag/search` is a debug/verification surface to inspect retrieval quality independently from generation.
+- `POST /api/rag/sync` is an operational control for immediate reindex after bulk file updates, without waiting for scheduled polling.
+- Both endpoints help observability and safe rollout of new medical knowledge files.
+
 ## Project Structure
 
 ```
@@ -309,8 +363,8 @@ Health check includes database connectivity status.
 
 The application automatically creates:
 - `conversation_log` table - Stores AI chat history
-- pgvector extension - For future RAG functionality
-- Vector store tables (auto-created by Spring AI)
+- `rag_source_files` table - Tracks indexed source files and chunk ids
+- pgvector extension + `vector_store` table for embeddings retrieval
 
 ## Development Notes
 
@@ -388,9 +442,8 @@ ports:
 
 ## Future Enhancements
 
-- **Phase 2:** RAG pipeline with document ingestion and vector search
-- **Phase 3:** Quiz/testing functionality with medical case scenarios
-- **Phase 4:** Vue.js frontend with chat interface
+- **Phase 4:** Quiz/testing functionality with medical case scenarios
+- **Phase 5:** Vue.js frontend with chat interface
 
 ## License
 

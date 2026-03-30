@@ -17,15 +17,18 @@ public class SimulationAiServiceImpl implements SimulationAiService {
 
     private final ChatClient chatClient;
     private final PromptTemplateService promptTemplateService;
+    private final RagSearchService ragSearchService;
     private final ObjectMapper objectMapper;
 
     public SimulationAiServiceImpl(
             ChatClient chatClient,
             PromptTemplateService promptTemplateService,
+            RagSearchService ragSearchService,
             ObjectMapper objectMapper
     ) {
         this.chatClient = chatClient;
         this.promptTemplateService = promptTemplateService;
+        this.ragSearchService = ragSearchService;
         this.objectMapper = objectMapper;
     }
 
@@ -63,10 +66,16 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             List<ConversationMessage> conversationHistory,
             String selectedDiagnosis
     ) {
+        final String ragContext = ragSearchService.buildPromptContext(
+                buildScoreRagQuery(medicalCase, conversationHistory, selectedDiagnosis)
+        );
         final String prompt = """
                 %s
 
                 Case data:
+                %s
+
+                Relevant clinical recommendations:
                 %s
 
                 Selected diagnosis:
@@ -77,6 +86,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 """.formatted(
                 promptTemplateService.getScoreReviewPrompt(),
                 formatCase(medicalCase),
+                ragContext.isBlank() ? "(none)" : ragContext,
                 selectedDiagnosis,
                 formatConversation(conversationHistory)
         );
@@ -170,10 +180,14 @@ public class SimulationAiServiceImpl implements SimulationAiService {
     }
 
     private String buildOpeningPrompt(MedicalCase medicalCase) {
+        final String ragContext = ragSearchService.buildPromptContext(buildOpeningRagQuery(medicalCase));
         return """
                 %s
 
                 Case data:
+                %s
+
+                Relevant clinical recommendations:
                 %s
 
                 Instructions:
@@ -181,6 +195,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 """.formatted(
                 promptTemplateService.getPatientRolePrompt(),
                 formatCase(medicalCase),
+                ragContext.isBlank() ? "(none)" : ragContext,
                 promptTemplateService.getSessionOpeningPrompt()
         );
     }
@@ -190,10 +205,16 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             List<ConversationMessage> conversationHistory,
             String doctorMessage
     ) {
+        final String ragContext = ragSearchService.buildPromptContext(
+                buildReplyRagQuery(medicalCase, conversationHistory, doctorMessage)
+        );
         return """
                 %s
 
                 Case data:
+                %s
+
+                Relevant clinical recommendations:
                 %s
 
                 Conversation so far:
@@ -204,8 +225,87 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 """.formatted(
                 promptTemplateService.getPatientRolePrompt(),
                 formatCase(medicalCase),
+                ragContext.isBlank() ? "(none)" : ragContext,
                 formatConversation(conversationHistory),
                 doctorMessage
+        );
+    }
+
+    private String buildOpeningRagQuery(MedicalCase medicalCase) {
+        final MedicalCaseFacts facts = medicalCase.facts();
+        return """
+                opening patient interaction
+                patient age: %d
+                patient sex: %s
+                complaint: %s
+                symptoms: %s
+                history: %s
+                negatives: %s
+                possible diagnoses: %s
+                """.formatted(
+                medicalCase.patientAge(),
+                medicalCase.patientSex(),
+                medicalCase.openingComplaint(),
+                String.join(", ", facts.symptoms()),
+                String.join(", ", facts.history()),
+                String.join(", ", facts.negatives()),
+                String.join(", ", medicalCase.diagnosisOptions())
+        );
+    }
+
+    private String buildReplyRagQuery(
+            MedicalCase medicalCase,
+            List<ConversationMessage> conversationHistory,
+            String doctorMessage
+    ) {
+        final MedicalCaseFacts facts = medicalCase.facts();
+        return """
+                patient follow-up interaction
+                patient age: %d
+                patient sex: %s
+                symptoms: %s
+                history: %s
+                negatives: %s
+                doctor message: %s
+                conversation summary:
+                %s
+                """.formatted(
+                medicalCase.patientAge(),
+                medicalCase.patientSex(),
+                String.join(", ", facts.symptoms()),
+                String.join(", ", facts.history()),
+                String.join(", ", facts.negatives()),
+                doctorMessage,
+                formatConversation(conversationHistory)
+        );
+    }
+
+    private String buildScoreRagQuery(
+            MedicalCase medicalCase,
+            List<ConversationMessage> conversationHistory,
+            String selectedDiagnosis
+    ) {
+        final MedicalCaseFacts facts = medicalCase.facts();
+        return """
+                scoring medical interview
+                patient age: %d
+                patient sex: %s
+                symptoms: %s
+                history: %s
+                negatives: %s
+                selected diagnosis: %s
+                correct diagnosis: %s
+                conversation:
+                %s
+                """.formatted(
+                medicalCase.patientAge(),
+                medicalCase.patientSex(),
+                String.join(", ", facts.symptoms()),
+                String.join(", ", facts.history()),
+                String.join(", ", facts.negatives()),
+                selectedDiagnosis,
+                medicalCase.correctDiagnosis(),
+                formatConversation(conversationHistory)
         );
     }
 
