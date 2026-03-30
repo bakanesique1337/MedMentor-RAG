@@ -66,7 +66,6 @@ public class AiServiceImpl implements AiService {
                     .aiMessage(aiMessage)
                     .requestId(requestId)
                     .timestamp(System.currentTimeMillis())
-                    .metadata(request.getMetadata())
                     .build();
 
         } catch (Exception e) {

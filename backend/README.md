@@ -2,6 +2,42 @@
 
 Medical testing AI chat application where doctors practice diagnostics. The AI emulates a patient, and the doctor must reach a correct diagnosis within 10 messages.
 
+## Project Structure
+
+```text
+backend/
+├── src/main/java/ru/medmentor/
+│   ├── config/              # Spring configuration (security, AI, websocket, properties)
+│   ├── controller/          # REST/WebSocket controllers (simulation, auth, RAG, etc.)
+│   ├── dto/                 # Request/response DTOs
+│   ├── model/               # JPA entities + domain models
+│   ├── repository/          # Spring Data repositories
+│   └── service/             # Business logic, AI orchestration, streaming, RAG pipeline
+├── src/main/resources/
+│   ├── application.properties
+│   ├── prompts/             # Prompt templates (patient role, opening, score review)
+│   └── schema.sql
+├── src/test/                # Unit + web-layer tests
+├── build.gradle
+└── README.md
+```
+
+### RAG Paths in Backend
+
+- `src/main/java/ru/medmentor/service/RagIngestionService.java`  
+  Startup/scheduled/manual sync orchestration.
+- `src/main/java/ru/medmentor/service/RagSourceParserService.java`  
+  File parsing for supported source formats.
+- `src/main/java/ru/medmentor/service/RagChunkingService.java`  
+  Chunk creation before embedding.
+- `src/main/java/ru/medmentor/service/RagSearchService.java`  
+  Similarity search + prompt context building.
+- `src/main/java/ru/medmentor/controller/RagController.java`  
+  Authenticated RAG API endpoints.
+- `src/main/java/ru/medmentor/model/RagSourceFile.java` and
+  `src/main/java/ru/medmentor/repository/RagSourceFileRepository.java`  
+  Incremental indexing state storage.
+
 ## Current Status
 
 Core simulation backend is implemented, including:
@@ -36,9 +72,9 @@ cp .env.example .env
 # Then edit .env and add your actual API key
 ```
 
-The same `.env` file also carries the planned single-user local bootstrap values:
+The same `.env` file also carries single-user local bootstrap values:
 `MEDMENTOR_DEFAULT_USERNAME`, `MEDMENTOR_DEFAULT_PASSWORD`, and
-`MEDMENTOR_DEFAULT_DISPLAY_NAME`. Once Task 2 lands, startup should create the
+`MEDMENTOR_DEFAULT_DISPLAY_NAME`. Startup creates or reuses the
 default local user if it does not exist yet, or load the existing one if it was
 already bootstrapped in the database.
 
@@ -140,8 +176,7 @@ Send a message to the AI patient simulator and receive a complete response.
 curl -X POST http://localhost:8080/api/ai \
   -H "Content-Type: application/json" \
   -d '{
-    "userMessage": "What symptoms are you experiencing?",
-    "metadata": {}
+    "userMessage": "What symptoms are you experiencing?"
   }'
 ```
 
@@ -150,8 +185,7 @@ curl -X POST http://localhost:8080/api/ai \
 {
   "aiMessage": "I've been feeling tired and have a persistent cough for the past week...",
   "requestId": "uuid-here",
-  "timestamp": 1234567890,
-  "metadata": {}
+  "timestamp": 1234567890
 }
 ```
 
@@ -176,8 +210,7 @@ The WebSocket endpoint provides real-time streaming of AI responses using STOMP 
 ```json
 {
   "conversationId": "optional-conversation-id",
-  "userMessage": "What symptoms are you experiencing?",
-  "metadata": {}
+  "userMessage": "What symptoms are you experiencing?"
 }
 ```
 
@@ -236,8 +269,7 @@ function sendMessage(text) {
     destination: '/app/ai/chat',
     body: JSON.stringify({
       conversationId: conversationId,
-      userMessage: text,
-      metadata: {}
+      userMessage: text
     })
   });
 }

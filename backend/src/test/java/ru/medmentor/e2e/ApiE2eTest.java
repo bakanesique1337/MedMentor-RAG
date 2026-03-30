@@ -28,7 +28,6 @@ import ru.medmentor.model.UserAccount;
 import ru.medmentor.service.SimulationService;
 import ru.medmentor.service.UserAccountService;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -106,11 +105,11 @@ class ApiE2eTest {
         ));
         when(simulationService.getStatsOverview("doctor")).thenReturn(new SimulationStatsOverviewDto(
                 2,
-                new BigDecimal("0.80"),
-                new BigDecimal("0.70"),
-                new BigDecimal("0.75"),
-                new BigDecimal("0.85"),
-                new BigDecimal("0.50")
+                0.80,
+                0.70,
+                0.75,
+                0.85,
+                0.50
         ));
 
         mockMvc.perform(get("/api/settings").session(session))

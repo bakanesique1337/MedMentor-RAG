@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import ru.medmentor.dto.ActiveSimulationDto;
-import ru.medmentor.dto.ResultDto;
 import ru.medmentor.dto.SimulationCommandResponseDto;
 import ru.medmentor.dto.SimulationDiagnosisRequestDto;
 import ru.medmentor.dto.SimulationMessageRequestDto;
@@ -47,11 +46,6 @@ public class SimulationController {
         return simulationService.sendMessage(authentication.getName(), sessionId, request.content());
     }
 
-    @PostMapping("/{sessionId}/finish-examination")
-    public SimulationSessionDto finishExamination(Authentication authentication, @PathVariable Long sessionId) {
-        return simulationService.finishExamination(authentication.getName(), sessionId);
-    }
-
     @PostMapping("/{sessionId}/diagnose")
     public SimulationSessionDto diagnose(
             Authentication authentication,
@@ -68,11 +62,6 @@ public class SimulationController {
             @RequestParam(defaultValue = "false") boolean retryOpening
     ) {
         return simulationService.getSession(authentication.getName(), sessionId, retryOpening);
-    }
-
-    @PostMapping("/{sessionId}/score")
-    public ResultDto score(Authentication authentication, @PathVariable Long sessionId) {
-        return simulationService.scoreSession(authentication.getName(), sessionId);
     }
 
     @GetMapping("/active")

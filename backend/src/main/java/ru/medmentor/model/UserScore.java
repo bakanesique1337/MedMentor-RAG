@@ -16,7 +16,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -36,20 +35,20 @@ public class UserScore {
     @JoinColumn(name = "session_id", nullable = false, unique = true)
     private SimulationSession session;
 
-    @Column(nullable = false, precision = 3, scale = 2)
-    private BigDecimal politeness;
+    @Column(nullable = false)
+    private Double politeness;
 
-    @Column(name = "questioning_structure", nullable = false, precision = 3, scale = 2)
-    private BigDecimal questioningStructure;
+    @Column(name = "questioning_structure", nullable = false)
+    private Double questioningStructure;
 
-    @Column(nullable = false, precision = 3, scale = 2)
-    private BigDecimal thoroughness;
+    @Column(nullable = false)
+    private Double thoroughness;
 
-    @Column(nullable = false, precision = 3, scale = 2)
-    private BigDecimal empathy;
+    @Column(nullable = false)
+    private Double empathy;
 
-    @Column(name = "diagnosis_correct", nullable = false, precision = 3, scale = 2)
-    private BigDecimal diagnosisCorrect;
+    @Column(name = "diagnosis_correct", nullable = false)
+    private Double diagnosisCorrect;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
