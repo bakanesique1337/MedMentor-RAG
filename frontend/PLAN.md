@@ -55,13 +55,87 @@ Feature composables use a shared `useFetch` instance created via `createFetch` f
 Each feature composable (`useAuthApi`, `useCasesApi`, `useSimulationApi`, `useProfileApi`)
 wraps calls from this shared instance. The shared instance is defined once in `composables/useApi.ts`.
 
+### Backend Contract Alignment
+
+Frontend MVP must follow the current backend contract exactly.
+Do not design against earlier REST assumptions.
+
+Authenticated REST endpoints used by MVP:
+
+- `POST /api/auth/login`
+- `POST /api/auth/logout`
+- `GET /api/auth/me`
+- `GET /api/cases`
+- `GET /api/simulations/active`
+- `POST /api/simulations/start`
+- `GET /api/simulations/{sessionId}`
+- `POST /api/simulations/{sessionId}/message`
+- `POST /api/simulations/{sessionId}/diagnose`
+- `GET /api/settings`
+- `PUT /api/settings`
+- `GET /api/history`
+- `GET /api/history/{sessionId}`
+- `GET /api/stats/overview`
+
+Backend endpoints under `/api/rag/*` are debug/testing endpoints only.
+They are not part of MVP frontend scope.
+
+### Simulation Lifecycle Contract
+
+The simulation flow is stateful and not a single synchronous request/response loop.
+Frontend must model backend lifecycle explicitly.
+
+Session state values:
+
+- `CASE_STARTED`
+- `IN_PROGRESS`
+- `DIAGNOSIS_SELECT`
+- `SCORING`
+- `COMPLETED`
+
+Opening status values:
+
+- `OPENING_PENDING`
+- `OPENING_STREAMING`
+- `OPENING_READY`
+- `OPENING_FAILED`
+
+Important behavior:
+
+- starting a session returns `OPENING_STARTED`, not a ready-to-chat session,
+- opening patient message is generated asynchronously,
+- chat input must stay disabled until `openingStatus === "OPENING_READY"` and session state allows messaging,
+- if opening generation fails, chat page must offer retry by reloading the session with `retryOpening=true`,
+- backend allows only one unfinished session per user; starting another returns conflict.
+
+### Streaming Strategy: VueUse `useWebSocket`
+
+Chat streaming uses backend WebSocket/STOMP infrastructure.
+Frontend implementation should use VueUse `useWebSocket` as the transport primitive.
+
+MVP scope for chat UX:
+
+- use REST for authenticated state-changing commands:
+  `POST /api/simulations/start`,
+  `POST /api/simulations/{sessionId}/message`,
+  `POST /api/simulations/{sessionId}/diagnose`,
+  `GET /api/simulations/{sessionId}`,
+- use WebSocket connection for receiving streamed AI chunks for simulation opening and patient replies,
+- keep REST session model and route model unchanged.
+
+Implementation note:
+
+- backend exposes STOMP/SockJS endpoint at `/ws` and publishes simulation chunks to `/topic/simulations/{sessionId}`,
+- frontend should encapsulate socket connection details in a dedicated composable,
+- if direct STOMP integration becomes necessary, keep it behind that composable so page components still consume a simple streaming API.
+
 ### Chat URL And Session Start Flow
 
 ```
 User selects a case on /cases
-  -> POST /api/simulations (start with caseId)
+  -> POST /api/simulations/start (start with caseId)
   -> on success: router.push({ name: ROUTES.CHAT, params: { sessionId } })
-  -> /chat/:sessionId renders session by id
+  -> /chat/:sessionId loads session via id and waits for opening stream / opening completion
 
 User returns to /cases with an active session
   -> cases page calls GET /api/simulations/active on mount
@@ -70,6 +144,7 @@ User returns to /cases with an active session
 
 User refreshes /chat/:sessionId
   -> chat page loads session via GET /api/simulations/:sessionId
+  -> if opening failed: user can trigger GET /api/simulations/:sessionId?retryOpening=true
 ```
 
 No `/chat/active` route. Session ID is always explicit in the URL.
@@ -90,7 +165,7 @@ No `/chat/active` route. Session ID is always explicit in the URL.
 2. Configure base app shell and router map using nested layout routes (see Architectural Decisions).
 3. Add shared constants for API base URL and route names.
 4. Define strict TypeScript domain models for auth, case cards, simulation session, messages,
-   stats, and API errors. Remove all `any` from existing type files.
+   stats, websocket chunks, and API errors. Remove all `any` from existing type files.
 
 Deliverables:
 
@@ -166,13 +241,19 @@ Deliverables:
 - `useSimulationApi` (`start`, `active`, `getSession`, `sendMessage`, `diagnose`),
 - `useProfileApi` (`settings`, `updateSettings`, `history`, `stats`).
 
-3. Add request state patterns:
+3. Create streaming composables around VueUse `useWebSocket`:
+
+- `useSimulationSocket` for connection lifecycle and chunk subscription by `sessionId`,
+- typed chunk parsing for `chunk`, `done`, `error`,
+- reconnect / stale-session handling appropriate for chat page recovery.
+
+4. Add request state patterns:
 
 - `isLoading`,
 - `error`,
 - optimistic/disabled states where needed.
 
-4. Add route guard strategy:
+5. Add route guard strategy:
 
 - guard attached to AppLayout parent route,
 - calls `useAuthApi.me()` on bootstrap,
@@ -255,7 +336,9 @@ Deliverables:
 3. Card UI includes title, category, difficulty, tags, patient preview.
 4. On mount: call `GET /api/simulations/active`. If active session exists, show
    "Resume session" CTA on the active case card.
-5. Start action: `POST /api/simulations` with `caseId`, then
+5. If backend returns conflict on start because an unfinished session already exists,
+   surface a clear resume-focused action instead of generic error text.
+6. Start action: `POST /api/simulations/start` with `caseId`, then
    `router.push({ name: ROUTES.CHAT, params: { sessionId } })`.
 
 ### 7.3 Login Page
@@ -280,7 +363,7 @@ Deliverables:
 
 4. Diagnosis modal:
 
-- input selected diagnosis,
+- input selected diagnosis from backend-provided `diagnosisOptions`,
 - submit to `/api/simulations/{id}/diagnose`.
 
 5. Session completion view:
@@ -288,6 +371,30 @@ Deliverables:
 - score metrics,
 - AI summary/feedback (`result.summary`),
 - option to return to cases.
+
+6. Opening lifecycle handling:
+
+- initial page load always fetches `GET /api/simulations/{sessionId}`,
+- if `openingStatus` is pending/streaming, show non-interactive loading state in timeline,
+- consume streamed opening chunks over WebSocket and append them progressively,
+- if `openingStatus === OPENING_FAILED`, show retry CTA and call
+  `GET /api/simulations/{sessionId}?retryOpening=true`,
+- enable chat input only after `openingStatus === OPENING_READY` and `state === IN_PROGRESS`.
+
+7. Message lifecycle handling:
+
+- sending a doctor message remains REST-based via `POST /api/simulations/{id}/message`,
+- patient reply is streamed over WebSocket into the active timeline item,
+- use `streamingStatus.inFlight` and `streamingStatus.type` from session payload
+  to restore in-progress UI after refresh,
+- disable input while a message response is in flight.
+
+8. Backend rule handling:
+
+- max 10 doctor messages per session,
+- backend may reject sends/diagnosis while AI response is already in flight,
+- backend may reject sends before opening is ready,
+- frontend must map `409` conflict responses to clear stateful UI messages, not generic toast-only failures.
 
 ### 7.5 Session State Recovery
 
@@ -297,7 +404,14 @@ Two scenarios, both handled without a dedicated route:
    If active: show "Resume" CTA. User explicitly navigates to `/chat/:sessionId`.
 2. **Refresh recovery**: On mount of `/chat/:sessionId`, load full session state
    via `GET /api/simulations/:sessionId`. Chat page must handle both
-   in-progress and completed session states from this single endpoint.
+   opening, in-progress, scoring, and completed session states from this single endpoint.
+
+Recovery details:
+
+- if `streamingStatus.inFlight === true`, rebuild the transient streaming UI after refresh,
+- if `streamingStatus.type === "opening"`, restore opening loader / chunk target,
+- if `streamingStatus.type === "message"`, restore pending patient reply state,
+- after reconnect or stream completion, refresh canonical session state from REST when needed.
 
 Deliverables:
 
@@ -374,18 +488,24 @@ Required frontend changes:
 3. Add save UX states (disable submit while pending, show success/error message).
 4. Ensure profile route is auth-protected (covered by AppLayout guard).
 
-## Feature Spec: WebSocket Chat Streaming (Deferred)
+## Feature Spec: Simulation Streaming
 
-Backend supports streaming via WebSocket: `/app/ai/chat` -> `/topic/ai/{conversationId}`.
-MVP ships on REST. WebSocket migration is a post-MVP feature for UX improvement.
+Simulation chat is not fully REST-only.
+MVP frontend should support server-pushed streaming for opening and patient reply rendering.
 
-Scope when implemented:
+Required behavior:
 
-- Replace `POST /api/simulations/{id}/message` polling with WS streaming.
-- Stream AI tokens into chat timeline progressively.
-- No changes to URL scheme, session model, or component structure required.
+1. Establish a WebSocket connection through VueUse `useWebSocket`.
+2. Subscribe / listen for simulation chunks associated with the current `sessionId`.
+3. Handle chunk types:
 
-Deliverables: improved perceived response time; no structural changes.
+- `chunk`: append content to the active streaming bubble,
+- `done`: finalize the active streaming bubble and clear pending state,
+- `error`: stop pending state, surface actionable error, allow session refresh.
+
+4. Keep transport concerns outside page components in a dedicated composable.
+5. Maintain REST as the source of truth for initial session fetch, mutation commands,
+   and recovery after reconnect or stream errors.
 
 ## Cross-Cutting Notes
 
@@ -393,6 +513,12 @@ Deliverables: improved perceived response time; no structural changes.
 - `/api/cases` currently supports optional server filter by `category`, but requested MVP
   includes client-side filtering.
 - For auth requests and all protected API calls, `credentials: "include"` is mandatory.
+- Backend maps validation errors to `400`, domain/state conflicts to `409`, unauthenticated
+  access to `401`, and forbidden access to `403`; frontend error normalization should preserve
+  that distinction for UX decisions.
+- `SimulationSessionDto` is the canonical session payload and includes `openingStatus`,
+  `diagnosisOptions`, `selectedDiagnosis`, `messages`, `streamingStatus`, `score`, `result`,
+  `createdAt`, and `updatedAt`.
 - Layout and URL scheme are locked in Architectural Decisions above. Do not introduce
   `/chat/active` as a route or any implicit session resolution inside the chat page.
 

@@ -1,3 +1,5 @@
 <template>
-    <RouterView />
+    <div data-layout="app">
+        <RouterView />
+    </div>
 </template>

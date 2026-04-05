@@ -6,3 +6,5 @@ export const ROUTES = {
     CHAT: 'chat',
     NOT_FOUND: 'not-found',
 } as const
+
+export type RouteName = (typeof ROUTES)[keyof typeof ROUTES]

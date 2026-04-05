@@ -13,8 +13,13 @@ next phases can build on predictable contracts.
 
 - Master roadmap: `PLAN.md` (`P1`, `P1.1`, `P1.2`, `P1.3`, `P1.4`).
 - Architectural decisions: `PLAN.md` section "Architectural Decisions (Locked)".
+- Backend contract notes in `PLAN.md` sections:
+  "Backend Contract Alignment",
+  "Simulation Lifecycle Contract",
+  "Streaming Strategy: VueUse `useWebSocket`".
 - Project standards: `CLAUDE.md` and `.claude/rules/*`.
 - Backend API DTO/contracts in `../backend/src/main/java/ru/medmentor/dto`.
+- Backend enums relevant for frontend state handling in `../backend/src/main/java/ru/medmentor/model`.
 
 ## Tasks
 
@@ -83,6 +88,13 @@ Individual child routes (`/cases`, `/profile`, `/chat`) do NOT each define their
 - `/api/simulations/active` is called from the cases page only, not from the chat page.
 - On chat page mount: load session state via `GET /api/simulations/:sessionId`.
 
+**Backend route contract to preserve in frontend constants/types:**
+
+- session start is `POST /api/simulations/start`, not `POST /api/simulations`,
+- profile endpoints are `GET/PUT /api/settings`, `GET /api/history`,
+  `GET /api/history/{sessionId}`, `GET /api/stats/overview`,
+- `/api/rag/*` endpoints are debug/testing only and excluded from MVP route/composable scope.
+
 **Placeholder views:** all views can be empty `<template><div /></template>` stubs at this stage.
 The goal is a navigable skeleton, not implemented pages.
 
@@ -121,9 +133,8 @@ Goal: eliminate magic strings from routing and API bootstrap.
 **First: clean up existing violations in `src/types/index.ts`:**
 
 - Remove `DynamicObject` interface — it uses `any` and is forbidden by rules.
-- Remove or replace `AIRequest` / `AIResponse` if they are starter artifacts not mapping
-  to actual backend DTOs. If they do map to real endpoints, retype with `unknown` and
-  add type guards.
+- Remove or isolate legacy `AIRequest` / `AIResponse` types if they target old non-MVP AI endpoints.
+  Do not let legacy chat types define MVP simulation contracts.
 
 **Add strict TypeScript models:**
 
@@ -141,9 +152,23 @@ Simulation entities:
 - `SimulationSession` — full session model
 - `SimulationCommandResponse` — response to start/message/diagnose commands
 - `ConversationMessage` — single message with role, content, timestamp
+- `SimulationState` — mirror backend enum
+- `OpeningStatus` — mirror backend enum
+- `StreamingStatus` — `{ inFlight: boolean; type: "opening" | "message" | "idle" }`
 - `Score` — scoring breakdown
 - `Result` — completion result with summary
 - `ActiveSimulation` — response from `GET /api/simulations/active` (may be null/empty)
+- `StreamChunk` — websocket chunk payload for simulation streaming
+- `StreamChunkType` — union for `chunk | done | error`
+
+Simulation contract notes:
+
+- `SimulationSession` must include `openingStatus`, `diagnosisOptions`, `selectedDiagnosis`,
+  `messages`, `streamingStatus`, `score`, `result`, `createdAt`, and `updatedAt`.
+- `diagnosisOptions` comes from backend session payload and is the only valid source
+  for diagnosis selection UI.
+- `streamingStatus` is needed in P7 recovery flows and must be typed in P1, even if
+  socket behavior is implemented later in P4/P7.
 
 Profile and settings:
 
@@ -168,6 +193,13 @@ Add type guards where response shape may vary:
 
 - `isApiError(value: unknown): value is ApiError`
 - `isActiveSimulation(value: unknown): value is ActiveSimulation`
+- `isStreamChunk(value: unknown): value is StreamChunk`
+
+Error normalization notes:
+
+- frontend should preserve backend distinction between `400` validation errors,
+  `409` domain/state conflicts, `401` unauthenticated, and `403` forbidden,
+- include support for optional `fieldErrors` on validation responses.
 
 Goal: compile-time safe contracts for all upcoming API/composable work.
 
@@ -181,6 +213,7 @@ Goal: compile-time safe contracts for all upcoming API/composable work.
 - [ ] All route names reference `ROUTES` constants — no hardcoded strings.
 - [ ] `API_BASE_URL` comes from env, not hardcoded.
 - [ ] Type layer covers all required backend contracts for MVP.
+- [ ] Type layer covers simulation lifecycle and streaming payloads required by MVP.
 - [ ] `src/types/index.ts` contains no `any`.
 - [ ] `mergeSettings` utility exists for safe settings pass-through.
 - [ ] No `any`, no forbidden patterns from repo rules.
@@ -195,6 +228,10 @@ Goal: compile-time safe contracts for all upcoming API/composable work.
 **Risk: backend DTO changes during implementation.**
 Mitigation: keep mapping layer thin and centralized in `types/` and adapter utils.
 All DTO field names must exactly mirror Java class field names — no aliasing in types.
+
+**Risk: frontend types cover only REST happy-path and miss streaming/state payloads.**
+Mitigation: treat backend enums and websocket chunk contracts as part of P1 typing scope,
+not as optional follow-up typing.
 
 **Risk: accidental store overuse.**
 Mitigation: keep local state in views/composables; use Pinia only for global auth/session.
@@ -228,4 +265,5 @@ Mitigation: strategy is locked (nested routes). `App.vue` must not contain any
 - [ ] `P1.3` shared constants completed.
 - [ ] `P1.2` app shell and nested route map completed.
 - [ ] `P1.4` domain typing completed (including `any` removal).
+- [ ] Streaming-related types and lifecycle enums completed.
 - [ ] `P1` DoD verification completed.
