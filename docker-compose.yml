@@ -5,9 +5,9 @@ services:
     image: pgvector/pgvector:pg16
     container_name: medmentor-postgres
     environment:
-      POSTGRES_DB: medmentor
-      POSTGRES_USER: medmentor
-      POSTGRES_PASSWORD: medmentor123
+      POSTGRES_DB: ${MEDMENTOR_POSTGRES_DB:-medmentor}
+      POSTGRES_USER: ${MEDMENTOR_POSTGRES_USER:-medmentor}
+      POSTGRES_PASSWORD: ${MEDMENTOR_POSTGRES_PASSWORD:-medmentor123}
     ports:
       - "5432:5432"
     volumes:
@@ -42,14 +42,15 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: medmentor-backend
+    env_file:
+      - ./.env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-pgvector:5432/medmentor
-      SPRING_DATASOURCE_USERNAME: medmentor
-      SPRING_DATASOURCE_PASSWORD: medmentor123
-      SPRING_AI_OLLAMA_BASE_URL: http://ollama:11434
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-pgvector:5432/${MEDMENTOR_POSTGRES_DB:-medmentor}
+      SPRING_DATASOURCE_USERNAME: ${MEDMENTOR_POSTGRES_USER:-medmentor}
+      SPRING_DATASOURCE_PASSWORD: ${MEDMENTOR_POSTGRES_PASSWORD:-medmentor123}
+      SPRING_AI_OLLAMA_BASE_URL: ${SPRING_AI_OLLAMA_BASE_URL:-http://ollama:11434}
       MEDMENTOR_CASES_PATH: /cases
       MEDMENTOR_RAG_SOURCE_PATH: /rag-data
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
       LOG_DIR: /app/logs
     ports:
       - "8080:8080"

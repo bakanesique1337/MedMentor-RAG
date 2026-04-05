@@ -72,6 +72,10 @@ cp .env.example .env
 # Then edit .env and add your actual API key
 ```
 
+`docker compose` uses this root `.env` file for both `postgres-pgvector` and
+`backend` containers, so DB credentials, bootstrap user credentials, and API keys
+come from one place in local Docker runs.
+
 The same `.env` file also carries single-user local bootstrap values:
 `MEDMENTOR_DEFAULT_USERNAME`, `MEDMENTOR_DEFAULT_PASSWORD`, and
 `MEDMENTOR_DEFAULT_DISPLAY_NAME`. Startup creates or reuses the
@@ -100,7 +104,7 @@ cp .env.example .env
 
 3. Start the services:
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 This will start:
@@ -149,7 +153,7 @@ If you prefer to run the backend locally while using PostgreSQL in Docker:
 
 1. Start only PostgreSQL:
 ```bash
-docker-compose up postgres
+docker compose up -d postgres-pgvector
 ```
 
 2. Build and run the backend:
@@ -345,9 +349,9 @@ Key configuration properties in `application.properties`:
 
 ### Database
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/medmentor
-spring.datasource.username=medmentor
-spring.datasource.password=medmentor123
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/medmentor}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:medmentor}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:medmentor123}
 ```
 
 ### AI Model (Gemini)
@@ -360,7 +364,7 @@ spring.ai.google.genai.chat.options.max-output-tokens=2048
 
 ### Embeddings (Ollama)
 ```properties
-spring.ai.ollama.base-url=http://localhost:11434
+spring.ai.ollama.base-url=${SPRING_AI_OLLAMA_BASE_URL:http://localhost:11434}
 spring.ai.ollama.embedding.options.model=nomic-embed-text
 spring.ai.ollama.init.pull-model-strategy=when_missing
 ```
@@ -429,12 +433,12 @@ logging.level.org.springframework.ai=DEBUG
 
 1. Ensure PostgreSQL is running:
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 2. Check database logs:
 ```bash
-docker-compose logs postgres
+docker compose logs postgres-pgvector
 ```
 
 ### AI API Issues
@@ -448,7 +452,7 @@ docker-compose logs postgres
 
 1. Ensure Ollama container is running:
 ```bash
-docker-compose logs ollama
+docker compose logs ollama
 ```
 
 2. Verify Ollama is accessible:
