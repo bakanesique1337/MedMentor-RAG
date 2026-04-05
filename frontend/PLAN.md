@@ -127,7 +127,8 @@ Implementation note:
 
 - backend exposes STOMP/SockJS endpoint at `/ws` and publishes simulation chunks to `/topic/simulations/{sessionId}`,
 - frontend should encapsulate socket connection details in a dedicated composable,
-- if direct STOMP integration becomes necessary, keep it behind that composable so page components still consume a simple streaming API.
+- if direct STOMP integration becomes necessary, keep it behind that composable so page components still consume a
+  simple streaming API.
 
 ### Chat URL And Session Start Flow
 
@@ -157,9 +158,10 @@ No `/chat/active` route. Session ID is always explicit in the URL.
 - store deep implementation details per phase in separate files (example: `plans/phase-1.md`, `plans/phase-2.md`).
 - When a phase grows, move details out of `PLAN.md` instead of expanding one long file.
 - Phase status:
-  - `P1`: completed
-  - `P2`: planning in progress
-- Current detailed phase file: `plans/phase-2.md`.
+    - `P1`: completed
+    - `P2`: completed
+    - `P3`: completed
+- Current detailed phase file: `plans/phase-3.md`.
 
 ## Phase 1. Foundation And Architecture
 
@@ -555,34 +557,36 @@ No blocking questions for MVP planning at this stage.
   Goal: typed DTO mirrors for auth, cases, simulation, stats, settings, errors.
   Remove `any` from existing `src/types/index.ts`.
 
-- [ ] `P2` Tailwind-based design system.
+- [x] `P2` Tailwind-based design system.
   Goal: tokenized, consistent, light neutral + green visual language.
 
-- [ ] `P2.1` Create color tokens (`base`, `primary`, `secondary`, `tertiary`, `success`, `info`, `warning`, `error`).
+- [x] `P2.1` Create color tokens (`base`, `primary`, `secondary`, `tertiary`, `success`, `info`, `warning`, `error`).
   Goal: semantic palette mapped to Tailwind utilities.
 
-- [ ] `P2.2` Define semantic surface/text/border/interactive tokens.
+- [x] `P2.2` Define semantic surface/text/border/interactive tokens.
   Goal: consistent UI states across all components.
 
-- [ ] `P2.3` Define spacing/typography/radius/shadow scales.
+- [x] `P2.3` Define spacing/typography/radius/shadow scales.
   Goal: rem-only sizing with `0.8rem` base step and even-scale rhythm.
 
-- [ ] `P2.4` Add accessibility baseline.
+- [x] `P2.4` Add accessibility baseline.
   Goal: focus-visible, keyboard states, and sufficient contrast.
 
-- [ ] `P3` UI kit implementation.
+- [x] `P3` UI kit implementation.
   Goal: reusable component set covering MVP needs without one-off UI.
 
-- [ ] `P3.1` Implement form controls (`VInput`, `VTextarea`, `VSelect`, `VCheckbox`, `VField`).
+- [x] `P3.1` Implement form controls (`VInput`, `VTextarea`, `VSelect`, `VCheckbox`, `VField`).
   Goal: unified form API with validation and error rendering.
 
-- [ ] `P3.2` Implement actions/surfaces (`VButton`, `VCard`, `VBadge`, `VTag`, `VAvatar`).
+- [x] `P3.2` Implement actions/surfaces (`VButton`, `VCard`, `VBadge`, `VTag`, `VAvatar`).
   Goal: consistent visual and interactive behavior.
 
-- [ ] `P3.3` Implement overlays (`VModal`, `VDrawer`, `VDropdown`, `VTooltip`).
+- [x] `P3.3` Implement overlays (`VModal`, `VDrawer`, `VDropdown`, `VTooltip`).
   Goal: support chat actions and diagnosis flow.
+  Note: `VModal`, `VDropdown`, and `VTooltip` are implemented. `VDrawer` is explicitly deferred until
+  `P6`/`P7` introduce a real mobile navigation or side-panel requirement.
 
-- [ ] `P3.4` Implement utility states (`VSpinner`, `VSkeleton`, `VEmptyState`, `VAlert`).
+- [x] `P3.4` Implement utility states (`VSpinner`, `VSkeleton`, `VEmptyState`, `VAlert`).
   Goal: complete loading/empty/error UX.
 
 - [ ] `P4` Data layer via composables and `useFetch`.
