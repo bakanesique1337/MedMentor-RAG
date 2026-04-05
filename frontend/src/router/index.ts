@@ -1,21 +1,53 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+
+import { ROUTES } from '@/constants/routes'
+import { authGuard } from '@/router/guards/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
+      component: () => import('@/components/layout/PublicLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: ROUTES.HOME,
+          component: () => import('@/views/HomeView.vue'),
+        },
+        {
+          path: 'login',
+          name: ROUTES.LOGIN,
+          component: () => import('@/views/LoginView.vue'),
+        },
+      ],
     },
     {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue'),
+      path: '/',
+      component: () => import('@/components/layout/AppLayout.vue'),
+      beforeEnter: authGuard,
+      children: [
+        {
+          path: 'cases',
+          name: ROUTES.CASES,
+          component: () => import('@/views/CasesView.vue'),
+        },
+        {
+          path: 'profile',
+          name: ROUTES.PROFILE,
+          component: () => import('@/views/ProfileView.vue'),
+        },
+        {
+          path: 'chat/:sessionId',
+          name: ROUTES.CHAT,
+          component: () => import('@/views/ChatView.vue'),
+        },
+      ],
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: ROUTES.NOT_FOUND,
+      component: () => import('@/views/NotFoundView.vue'),
     },
   ],
 })
