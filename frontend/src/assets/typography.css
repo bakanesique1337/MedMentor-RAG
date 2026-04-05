@@ -1,1 +1,68 @@
+@layer base {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        color: var(--text-primary);
+        font-weight: var(--font-weight-semibold);
+        letter-spacing: -0.02em;
+        text-wrap: balance;
+    }
 
+    h1 {
+        font-size: var(--text-h1);
+        line-height: var(--leading-tight);
+    }
+
+    h2 {
+        font-size: var(--text-h2);
+        line-height: var(--leading-tight);
+    }
+
+    h3 {
+        font-size: var(--text-h3);
+        line-height: var(--leading-tight);
+    }
+
+    p,
+    li,
+    dd,
+    dt {
+        max-width: var(--prose-width);
+    }
+
+    p,
+    li {
+        color: var(--text-secondary);
+        font-size: var(--text-body);
+        line-height: var(--leading-relaxed);
+    }
+
+    small {
+        color: var(--text-tertiary);
+        font-size: var(--text-caption);
+        line-height: 1.4;
+    }
+
+    label,
+    th {
+        font-size: var(--text-label);
+        font-weight: var(--font-weight-medium);
+        line-height: 1.35;
+    }
+
+    code,
+    kbd,
+    samp,
+    pre {
+        font-family: var(--font-mono), monospace;
+        font-size: var(--text-mono);
+    }
+
+    pre {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+}

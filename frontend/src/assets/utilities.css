@@ -1,0 +1,49 @@
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@layer utilities {
+    .focus-ring {
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        transition:
+            outline-color var(--duration-fast) var(--ease-default),
+            box-shadow var(--duration-fast) var(--ease-default);
+    }
+
+    .focus-ring:focus {
+        outline: none;
+    }
+
+    .focus-ring:focus-visible {
+        outline-color: var(--focus-ring);
+        box-shadow: 0 0 0 2px var(--focus-ring-offset), var(--shadow-focus);
+    }
+
+    .skeleton {
+        border-radius: var(--skeleton-radius);
+        background-color: var(--skeleton-base);
+        background-image: linear-gradient(
+            90deg,
+            var(--skeleton-base) 0%,
+            var(--skeleton-highlight) 50%,
+            var(--skeleton-base) 100%
+        );
+        background-size: 200% 100%;
+        animation: var(--animate-skeleton-shimmer);
+    }
+
+    .prose-measure {
+        max-width: var(--prose-width);
+    }
+
+    .tabular {
+        font-variant-numeric: tabular-nums;
+    }
+}

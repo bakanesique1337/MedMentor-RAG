@@ -6,6 +6,13 @@ export default defineConfigWithVueTs(
   pluginVue.configs['flat/recommended'],
   vueTsConfigs.recommended,
   {
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'node_modules/**',
+    ],
+  },
+  {
     linterOptions: {
       reportUnusedDisableDirectives: false,
     },

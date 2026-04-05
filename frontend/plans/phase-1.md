@@ -261,9 +261,9 @@ Mitigation: strategy is locked (nested routes). `App.vue` must not contain any
 
 ## Progress Checklist
 
-- [ ] `P1.1` structure alignment and starter artifact cleanup completed.
-- [ ] `P1.3` shared constants completed.
-- [ ] `P1.2` app shell and nested route map completed.
-- [ ] `P1.4` domain typing completed (including `any` removal).
-- [ ] Streaming-related types and lifecycle enums completed.
-- [ ] `P1` DoD verification completed.
+- [x] `P1.1` structure alignment and starter artifact cleanup completed.
+- [x] `P1.3` shared constants completed.
+- [x] `P1.2` app shell and nested route map completed.
+- [x] `P1.4` domain typing completed (including `any` removal).
+- [x] Streaming-related types and lifecycle enums completed.
+- [x] `P1` DoD verification completed.

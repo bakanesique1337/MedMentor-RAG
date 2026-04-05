@@ -156,7 +156,10 @@ No `/chat/active` route. Session ID is always explicit in the URL.
 - keep this `PLAN.md` as the master roadmap (phases, dependencies, global status),
 - store deep implementation details per phase in separate files (example: `plans/phase-1.md`, `plans/phase-2.md`).
 - When a phase grows, move details out of `PLAN.md` instead of expanding one long file.
-- Current detailed phase file: `plans/phase-1.md`.
+- Phase status:
+  - `P1`: completed
+  - `P2`: planning in progress
+- Current detailed phase file: `plans/phase-2.md`.
 
 ## Phase 1. Foundation And Architecture
 
@@ -197,10 +200,16 @@ Deliverables:
 4. Build spacing/radius/shadow/type scales:
 
 - spacing base unit `0.8rem`,
+- set root font size so `1rem = 10px` for layout math convenience,
 - scale values strictly aligned with even step system,
 - rem-only dimensions (except `1px` border).
 
-5. Add accessibility baseline: color contrast, focus-visible styles, keyboard states.
+5. Add baseline reset strategy:
+
+- use Tailwind preflight/reset if available in the active Tailwind setup,
+- add custom reset styles only for gaps not covered by Tailwind preflight.
+
+6. Add accessibility baseline: color contrast, focus-visible styles, keyboard states.
 
 Deliverables:
 
@@ -528,21 +537,21 @@ No blocking questions for MVP planning at this stage.
 
 ## Claude Progress Checklist
 
-- [ ] `P1` Foundation and architecture.
+- [x] `P1` Foundation and architecture.
   Goal: establish target folder structure, router map, shared constants, and strict domain types.
 
-- [ ] `P1.1` Define/align project structure in `src`.
+- [x] `P1.1` Define/align project structure in `src`.
   Goal: clear separation for `components`, `views`, `composables`, `services`, `types`, `utils`,
   `stores`, `constants`. Remove Vue starter artifacts.
 
-- [ ] `P1.2` Configure app shell and routes.
+- [x] `P1.2` Configure app shell and routes.
   Goal: nested layout routes skeleton (PublicLayout / AppLayout) for all MVP pages.
   Includes dedicated `404` route and error page.
 
-- [ ] `P1.3` Add global constants.
+- [x] `P1.3` Add global constants.
   Goal: single source for API base URL and route names. Done before routes are wired.
 
-- [ ] `P1.4` Add TypeScript domain contracts.
+- [x] `P1.4` Add TypeScript domain contracts.
   Goal: typed DTO mirrors for auth, cases, simulation, stats, settings, errors.
   Remove `any` from existing `src/types/index.ts`.
 
