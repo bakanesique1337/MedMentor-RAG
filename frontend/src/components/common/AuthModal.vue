@@ -2,10 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { VAlert, VButton, VInput, VModal, } from '@/components/ui'
-import { useAuthApi } from '@/composables/useAuthApi'
+import { VAlert, VButton, VInput, VModal } from '@/components/ui'
 import { ROUTES } from '@/constants/routes'
 import { useAuthGateStore } from '@/stores/authGate'
+import { isApiError } from '@/types'
 
 const emit = defineEmits<{
     (event: 'close'): void
@@ -13,12 +13,20 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const authGate = useAuthGateStore()
-const {login} = useAuthApi()
+
+// ---------------------------------------------------------------------------
+// Form state
+// ---------------------------------------------------------------------------
 
 const username = ref('')
 const password = ref('')
+const usernameError = ref('')
+const passwordError = ref('')
 const formError = ref('')
-const isSubmitting = ref(false)
+
+// ---------------------------------------------------------------------------
+// Modal binding
+// ---------------------------------------------------------------------------
 
 const isOpen = computed({
     get: () => authGate.isAuthModalOpen,
@@ -29,8 +37,9 @@ const isOpen = computed({
     },
 })
 
-const hasRedirectTarget = computed(() => authGate.redirectTarget !== null)
+const hasRedirectContext = computed(() => authGate.redirectTarget !== null)
 
+// Reset form when modal opens; clear stale errors only when it closes
 watch(isOpen, (value) => {
     if (value) {
         return
@@ -38,9 +47,60 @@ watch(isOpen, (value) => {
 
     username.value = ''
     password.value = ''
-    formError.value = ''
-    isSubmitting.value = false
+    clearErrors()
 })
+
+// ---------------------------------------------------------------------------
+// Error helpers
+// ---------------------------------------------------------------------------
+
+function clearErrors(): void {
+    usernameError.value = ''
+    passwordError.value = ''
+    formError.value = ''
+}
+
+/** Applies field-level errors from a 400 response. Returns true if any field error was set. */
+function applyFieldErrors(fieldErrors: Record<string, string>): boolean {
+    usernameError.value = fieldErrors.username ?? ''
+    passwordError.value = fieldErrors.password ?? ''
+    return Boolean(usernameError.value || passwordError.value)
+}
+
+function mapApiError(err: unknown): void {
+    if (!isApiError(err)) {
+        formError.value = 'Sign-in failed. Check your credentials and try again.'
+        return
+    }
+
+    if (err.status === 401) {
+        formError.value = 'Incorrect username or password. Please try again.'
+        return
+    }
+
+    if (err.status === 400 && err.fieldErrors) {
+        if (!applyFieldErrors(err.fieldErrors)) {
+            formError.value = err.error
+        }
+        return
+    }
+
+    if (err.status === 0) {
+        formError.value = 'Network error. Check your connection and try again.'
+        return
+    }
+
+    if (err.status >= 500) {
+        formError.value = 'Server error. Please try again in a moment.'
+        return
+    }
+
+    formError.value = err.error || 'Sign-in failed. Check your credentials and try again.'
+}
+
+// ---------------------------------------------------------------------------
+// Actions
+// ---------------------------------------------------------------------------
 
 function handleClose(): void {
     authGate.closeAuthModal()
@@ -48,31 +108,32 @@ function handleClose(): void {
 }
 
 async function handleSubmit(): Promise<void> {
-    formError.value = ''
+    clearErrors()
 
-    if (username.value.trim().length === 0 || password.value.trim().length === 0) {
-        formError.value = 'Enter both username and password to continue.'
+    const trimmedUsername = username.value.trim()
+    const trimmedPassword = password.value.trim()
+
+    if (!trimmedUsername) {
+        usernameError.value = 'Username is required.'
+    }
+
+    if (!trimmedPassword) {
+        passwordError.value = 'Password is required.'
+    }
+
+    if (usernameError.value || passwordError.value) {
         return
     }
 
-    isSubmitting.value = true
-
-    const redirectTarget = authGate.redirectTarget ?? undefined
-
     try {
-        const user = await login({username: username.value, password: password.value})
+        await authGate.login({ username: trimmedUsername, password: trimmedPassword })
 
-        authGate.signIn(user)
+        const target = authGate.consumeRedirectTarget()
+        const isSafeTarget = typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')
 
-        await router.push(redirectTarget ?? {name: ROUTES.CASES})
-
-        authGate.consumeRedirectTarget()
+        await router.push(isSafeTarget ? target : { name: ROUTES.CASES })
     } catch (err: unknown) {
-        formError.value = typeof err === 'object' && err !== null && 'error' in err
-            ? String((err as { error: string }).error)
-            : 'Sign-in failed. Check your credentials and try again.'
-    } finally {
-        isSubmitting.value = false
+        mapApiError(err)
     }
 }
 </script>
@@ -80,19 +141,21 @@ async function handleSubmit(): Promise<void> {
 <template>
     <VModal
         v-model="isOpen"
-        title="Sign in to continue"
-        description="MVP uses a modal auth entry instead of a dedicated login page."
+        title="Sign in"
+        description="Sign in to access clinical cases and patient simulations."
+        fullscreen
         @close="handleClose"
     >
         <form
-            class="space-y-3"
+            class="space-y-4"
+            @keydown.enter.prevent="handleSubmit"
             @submit.prevent="handleSubmit"
         >
             <VAlert
-                v-if="hasRedirectTarget"
+                v-if="hasRedirectContext"
                 status="info"
-                title="Protected destination requested"
-                description="Complete sign-in to continue to the page you originally opened."
+                title="Sign in required"
+                description="You need to sign in to access the page you requested."
             />
 
             <VAlert
@@ -106,7 +169,10 @@ async function handleSubmit(): Promise<void> {
                 label="Username"
                 placeholder="resident"
                 autocomplete="username"
+                :error="usernameError"
+                :invalid="Boolean(usernameError)"
                 required
+                @input="usernameError = ''"
             />
 
             <VInput
@@ -115,25 +181,29 @@ async function handleSubmit(): Promise<void> {
                 label="Password"
                 placeholder="Enter password"
                 autocomplete="current-password"
+                :error="passwordError"
+                :invalid="Boolean(passwordError)"
                 required
+                @input="passwordError = ''"
             />
-        </form>
 
-        <template #footer>
-            <div class="flex flex-wrap justify-end gap-2">
+            <div class="flex flex-wrap justify-end gap-2 pt-1">
                 <VButton
                     variant="ghost"
+                    type="button"
                     @click="handleClose"
                 >
                     Cancel
                 </VButton>
+
                 <VButton
-                    :loading="isSubmitting"
-                    @click="handleSubmit"
+                    type="submit"
+                    :loading="authGate.isLoginPending"
+                    :disabled="authGate.isLoginPending"
                 >
                     Sign in
                 </VButton>
             </div>
-        </template>
+        </form>
     </VModal>
 </template>

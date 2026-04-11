@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 import {
     VAlert,
@@ -24,8 +24,14 @@ import { ROUTES } from '@/constants/routes'
 import { useAuthGateStore } from '@/stores/authGate'
 import type { SelectOption } from '@/components/ui'
 
+const route = useRoute()
 const router = useRouter()
 const authGate = useAuthGateStore()
+
+const AUTH_ERROR_COPY: Record<string, string> = {
+    network: 'Could not reach the server while checking your session. Check your connection and try again.',
+    server: 'Server error while checking your session. Please try again in a moment.',
+} as const
 
 const textValue = ref('Dr. House')
 const emailValue = ref('resident@example.com')
@@ -53,30 +59,28 @@ const options: SelectOption[] = [
     },
 ]
 
+const authErrorReason = computed(() => {
+    const reason = route.query.authError
+
+    return typeof reason === 'string' && reason in AUTH_ERROR_COPY ? reason : null
+})
+
 const authCtaLabel = computed(() => (
-    authGate.isAuthenticated ? 'Continue to cases' : 'Open auth modal'
+    authGate.isAuthenticated ? 'Continue to cases' : 'Sign in'
 ))
 
 function handlePrimaryCta(): void {
     if (authGate.isAuthenticated) {
-        router.push({
-            name: ROUTES.CASES,
-        })
+        router.push({ name: ROUTES.CASES })
         return
     }
 
     authGate.openAuthModal()
 }
 
-function handleSecondaryCta(): void {
-    if (authGate.isAuthenticated) {
-        authGate.signOut()
-        return
-    }
-
-    router.push({
-        name: ROUTES.CASES,
-    })
+async function handleSignOut(): Promise<void> {
+    await authGate.logout()
+    await router.push({ name: ROUTES.HOME })
 }
 </script>
 
@@ -97,6 +101,13 @@ function handleSecondaryCta(): void {
                     </p>
 
                     <VAlert
+                        v-if="authErrorReason"
+                        status="error"
+                        title="Session check failed"
+                        :description="AUTH_ERROR_COPY[authErrorReason]"
+                    />
+
+                    <VAlert
                         :status="authGate.isAuthenticated ? 'success' : 'info'"
                         :title="authGate.isAuthenticated ? `Signed in as ${authGate.displayName}` : 'Authentication now opens in a modal'"
                         :description="authGate.isAuthenticated
@@ -109,10 +120,19 @@ function handleSecondaryCta(): void {
                             {{ authCtaLabel }}
                         </VButton>
                         <VButton
+                            v-if="authGate.isAuthenticated"
                             variant="secondary"
-                            @click="handleSecondaryCta"
+                            :loading="authGate.isLogoutPending"
+                            @click="handleSignOut"
                         >
-                            {{ authGate.isAuthenticated ? 'Sign out' : 'Try protected route' }}
+                            Sign out
+                        </VButton>
+                        <VButton
+                            v-else
+                            variant="secondary"
+                            @click="router.push({ name: ROUTES.CASES })"
+                        >
+                            Try protected route
                         </VButton>
                     </div>
                 </div>

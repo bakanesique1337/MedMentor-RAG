@@ -30,17 +30,20 @@ watch(
 )
 
 async function handleAuthModalClose(): Promise<void> {
-    if (route.query.auth !== 'login' && route.query.redirect === undefined) {
+    const hasAuthIntent = route.query.auth === 'login'
+    const hasRedirect = route.query.redirect !== undefined
+    const hasAuthError = route.query.authError !== undefined
+
+    if (!hasAuthIntent && !hasRedirect && !hasAuthError) {
         return
     }
 
-    const queryWithoutAuthIntent = { ...route.query }
-    delete queryWithoutAuthIntent.auth
-    delete queryWithoutAuthIntent.redirect
+    const cleanQuery = { ...route.query }
+    delete cleanQuery.auth
+    delete cleanQuery.redirect
+    delete cleanQuery.authError
 
-    await router.replace({
-        query: queryWithoutAuthIntent,
-    })
+    await router.replace({ query: cleanQuery })
 }
 </script>
 

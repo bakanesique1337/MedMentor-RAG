@@ -12,6 +12,7 @@ interface Props {
     title?: string
     description?: string
     rootClass?: string
+    fullscreen?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -21,6 +22,7 @@ const props = withDefaults(defineProps<Props>(), {
     title: '',
     description: '',
     rootClass: '',
+    fullscreen: false,
 })
 
 const emit = defineEmits<{
@@ -101,12 +103,16 @@ function focusFirstElement(): void {
         <div
             v-if="isOpen"
             ref="containerRef"
-            class="fixed inset-0 z-modal flex items-center justify-center bg-surface-overlay px-2 py-3"
+            :class="props.fullscreen
+                ? 'fixed inset-0 z-modal flex flex-col bg-surface-elevated'
+                : 'fixed inset-0 z-modal flex items-center justify-center bg-surface-overlay px-2 py-3'"
         >
             <div
                 ref="panelRef"
                 :class="cn(
-                    'relative w-full max-w-[56rem] rounded-2xl border border-border-default bg-surface-elevated shadow-overlay',
+                    props.fullscreen
+                        ? 'flex flex-1 flex-col overflow-hidden'
+                        : 'relative w-full max-w-[56rem] rounded-2xl border border-border-default bg-surface-elevated shadow-overlay',
                     props.rootClass,
                 )"
                 role="dialog"
@@ -145,8 +151,14 @@ function focusFirstElement(): void {
                     </VButton>
                 </div>
 
-                <div class="px-3 py-3">
-                    <slot />
+                <div
+                    :class="props.fullscreen
+                        ? 'flex flex-1 items-center justify-center overflow-auto px-3 py-6'
+                        : 'px-3 py-3'"
+                >
+                    <div :class="props.fullscreen ? 'w-full max-w-[42rem]' : ''">
+                        <slot />
+                    </div>
                 </div>
 
                 <footer

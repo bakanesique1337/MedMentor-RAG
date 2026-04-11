@@ -1,8 +1,12 @@
 import { createFetch } from '@vueuse/core'
 
+import { emitUnauthorized } from '@/composables/authBus'
 import { API_BASE_URL, REQUEST_TIMEOUT_MS } from '@/constants/api'
 import type { ApiError } from '@/types'
 import { isApiError } from '@/types'
+
+// Auth endpoints are excluded from global 401 handling to prevent loops.
+const AUTH_ENDPOINTS = new Set(['/api/auth/login', '/api/auth/logout', '/api/auth/me'])
 
 // ---------------------------------------------------------------------------
 // Internal normalization helpers
@@ -99,9 +103,15 @@ export async function apiGet<T>(url: string, options?: ApiRequestOptions): Promi
     }).get().json<T>()
 
     if (error.value !== null && error.value !== undefined) {
-        throw isApiError(error.value)
+        const apiError = isApiError(error.value)
             ? error.value
             : normalizeError(statusCode.value ?? 0, data.value, error.value)
+
+        if (apiError.status === 401 && !AUTH_ENDPOINTS.has(url)) {
+            emitUnauthorized(url)
+        }
+
+        throw apiError
     }
 
     return data.value as T
@@ -121,9 +131,15 @@ export async function apiPost<TResponse, TBody = unknown>(
     }).post(body).json<TResponse>()
 
     if (error.value !== null && error.value !== undefined) {
-        throw isApiError(error.value)
+        const apiError = isApiError(error.value)
             ? error.value
             : normalizeError(statusCode.value ?? 0, data.value, error.value)
+
+        if (apiError.status === 401 && !AUTH_ENDPOINTS.has(url)) {
+            emitUnauthorized(url)
+        }
+
+        throw apiError
     }
 
     return data.value as TResponse
@@ -143,9 +159,15 @@ export async function apiPut<TResponse, TBody = unknown>(
     }).put(body).json<TResponse>()
 
     if (error.value !== null && error.value !== undefined) {
-        throw isApiError(error.value)
+        const apiError = isApiError(error.value)
             ? error.value
             : normalizeError(statusCode.value ?? 0, data.value, error.value)
+
+        if (apiError.status === 401 && !AUTH_ENDPOINTS.has(url)) {
+            emitUnauthorized(url)
+        }
+
+        throw apiError
     }
 
     return data.value as TResponse
