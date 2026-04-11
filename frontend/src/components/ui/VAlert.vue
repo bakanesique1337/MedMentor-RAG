@@ -1,6 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { type Component, computed } from 'vue'
 
+import VErrorIcon from '@/components/icons/VErrorIcon.vue'
+import VInfoIcon from '@/components/icons/VInfoIcon.vue'
+import VSuccessIcon from '@/components/icons/VSuccessIcon.vue'
+import VWarningIcon from '@/components/icons/VWarningIcon.vue'
 import { cn } from '@/components/ui/utils'
 
 type AlertStatus = 'info' | 'success' | 'warning' | 'error'
@@ -19,23 +23,23 @@ const props = withDefaults(defineProps<Props>(), {
     class: '',
 })
 
-const statusClasses = computed<Record<AlertStatus, string>>(() => ({
+const STATUS_CLASSES: Record<AlertStatus, string> = {
     info: 'border-info-border bg-info-surface text-info-text',
     success: 'border-success-border bg-success-surface text-success-text',
     warning: 'border-warning-border bg-warning-surface text-warning-text',
     error: 'border-error-border bg-error-surface text-error-text',
-}))
+}
 
-const iconMap = computed<Record<AlertStatus, string>>(() => ({
-    info: 'i',
-    success: '!',
-    warning: '!',
-    error: 'x',
-}))
+const STATUS_ICON: Record<AlertStatus, Component> = {
+    info: VInfoIcon,
+    success: VSuccessIcon,
+    warning: VWarningIcon,
+    error: VErrorIcon,
+}
 
 const alertClassName = computed(() => cn(
-    'flex items-start gap-2 rounded-xl border px-3 py-2',
-    statusClasses.value[props.status],
+    'flex items-start gap-2 squircle squircle-md border px-3 py-2',
+    STATUS_CLASSES[props.status],
     props.class,
 ))
 </script>
@@ -46,10 +50,10 @@ const alertClassName = computed(() => cn(
         role="alert"
     >
         <span
-            class="mt-[0.2rem] inline-flex size-[2rem] shrink-0 items-center justify-center rounded-full border border-current/20 text-label font-bold uppercase"
+            class="mt-[0.1rem] inline-flex size-[2rem] shrink-0 items-center justify-center squircle squircle-sm border border-current/20"
             aria-hidden="true"
         >
-            {{ iconMap[status] }}
+            <component :is="STATUS_ICON[status]"/>
         </span>
 
         <div class="min-w-0 flex-1 space-y-1">
@@ -73,7 +77,7 @@ const alertClassName = computed(() => cn(
             v-if="$slots.action"
             class="shrink-0"
         >
-            <slot name="action" />
+            <slot name="action"/>
         </div>
     </div>
 </template>
