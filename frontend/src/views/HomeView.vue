@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref } from 'vue'
 
 import {
     VAlert,
@@ -20,18 +19,7 @@ import {
     VTextarea,
     VTooltip,
 } from '@/components/ui'
-import { ROUTES } from '@/constants/routes'
-import { useAuthGateStore } from '@/stores/authGate'
 import type { SelectOption } from '@/components/ui'
-
-const route = useRoute()
-const router = useRouter()
-const authGate = useAuthGateStore()
-
-const AUTH_ERROR_COPY: Record<string, string> = {
-    network: 'Could not reach the server while checking your session. Check your connection and try again.',
-    server: 'Server error while checking your session. Please try again in a moment.',
-} as const
 
 const textValue = ref('Dr. House')
 const emailValue = ref('resident@example.com')
@@ -58,83 +46,24 @@ const options: SelectOption[] = [
         disabled: true,
     },
 ]
-
-const authErrorReason = computed(() => {
-    const reason = route.query.authError
-
-    return typeof reason === 'string' && reason in AUTH_ERROR_COPY ? reason : null
-})
-
-const authCtaLabel = computed(() => (
-    authGate.isAuthenticated ? 'Continue to cases' : 'Sign in'
-))
-
-function handlePrimaryCta(): void {
-    if (authGate.isAuthenticated) {
-        router.push({ name: ROUTES.CASES })
-        return
-    }
-
-    authGate.openAuthModal()
-}
-
-async function handleSignOut(): Promise<void> {
-    await authGate.logout()
-    await router.push({ name: ROUTES.HOME })
-}
 </script>
 
 <template>
-    <main class="min-h-screen bg-surface-base px-2 py-4">
+    <div class="min-h-screen bg-surface-base px-2 py-4">
         <div class="mx-auto flex w-full max-w-384 flex-col gap-4">
             <section
                 class="rounded-[2.4rem] border border-border-subtle bg-linear-to-br from-surface-elevated to-surface-sunken px-4 py-5 shadow-sm"
             >
                 <div class="space-y-2">
-                    <VBadge variant="primary">Temporary UI Kit Demo + Auth Entry</VBadge>
+                    <VBadge variant="primary">Temporary UI Kit Demo</VBadge>
                     <h1 class="text-display font-semibold text-text-primary">
-                        Home page is now a vertical preview of all current UI kit variants.
+                        Home page is a vertical preview of all current UI kit variants.
                     </h1>
                     <p class="max-w-prose text-body text-text-secondary">
                         This page is temporary and exists to inspect the current component surface
-                        before feature pages start consuming the kit.
+                        before feature pages start consuming the kit. Sign-in and navigation are
+                        now handled by the header.
                     </p>
-
-                    <VAlert
-                        v-if="authErrorReason"
-                        status="error"
-                        title="Session check failed"
-                        :description="AUTH_ERROR_COPY[authErrorReason]"
-                    />
-
-                    <VAlert
-                        :status="authGate.isAuthenticated ? 'success' : 'info'"
-                        :title="authGate.isAuthenticated ? `Signed in as ${authGate.displayName}` : 'Authentication now opens in a modal'"
-                        :description="authGate.isAuthenticated
-                            ? 'Protected routes are available in the current session.'
-                            : 'Use the primary CTA or try opening a protected route to see the auth modal flow.'"
-                    />
-
-                    <div class="flex flex-wrap gap-2 pt-1">
-                        <VButton @click="handlePrimaryCta">
-                            {{ authCtaLabel }}
-                        </VButton>
-                        <VButton
-                            v-if="authGate.isAuthenticated"
-                            variant="secondary"
-                            :loading="authGate.isLogoutPending"
-                            @click="handleSignOut"
-                        >
-                            Sign out
-                        </VButton>
-                        <VButton
-                            v-else
-                            variant="secondary"
-                            @click="router.push({ name: ROUTES.CASES })"
-                        >
-                            Try protected route
-                        </VButton>
-                    </div>
                 </div>
             </section>
 
@@ -468,5 +397,5 @@ async function handleSignOut(): Promise<void> {
                 </div>
             </div>
         </VModal>
-    </main>
+    </div>
 </template>
