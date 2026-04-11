@@ -16,4 +16,4 @@ export const SIMULATION_QUICK_PROMPTS: readonly QuickPrompt[] = [
         label: 'Instrumental diagnostics',
         content: 'I would like to order instrumental diagnostics.',
     },
-] as const
+]
