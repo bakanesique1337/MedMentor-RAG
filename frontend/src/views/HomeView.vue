@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import {
     VAlert,
@@ -19,7 +20,12 @@ import {
     VTextarea,
     VTooltip,
 } from '@/components/ui'
+import { ROUTES } from '@/constants/routes'
+import { useAuthGateStore } from '@/stores/authGate'
 import type { SelectOption } from '@/components/ui'
+
+const router = useRouter()
+const authGate = useAuthGateStore()
 
 const textValue = ref('Dr. House')
 const emailValue = ref('resident@example.com')
@@ -46,14 +52,42 @@ const options: SelectOption[] = [
         disabled: true,
     },
 ]
+
+const authCtaLabel = computed(() => (
+    authGate.isAuthenticated ? 'Continue to cases' : 'Open auth modal'
+))
+
+function handlePrimaryCta(): void {
+    if (authGate.isAuthenticated) {
+        router.push({
+            name: ROUTES.CASES,
+        })
+        return
+    }
+
+    authGate.openAuthModal()
+}
+
+function handleSecondaryCta(): void {
+    if (authGate.isAuthenticated) {
+        authGate.signOut()
+        return
+    }
+
+    router.push({
+        name: ROUTES.CASES,
+    })
+}
 </script>
 
 <template>
     <main class="min-h-screen bg-surface-base px-2 py-4">
-        <div class="mx-auto flex w-full max-w-[96rem] flex-col gap-4">
-            <section class="rounded-[2.4rem] border border-border-subtle bg-linear-to-br from-surface-elevated to-surface-sunken px-4 py-5 shadow-sm">
+        <div class="mx-auto flex w-full max-w-384 flex-col gap-4">
+            <section
+                class="rounded-[2.4rem] border border-border-subtle bg-linear-to-br from-surface-elevated to-surface-sunken px-4 py-5 shadow-sm"
+            >
                 <div class="space-y-2">
-                    <VBadge variant="primary">Temporary UI Kit Demo</VBadge>
+                    <VBadge variant="primary">Temporary UI Kit Demo + Auth Entry</VBadge>
                     <h1 class="text-display font-semibold text-text-primary">
                         Home page is now a vertical preview of all current UI kit variants.
                     </h1>
@@ -61,6 +95,26 @@ const options: SelectOption[] = [
                         This page is temporary and exists to inspect the current component surface
                         before feature pages start consuming the kit.
                     </p>
+
+                    <VAlert
+                        :status="authGate.isAuthenticated ? 'success' : 'info'"
+                        :title="authGate.isAuthenticated ? `Signed in as ${authGate.displayName}` : 'Authentication now opens in a modal'"
+                        :description="authGate.isAuthenticated
+                            ? 'Protected routes are available in the current session.'
+                            : 'Use the primary CTA or try opening a protected route to see the auth modal flow.'"
+                    />
+
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <VButton @click="handlePrimaryCta">
+                            {{ authCtaLabel }}
+                        </VButton>
+                        <VButton
+                            variant="secondary"
+                            @click="handleSecondaryCta"
+                        >
+                            {{ authGate.isAuthenticated ? 'Sign out' : 'Try protected route' }}
+                        </VButton>
+                    </div>
                 </div>
             </section>
 
@@ -85,11 +139,11 @@ const options: SelectOption[] = [
                     </div>
 
                     <div class="flex flex-wrap items-center gap-3">
-                        <VSpinner size="sm" />
-                        <VSpinner size="md" />
-                        <VSpinner size="lg" />
+                        <VSpinner size="sm"/>
+                        <VSpinner size="md"/>
+                        <VSpinner size="lg"/>
                         <div class="rounded-lg bg-slate-900 px-2 py-1">
-                            <VSpinner variant="inverse" />
+                            <VSpinner variant="inverse"/>
                         </div>
                     </div>
                 </div>
@@ -283,19 +337,27 @@ const options: SelectOption[] = [
                 <div class="flex flex-wrap items-center gap-3">
                     <VDropdown v-model="dropdownOpen">
                         <template #trigger="{ open }">
-                            <span class="rounded-lg border border-border-default bg-surface-elevated px-2 py-1 text-body-sm text-text-primary">
+                            <span
+                                class="rounded-lg border border-border-default bg-surface-elevated px-2 py-1 text-body-sm text-text-primary"
+                            >
                                 {{ open ? 'Close dropdown' : 'Open dropdown' }}
                             </span>
                         </template>
 
                         <div class="flex flex-col gap-0.5 p-1">
-                            <button class="rounded-lg px-2 py-1 text-left text-body-sm text-text-primary hover:bg-interactive-ghost-hover">
+                            <button
+                                class="rounded-lg px-2 py-1 text-left text-body-sm text-text-primary hover:bg-interactive-ghost-hover"
+                            >
                                 Profile
                             </button>
-                            <button class="rounded-lg px-2 py-1 text-left text-body-sm text-text-primary hover:bg-interactive-ghost-hover">
+                            <button
+                                class="rounded-lg px-2 py-1 text-left text-body-sm text-text-primary hover:bg-interactive-ghost-hover"
+                            >
                                 Cases
                             </button>
-                            <button class="rounded-lg px-2 py-1 text-left text-body-sm text-error-text hover:bg-error-surface">
+                            <button
+                                class="rounded-lg px-2 py-1 text-left text-body-sm text-error-text hover:bg-error-surface"
+                            >
                                 Logout
                             </button>
                         </div>
@@ -305,7 +367,9 @@ const options: SelectOption[] = [
                         v-model="tooltipOpen"
                         text="Tooltip content should remain supplementary and non-critical."
                     >
-                        <span class="rounded-lg border border-border-default bg-surface-elevated px-2 py-1 text-body-sm text-text-primary">
+                        <span
+                            class="rounded-lg border border-border-default bg-surface-elevated px-2 py-1 text-body-sm text-text-primary"
+                        >
                             Toggle tooltip
                         </span>
                     </VTooltip>
@@ -326,7 +390,7 @@ const options: SelectOption[] = [
 
                 <div class="flex flex-col gap-4">
                     <div class="space-y-2">
-                        <VSkeleton class="skeleton" />
+                        <VSkeleton class="skeleton"/>
                         <VSkeleton
                             width="70%"
                             class="skeleton"

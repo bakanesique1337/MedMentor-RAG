@@ -167,7 +167,7 @@ Goal: establish polished action and feedback primitives reused across all pages.
 
 ### P3.3 Form Controls
 
-Build the MVP form set needed for login, profile, diagnosis selection, and chat input.
+Build the MVP form set needed for the authentication modal, profile, diagnosis selection, and chat input.
 
 #### `VField`
 

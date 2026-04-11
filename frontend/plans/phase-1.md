@@ -69,7 +69,6 @@ Goal: clean structure with clear responsibility boundaries and no dead starter c
 ```
 / (PublicLayout)
   path: '/'        name: ROUTES.HOME      -> views/HomeView.vue
-  path: '/login'   name: ROUTES.LOGIN     -> views/LoginView.vue
 
 / (AppLayout, auth guard attached here)
   path: '/cases'              name: ROUTES.CASES    -> views/CasesView.vue
@@ -95,7 +94,13 @@ Individual child routes (`/cases`, `/profile`, `/chat`) do NOT each define their
   `GET /api/history/{sessionId}`, `GET /api/stats/overview`,
 - `/api/rag/*` endpoints are debug/testing only and excluded from MVP route/composable scope.
 
-**Placeholder views:** all views can be empty `<template><div /></template>` stubs at this stage.
+**Public auth entry note:**
+
+- No dedicated `/login` route in MVP.
+- Unauthenticated users stay on public landing and use an auth modal triggered from landing CTA
+  or from protected-route interception.
+
+**Placeholder views:** all route views can be empty `<template><div /></template>` stubs at this stage.
 The goal is a navigable skeleton, not implemented pages.
 
 Goal: deterministic navigation skeleton for all required pages.
@@ -110,7 +115,6 @@ Do this step before wiring routes in P1.2 to avoid hardcoded strings in the rout
   ```ts
   export const ROUTES = {
     HOME: 'home',
-    LOGIN: 'login',
     CASES: 'cases',
     PROFILE: 'profile',
     CHAT: 'chat',

@@ -17,11 +17,13 @@
         "sl:fix": "stylelint \"**/*.{scss,vue}\" --fix"
     },
     "dependencies": {
+        "@stomp/stompjs": "^7.3.0",
         "@tailwindcss/vite": "^4.2.0",
         "@vueuse/core": "^13.0.0",
         "lighthouse": "^12.8.2",
         "pinia": "^3.0.4",
         "scroll-lock": "^2.1.5",
+        "sockjs-client": "^1.6.1",
         "tailwindcss": "^4.2.0",
         "vue": "^3.5.28",
         "vue-router": "^5.0.2"
@@ -29,6 +31,7 @@
     "devDependencies": {
         "@tsconfig/node24": "^24.0.4",
         "@types/node": "^24.10.13",
+        "@types/sockjs-client": "^1.5.4",
         "@vitejs/plugin-vue": "^6.0.4",
         "@vue/eslint-config-typescript": "^14.6.0",
         "@vue/tsconfig": "^0.8.1",

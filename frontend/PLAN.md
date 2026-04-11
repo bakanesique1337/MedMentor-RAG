@@ -9,7 +9,8 @@ Build an MVP frontend for the medical training simulator with:
 - typed API layer via composables and `useFetch` from VueUse (`createFetch` wrapper
   with base URL, `credentials: "include"`, and shared error hooks),
 - authentication flow aligned with backend auth,
-- core pages: landing, cases list, login, chat simulation.
+- core pages: landing, cases list, profile, chat simulation,
+- authentication modal for unauthenticated entry into protected flows.
 
 ## Constraints And Standards
 
@@ -32,7 +33,6 @@ App shell uses two layout routes via Vue Router v4 nested routes.
 ```
 PublicLayout  (no auth required)
   /           landing
-  /login      login page
 
 AppLayout     (auth required, guarded)
   /cases      cases list
@@ -268,7 +268,7 @@ Deliverables:
 
 - guard attached to AppLayout parent route,
 - calls `useAuthApi.me()` on bootstrap,
-- redirects unauthenticated users to `/login` with `redirect` query param.
+- redirects unauthenticated users to public landing and opens auth modal with `redirect` intent.
 
 Deliverables:
 
@@ -278,7 +278,7 @@ Deliverables:
 
 ## Phase 5. Authentication Flow
 
-1. Build login page and form validation.
+1. Build login modal and form validation.
 2. Implement auth store/composable for session lifecycle:
 
 - bootstrap on app start (`/api/auth/me`),
@@ -305,7 +305,7 @@ Deliverables:
    as nested route components (see Architectural Decisions).
 2. Header variants:
 
-- public (landing/login),
+- public (landing with auth CTA/modal trigger),
 - authenticated (cases/profile/chat access, user menu, logout).
 
 3. Footer variants:
@@ -324,7 +324,7 @@ Deliverables:
 
 1. Hero with value proposition of simulator.
 2. Sections: training mechanics, RAG fact-grounded approach, benefits for students/CME.
-3. CTA to login and start first case.
+3. CTA to open auth modal and start first case.
 
 ### 7.1.1 Error Page (404)
 
@@ -352,11 +352,12 @@ Deliverables:
 6. Start action: `POST /api/simulations/start` with `caseId`, then
    `router.push({ name: ROUTES.CHAT, params: { sessionId } })`.
 
-### 7.3 Login Page
+### 7.3 Authentication Modal
 
 1. Username/password form only (no registration for MVP).
 2. Validation + backend error mapping.
-3. Redirect after successful auth to cases list page.
+3. Open from landing and from unauthorized access attempts to protected routes.
+4. Redirect after successful auth to intended target or cases list by default.
 
 ### 7.4 Chat Simulation Page
 
@@ -589,32 +590,32 @@ No blocking questions for MVP planning at this stage.
 - [x] `P3.4` Implement utility states (`VSpinner`, `VSkeleton`, `VEmptyState`, `VAlert`).
   Goal: complete loading/empty/error UX.
 
-- [ ] `P4` Data layer via composables and `useFetch`.
+- [x] `P4` Data layer via composables and `useFetch`.
   Goal: typed, centralized API access with shared error/loading handling.
 
-- [ ] `P4.1` Build shared API instance via `createFetch` in `composables/useApi.ts`.
+- [x] `P4.1` Build shared API instance via `createFetch` in `composables/useApi.ts`.
   Goal: `credentials: "include"`, base URL from env, normalized errors via hooks, typed wrappers.
 
-- [ ] `P4.2` Build feature composables (`useAuthApi`, `useCasesApi`, `useSimulationApi`, `useProfileApi`).
+- [x] `P4.2` Build feature composables (`useAuthApi`, `useCasesApi`, `useSimulationApi`, `useProfileApi`).
   Goal: one composable per domain with clear method contracts.
 
-- [ ] `P4.3` Add request-state conventions.
+- [x] `P4.3` Add request-state conventions.
   Goal: predictable `isLoading/error/success` behavior across pages.
 
-- [ ] `P4.4` Implement route guard on AppLayout parent route.
+- [x] `P4.4` Implement route guard on AppLayout parent route.
   Goal: protect cases/profile/chat for authorized users only via single guard.
 
 - [ ] `P5` Authentication flow (session cookie).
   Goal: complete login/logout lifecycle with persistent authenticated state.
 
-- [ ] `P5.1` Build login page and validation.
-  Goal: stable auth form with backend error mapping.
+- [ ] `P5.1` Build authentication modal and validation.
+  Goal: stable auth form in modal with backend error mapping.
 
 - [ ] `P5.2` Implement auth state bootstrap.
   Goal: recover session on app reload via `/api/auth/me`.
 
 - [ ] `P5.3` Enforce protected routes and redirects.
-  Goal: post-login default route is cases list; unauthorized access blocked via AppLayout guard.
+  Goal: post-login default route is cases list; unauthorized access opens auth modal with redirect intent.
 
 - [ ] `P5.4` Handle global 401/403.
   Goal: deterministic re-auth/sign-out behavior.
@@ -626,7 +627,7 @@ No blocking questions for MVP planning at this stage.
   Goal: nested layout wrappers for public and authenticated route groups.
 
 - [ ] `P6.2` Implement header variants.
-  Goal: public mode for landing/login, private mode for cases/profile/chat.
+  Goal: public mode for landing with auth CTA/modal trigger, private mode for cases/profile/chat.
 
 - [ ] `P6.3` Implement footer variants.
   Goal: full landing footer and compact app footer.
@@ -635,7 +636,7 @@ No blocking questions for MVP planning at this stage.
   Goal: deliver all MVP pages and end-to-end user flow.
 
 - [ ] `P7.1` Landing page.
-  Goal: product positioning, RAG explanation, CTA to login/start.
+  Goal: product positioning, RAG explanation, CTA to open auth modal/start.
 
 - [ ] `P7.1.1` Error page (404).
   Goal: clear fallback UX for unknown routes with role-aware navigation actions.
@@ -644,8 +645,8 @@ No blocking questions for MVP planning at this stage.
   Goal: render case cards with strict front-side filtering; active session check on mount;
   start action triggers POST and redirects to `/chat/:sessionId`.
 
-- [ ] `P7.3` Login page.
-  Goal: authorize and redirect to cases list.
+- [ ] `P7.3` Authentication modal.
+  Goal: authorize and redirect to intended target or cases list.
 
 - [ ] `P7.4` Chat simulation page.
   Goal: sidebar + timeline + input + diagnosis modal + completion stats/feedback.
