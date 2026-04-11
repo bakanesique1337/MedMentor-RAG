@@ -140,8 +140,7 @@ function handleResetFilters(): void {
 }
 
 onMounted(() => {
-    void fetchCases()
-    void fetchActiveSession()
+    Promise.all([fetchCases(), fetchActiveSession()])
 })
 </script>
 
