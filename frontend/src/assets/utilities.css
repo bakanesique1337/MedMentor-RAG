@@ -8,13 +8,24 @@
     }
 }
 
+@keyframes ripple-effect {
+    0% {
+        opacity: 0.22;
+        transform: scale(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1);
+    }
+}
+
 @layer utilities {
     .focus-ring {
         outline: 2px solid transparent;
         outline-offset: 2px;
-        transition:
-            outline-color var(--duration-fast) var(--ease-default),
-            box-shadow var(--duration-fast) var(--ease-default);
+        transition: outline-color var(--duration-fast) var(--ease-default),
+        box-shadow var(--duration-fast) var(--ease-default);
     }
 
     .focus-ring:focus {
@@ -45,5 +56,56 @@
 
     .tabular {
         font-variant-numeric: tabular-nums;
+    }
+
+    .ripple {
+        position: absolute;
+        border-radius: 9999px;
+        background: color-mix(in srgb, currentColor 24%, transparent);
+        opacity: 0;
+        transform: scale(0);
+        animation: ripple-effect 550ms ease-out;
+    }
+
+    .squircle {
+        --squircle-radius: 1.6rem;
+        --squircle-fallback-svg: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path fill='black' d='M50 0C74 0 87 0 93.5 6.5S100 26 100 50 100 74 93.5 80.5 74 100 50 100 26 100 19.5 93.5 0 74 0 50 0 26 6.5 19.5 26 0 50 0Z'/></svg>");
+
+        border-radius: var(--squircle-radius);
+    }
+
+    @supports (corner-shape: squircle) {
+        .squircle {
+            corner-shape: squircle;
+        }
+    }
+
+    @supports not (corner-shape: squircle) {
+        .squircle {
+            -webkit-mask-image: var(--squircle-fallback-svg);
+            -webkit-mask-repeat: no-repeat;
+            -webkit-mask-position: center;
+            -webkit-mask-size: 100% 100%;
+            mask-image: var(--squircle-fallback-svg);
+            mask-repeat: no-repeat;
+            mask-position: center;
+            mask-size: 100% 100%;
+        }
+    }
+
+    .squircle-sm {
+        --squircle-radius: 1.2rem;
+    }
+
+    .squircle-md {
+        --squircle-radius: 1.6rem;
+    }
+
+    .squircle-lg {
+        --squircle-radius: 2.4rem;
+    }
+
+    .squircle-xl {
+        --squircle-radius: 3.2rem;
     }
 }

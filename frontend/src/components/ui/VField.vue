@@ -50,15 +50,15 @@ const hasError = computed(() => props.invalid || Boolean(props.error))
 <template>
     <div
         :class="cn(
-            'flex w-full flex-col gap-1.5',
-            disabled ? 'opacity-80' : '',
+            'flex w-full flex-col gap-2',
+            disabled ? 'opacity-75' : '',
             props.rootClass,
         )"
     >
         <label
             v-if="label || $slots.label"
             :for="controlId"
-            class="flex items-center gap-1 text-label font-semibold text-text-primary"
+            class="flex items-center gap-1 text-[1.25rem] font-medium tracking-[-0.01em] text-text-primary/88"
         >
             <slot name="label">
                 <span>{{ label }}</span>
@@ -84,7 +84,7 @@ const hasError = computed(() => props.invalid || Boolean(props.error))
         <p
             v-if="hint || $slots.hint"
             :id="hintId"
-            class="text-body-sm text-text-secondary"
+            class="text-[1.25rem] leading-[1.45] text-text-secondary/88"
         >
             <slot name="hint">
                 {{ hint }}
@@ -94,7 +94,7 @@ const hasError = computed(() => props.invalid || Boolean(props.error))
         <p
             v-if="error || $slots.error"
             :id="errorId"
-            class="text-body-sm font-medium text-error-text"
+            class="text-[1.25rem] font-medium leading-[1.45] text-error-text"
         >
             <slot name="error">
                 {{ error }}

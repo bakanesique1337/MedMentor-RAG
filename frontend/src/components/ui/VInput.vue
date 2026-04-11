@@ -2,6 +2,7 @@
 import { useVModel } from '@vueuse/core'
 import { computed, useAttrs } from 'vue'
 
+import VCloseIcon from '@/components/icons/VCloseIcon.vue'
 import VField from '@/components/ui/VField.vue'
 import { cn } from '@/components/ui/utils'
 
@@ -52,25 +53,48 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 const model = useVModel(props, 'modelValue', emit)
+
 const hasError = computed(() => props.invalid || Boolean(props.error))
 
-const sizeClasses = computed<Record<InputSize, string>>(() => ({
-    sm: 'min-h-[3.6rem] px-2.5 text-body-sm',
-    md: 'min-h-[4.2rem] px-3 text-body',
-    lg: 'min-h-[4.8rem] px-3 text-body',
-}))
+const showClearButton = computed(() => (
+    props.type === 'search'
+    && !props.disabled
+    && !props.readonly
+    && model.value.length > 0
+))
+
+const SIZE_CLASSES: Record<InputSize, string> = {
+    sm: 'h-[3.8rem] px-2.5 text-body-sm',
+    md: 'h-[4.4rem] px-3 text-body',
+    lg: 'h-[5rem] px-3.5 text-[1.6rem]',
+}
+
+const controlClassName = computed(() => cn(
+    'input-control group flex w-full items-center squircle squircle-md border bg-surface-elevated',
+    SIZE_CLASSES[props.size],
+    hasError.value ? 'is-invalid' : '',
+    props.disabled ? 'is-disabled' : '',
+    props.readonly ? 'is-readonly' : '',
+))
 
 const inputClassName = computed(() => cn(
-    'w-full rounded-lg border bg-surface-elevated text-text-primary',
+    'min-w-0 flex-1 border-0 bg-transparent p-0 text-text-primary outline-none',
     'placeholder:text-text-tertiary',
-    'disabled:bg-surface-muted disabled:text-text-disabled',
-    'readonly:bg-surface-sunken readonly:text-text-secondary',
-    hasError.value
-        ? 'border-error-border bg-error-surface/40'
-        : 'border-border-default hover:border-border-strong focus:border-interactive-secondary-default',
-    sizeClasses.value[props.size],
+    'focus:outline-none focus-visible:outline-none focus-visible:shadow-none',
+    'transition-[color] duration-fast ease-default',
+    'disabled:cursor-not-allowed disabled:text-text-disabled',
+    'readonly:text-text-secondary',
     props.inputClass,
 ))
+
+/** Prevents blur on clear button click so input stays focused */
+function handleClearPointerDown(event: PointerEvent): void {
+    event.preventDefault()
+}
+
+function handleClearClick(): void {
+    model.value = ''
+}
 </script>
 
 <template>
@@ -84,20 +108,14 @@ const inputClassName = computed(() => cn(
         :invalid="hasError"
         :root-class="rootClass"
     >
-        <template
-            #default="{
-                controlId,
-                describedBy,
-                invalid: fieldInvalid,
-            }"
-        >
-            <div class="relative">
+        <template #default="{ controlId, describedBy, invalid: fieldInvalid }">
+            <div :class="controlClassName">
                 <span
                     v-if="$slots.prefix"
-                    class="pointer-events-none absolute inset-y-0 left-3 inline-flex items-center text-text-secondary"
+                    class="pointer-events-none mr-2 inline-flex shrink-0 items-center text-text-tertiary transition-colors duration-fast ease-default group-focus-within:text-interactive-primary-default"
                     aria-hidden="true"
                 >
-                    <slot name="prefix" />
+                    <slot name="prefix"/>
                 </span>
 
                 <input
@@ -111,21 +129,84 @@ const inputClassName = computed(() => cn(
                     :required="required"
                     :aria-describedby="describedBy"
                     :aria-invalid="fieldInvalid || undefined"
-                    :class="cn(
-                        inputClassName,
-                        $slots.prefix ? 'pl-8' : '',
-                        $slots.suffix ? 'pr-8' : '',
-                    )"
+                    :class="inputClassName"
                 />
 
+                <button
+                    v-if="showClearButton"
+                    type="button"
+                    class="ml-2 inline-flex size-[2rem] shrink-0 items-center justify-center rounded-full bg-text-secondary/10 text-text-secondary transition-colors duration-fast ease-default hover:bg-text-secondary/16 hover:text-text-primary"
+                    aria-label="Clear input"
+                    @pointerdown="handleClearPointerDown"
+                    @click="handleClearClick"
+                >
+                    <VCloseIcon/>
+                </button>
+
                 <span
-                    v-if="$slots.suffix"
-                    class="pointer-events-none absolute inset-y-0 right-3 inline-flex items-center text-text-secondary"
+                    v-if="$slots.suffix && !showClearButton"
+                    class="pointer-events-none ml-2 inline-flex shrink-0 items-center text-text-tertiary transition-colors duration-fast ease-default group-focus-within:text-interactive-primary-default"
                     aria-hidden="true"
                 >
-                    <slot name="suffix" />
+                    <slot name="suffix"/>
                 </span>
             </div>
         </template>
     </VField>
 </template>
+
+<style scoped>
+.input-control {
+    border-color: var(--color-border-default);
+    transition: border-color var(--duration-input) var(--ease-input),
+    box-shadow var(--duration-input) var(--ease-input);
+}
+
+.input-control:hover {
+    border-color: var(--color-border-strong);
+}
+
+.input-control:focus-within {
+    border-color: var(--color-interactive-primary-default);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-interactive-primary-default) 15%, transparent);
+}
+
+.input-control.is-disabled {
+    border-color: var(--color-border-subtle);
+    background-color: var(--color-surface-muted);
+    cursor: not-allowed;
+}
+
+.input-control.is-disabled:hover,
+.input-control.is-disabled:focus-within {
+    border-color: var(--color-border-subtle);
+    box-shadow: none;
+}
+
+.input-control.is-readonly {
+    background-color: var(--color-surface-sunken);
+}
+
+.input-control.is-readonly:hover,
+.input-control.is-readonly:focus-within {
+    border-color: var(--color-border-default);
+    box-shadow: none;
+}
+
+.input-control.is-invalid {
+    border-color: var(--color-error-border);
+}
+
+.input-control.is-invalid:focus-within {
+    border-color: var(--color-error-border);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error-border) 15%, transparent);
+}
+
+input[type="search"]::-webkit-search-decoration,
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-results-button,
+input[type="search"]::-webkit-search-results-decoration {
+    display: none;
+    -webkit-appearance: none;
+}
+</style>

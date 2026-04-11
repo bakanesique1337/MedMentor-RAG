@@ -22,6 +22,18 @@
     --border-subtle: var(--color-slate-200);
     --border-default: var(--color-slate-300);
     --border-strong: var(--color-slate-400);
+    --input-surface-top: var(--surface-elevated);
+    --input-surface-middle: var(--surface-elevated);
+    --input-surface-bottom: color-mix(in srgb, var(--surface-base) 82%, var(--surface-elevated));
+    --input-surface-bottom-hover: color-mix(in srgb, var(--interactive-primary-disabled) 22%, var(--surface-elevated));
+    --input-surface-bottom-focus: color-mix(in srgb, var(--interactive-primary-disabled) 38%, var(--surface-elevated));
+    --input-border-hover: color-mix(in srgb, var(--border-strong) 82%, var(--interactive-primary-disabled));
+    --input-border-focus: color-mix(in srgb, var(--interactive-primary-default) 22%, var(--border-strong));
+    --input-focus-ring: color-mix(in srgb, var(--interactive-primary-default) 18%, transparent);
+    --input-glow: color-mix(in srgb, var(--interactive-primary-default) 10%, transparent);
+    --input-glow-error: color-mix(in srgb, var(--error-border) 10%, transparent);
+    --input-motion-duration: 280ms;
+    --input-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
     --interactive-primary-default: var(--color-teal-600);
     --interactive-primary-hover: var(--color-teal-700);
@@ -79,6 +91,16 @@
     --color-border-subtle: var(--border-subtle);
     --color-border-default: var(--border-default);
     --color-border-strong: var(--border-strong);
+    --color-input-surface-top: var(--input-surface-top);
+    --color-input-surface-middle: var(--input-surface-middle);
+    --color-input-surface-bottom: var(--input-surface-bottom);
+    --color-input-surface-bottom-hover: var(--input-surface-bottom-hover);
+    --color-input-surface-bottom-focus: var(--input-surface-bottom-focus);
+    --color-input-border-hover: var(--input-border-hover);
+    --color-input-border-focus: var(--input-border-focus);
+    --color-input-focus-ring: var(--input-focus-ring);
+    --color-input-glow: var(--input-glow);
+    --color-input-glow-error: var(--input-glow-error);
 
     --color-interactive-primary-default: var(--interactive-primary-default);
     --color-interactive-primary-hover: var(--interactive-primary-hover);
@@ -198,4 +220,6 @@
     --duration-normal: 200ms;
     --duration-slow: 350ms;
     --duration-skeleton: 1500ms;
+    --duration-input: var(--input-motion-duration);
+    --ease-input: var(--input-motion-ease);
 }
