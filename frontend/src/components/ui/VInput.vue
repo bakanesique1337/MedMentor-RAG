@@ -2,7 +2,6 @@
 import { useVModel } from '@vueuse/core'
 import { computed, useAttrs } from 'vue'
 
-import VCloseIcon from '@/components/icons/VCloseIcon.vue'
 import VField from '@/components/ui/VField.vue'
 import { cn } from '@/components/ui/utils'
 
@@ -10,7 +9,7 @@ defineOptions({
     inheritAttrs: false,
 })
 
-type InputType = 'text' | 'password' | 'email' | 'search'
+type InputType = 'text' | 'password' | 'email' | 'search' | 'number'
 type InputSize = 'sm' | 'md' | 'lg'
 
 interface Props {
@@ -53,48 +52,33 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 const model = useVModel(props, 'modelValue', emit)
-
 const hasError = computed(() => props.invalid || Boolean(props.error))
 
-const showClearButton = computed(() => (
-    props.type === 'search'
-    && !props.disabled
-    && !props.readonly
-    && model.value.length > 0
-))
-
 const SIZE_CLASSES: Record<InputSize, string> = {
-    sm: 'h-[3.8rem] px-2.5 text-body-sm',
-    md: 'h-[4.4rem] px-3 text-body',
-    lg: 'h-[5rem] px-3.5 text-[1.6rem]',
+    sm: 'h-[3.8rem] px-[1.2rem] text-[1.35rem]',
+    md: 'h-[4.4rem] px-[1.4rem] text-[1.4rem]',
+    lg: 'h-[5rem] px-[1.6rem] text-[1.5rem]',
 }
 
-const controlClassName = computed(() => cn(
-    'input-control group flex w-full items-center squircle squircle-md border bg-surface-elevated',
-    SIZE_CLASSES[props.size],
-    hasError.value ? 'is-invalid' : '',
-    props.disabled ? 'is-disabled' : '',
-    props.readonly ? 'is-readonly' : '',
-))
+const controlClass = computed(() =>
+    cn(
+        'flex w-full items-center gap-[0.8rem] rounded-[0.9rem] border bg-surface-base transition',
+        SIZE_CLASSES[props.size],
+        hasError.value
+            ? 'border-[color:var(--color-danger-bright)] focus-within:border-[color:var(--color-danger-bright)]'
+            : 'border-[color:var(--color-line-2)] focus-within:border-brand focus-within:bg-white',
+        props.disabled ? 'opacity-60 cursor-not-allowed' : '',
+    ),
+)
 
-const inputClassName = computed(() => cn(
-    'min-w-0 flex-1 border-0 bg-transparent p-0 text-text-primary outline-none',
-    'placeholder:text-text-tertiary',
-    'focus:outline-none focus-visible:outline-none focus-visible:shadow-none',
-    'transition-[color] duration-fast ease-default',
-    'disabled:cursor-not-allowed disabled:text-text-disabled',
-    'readonly:text-text-secondary',
-    props.inputClass,
-))
-
-/** Prevents blur on clear button click so input stays focused */
-function handleClearPointerDown(event: PointerEvent): void {
-    event.preventDefault()
-}
-
-function handleClearClick(): void {
-    model.value = ''
-}
+const inputClass = computed(() =>
+    cn(
+        'min-w-0 flex-1 border-0 bg-transparent p-0 text-text-primary outline-none',
+        'placeholder:text-text-tertiary',
+        'disabled:cursor-not-allowed',
+        props.inputClass,
+    ),
+)
 </script>
 
 <template>
@@ -109,15 +93,14 @@ function handleClearClick(): void {
         :root-class="rootClass"
     >
         <template #default="{ controlId, describedBy, invalid: fieldInvalid }">
-            <div :class="controlClassName">
+            <div :class="controlClass">
                 <span
                     v-if="$slots.prefix"
-                    class="pointer-events-none mr-2 inline-flex shrink-0 items-center text-text-tertiary transition-colors duration-fast ease-default group-focus-within:text-interactive-primary-default"
+                    class="inline-flex shrink-0 items-center text-text-tertiary"
                     aria-hidden="true"
                 >
-                    <slot name="prefix"/>
+                    <slot name="prefix" />
                 </span>
-
                 <input
                     :id="controlId"
                     v-bind="attrs"
@@ -129,84 +112,16 @@ function handleClearClick(): void {
                     :required="required"
                     :aria-describedby="describedBy"
                     :aria-invalid="fieldInvalid || undefined"
-                    :class="inputClassName"
+                    :class="inputClass"
                 />
-
-                <button
-                    v-if="showClearButton"
-                    type="button"
-                    class="ml-2 inline-flex size-[2rem] shrink-0 items-center justify-center rounded-full bg-text-secondary/10 text-text-secondary transition-colors duration-fast ease-default hover:bg-text-secondary/16 hover:text-text-primary"
-                    aria-label="Clear input"
-                    @pointerdown="handleClearPointerDown"
-                    @click="handleClearClick"
-                >
-                    <VCloseIcon/>
-                </button>
-
                 <span
-                    v-if="$slots.suffix && !showClearButton"
-                    class="pointer-events-none ml-2 inline-flex shrink-0 items-center text-text-tertiary transition-colors duration-fast ease-default group-focus-within:text-interactive-primary-default"
+                    v-if="$slots.suffix"
+                    class="inline-flex shrink-0 items-center text-text-tertiary"
                     aria-hidden="true"
                 >
-                    <slot name="suffix"/>
+                    <slot name="suffix" />
                 </span>
             </div>
         </template>
     </VField>
 </template>
-
-<style scoped>
-.input-control {
-    border-color: var(--color-border-default);
-    transition: border-color var(--duration-input) var(--ease-input),
-    box-shadow var(--duration-input) var(--ease-input);
-}
-
-.input-control:hover {
-    border-color: var(--color-border-strong);
-}
-
-.input-control:focus-within {
-    border-color: var(--color-interactive-primary-default);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-interactive-primary-default) 15%, transparent);
-}
-
-.input-control.is-disabled {
-    border-color: var(--color-border-subtle);
-    background-color: var(--color-surface-muted);
-    cursor: not-allowed;
-}
-
-.input-control.is-disabled:hover,
-.input-control.is-disabled:focus-within {
-    border-color: var(--color-border-subtle);
-    box-shadow: none;
-}
-
-.input-control.is-readonly {
-    background-color: var(--color-surface-sunken);
-}
-
-.input-control.is-readonly:hover,
-.input-control.is-readonly:focus-within {
-    border-color: var(--color-border-default);
-    box-shadow: none;
-}
-
-.input-control.is-invalid {
-    border-color: var(--color-error-border);
-}
-
-.input-control.is-invalid:focus-within {
-    border-color: var(--color-error-border);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-error-border) 15%, transparent);
-}
-
-input[type="search"]::-webkit-search-decoration,
-input[type="search"]::-webkit-search-cancel-button,
-input[type="search"]::-webkit-search-results-button,
-input[type="search"]::-webkit-search-results-decoration {
-    display: none;
-    -webkit-appearance: none;
-}
-</style>

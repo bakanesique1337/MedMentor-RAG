@@ -1,59 +1,30 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-import { cn } from '@/components/ui/utils'
-
-type SkeletonShape = 'line' | 'rectangle' | 'circle'
+type SkeletonShape = 'rectangle' | 'circle' | 'text'
 
 interface Props {
-    shape?: SkeletonShape
     width?: string
     height?: string
-    shimmer?: boolean
-    rootClass?: string
+    shape?: SkeletonShape
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    shape: 'line',
     width: '100%',
-    height: '',
-    shimmer: true,
-    rootClass: '',
+    height: '1.2rem',
+    shape: 'rectangle',
 })
 
-const shapeClasses = computed<Record<SkeletonShape, string>>(() => ({
-    line: 'h-[1.2rem] rounded-full',
-    rectangle: 'rounded-lg',
-    circle: 'rounded-full',
-}))
-
-const resolvedHeight = computed(() => {
-    if (props.height) {
-        return props.height
-    }
-
-    if (props.shape === 'circle') {
-        return props.width
-    }
-
-    return props.shape === 'rectangle' ? '8rem' : '1.2rem'
-})
-
-const skeletonStyle = computed(() => ({
+const style = computed(() => ({
     width: props.width,
-    height: resolvedHeight.value,
+    height: props.height,
+    borderRadius: props.shape === 'circle' ? '9999px' : props.shape === 'text' ? '0.4rem' : '0.8rem',
 }))
 </script>
 
 <template>
-    <span
-        :class="cn(
-            'block bg-skeleton-base',
-            props.shimmer ? 'animate-skeleton-shimmer' : '',
-            shapeClasses[shape],
-            props.rootClass,
-        )"
-        :style="skeletonStyle"
-        aria-hidden="true"
+    <div
+        class="skeleton"
+        :style="style"
     />
 </template>

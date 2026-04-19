@@ -20,29 +20,31 @@ const props = withDefaults(defineProps<Props>(), {
     class: '',
 })
 
-const sizeClasses = computed<Record<SpinnerSize, string>>(() => ({
+const SIZE_CLASSES: Record<SpinnerSize, string> = {
     sm: 'size-[1.4rem] border-[0.2rem]',
-    md: 'size-[1.8rem] border-[0.25rem]',
-    lg: 'size-[2.4rem] border-[0.3rem]',
-}))
+    md: 'size-[2rem] border-[0.25rem]',
+    lg: 'size-[2.6rem] border-[0.3rem]',
+}
 
-const variantClasses = computed<Record<SpinnerVariant, string>>(() => ({
-    neutral: 'border-border-default border-t-text-secondary',
-    primary: 'border-interactive-primary-disabled border-t-interactive-primary-default',
+const VARIANT_CLASSES: Record<SpinnerVariant, string> = {
+    neutral: 'border-[color:var(--color-line-2)] border-t-[color:var(--color-ink-3)]',
+    primary: 'border-[color:var(--color-teal-soft)] border-t-brand',
     inverse: 'border-white/35 border-t-white',
-}))
+}
 
-const spinnerClassName = computed(() => cn(
-    'inline-block animate-spin rounded-full border-solid',
-    sizeClasses.value[props.size],
-    variantClasses.value[props.variant],
-    props.class,
-))
+const spinnerClass = computed(() =>
+    cn(
+        'inline-block animate-spin rounded-full border-solid',
+        SIZE_CLASSES[props.size],
+        VARIANT_CLASSES[props.variant],
+        props.class,
+    ),
+)
 </script>
 
 <template>
     <span
-        :class="spinnerClassName"
+        :class="spinnerClass"
         role="status"
         :aria-label="label"
     >

@@ -1,5 +1,7 @@
 package ru.medmentor.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,8 @@ import java.util.concurrent.CompletableFuture;
 
 @Service
 public class SimulationStreamingServiceImpl implements SimulationStreamingService {
+
+    private static final Logger log = LoggerFactory.getLogger(SimulationStreamingServiceImpl.class);
 
     private final ConversationMessageRepository conversationMessageRepository;
     private final CaseLoaderService caseLoaderService;
@@ -61,7 +65,12 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
         if (!simulationInFlightRegistry.markMessageInFlight(sessionId)) {
             throw new IllegalStateException("AI response is already in flight for this session");
         }
-        CompletableFuture.runAsync(() -> streamReply(sessionId, doctorMessage));
+        log.info("[stream] startPatientReply dispatch sessionId={} messageLen={}", sessionId, doctorMessage.length());
+        CompletableFuture.runAsync(() -> streamReply(sessionId, doctorMessage))
+                .exceptionally(ex -> {
+                    log.error("[stream] streamReply async task failed sessionId={}", sessionId, ex);
+                    return null;
+                });
     }
 
     @Override
@@ -103,26 +112,35 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
 
     @Transactional(noRollbackFor = RuntimeException.class)
     protected void streamReply(Long sessionId, String doctorMessage) {
+        log.info("[stream] streamReply enter sessionId={}", sessionId);
         final SimulationSession session = getSession(sessionId);
         final MedicalCase medicalCase = caseLoaderService.getCaseById(session.getCaseId());
         final List<ConversationMessage> history = conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(sessionId);
         final StringBuilder buffer = new StringBuilder();
+        log.info("[stream] streamReply building flux sessionId={} historySize={}", sessionId, history.size());
         final Flux<String> flux = simulationAiService.streamPatientReply(medicalCase, history, doctorMessage);
+        log.info("[stream] streamReply flux built, subscribing sessionId={}", sessionId);
 
         try {
             flux.doOnNext(chunk -> {
                         buffer.append(chunk);
+                        log.debug("[stream] chunk sessionId={} len={}", sessionId, chunk.length());
                         publishChunk(sessionId, chunk);
                     })
+                    .doOnError(err -> log.error("[stream] flux error sessionId={}", sessionId, err))
+                    .doOnComplete(() -> log.info("[stream] flux complete sessionId={} totalLen={}", sessionId, buffer.length()))
                     .blockLast();
 
+            log.info("[stream] streamReply publishing done sessionId={} totalLen={}", sessionId, buffer.length());
             savePatientMessage(session, buffer.toString(), nextOrder(sessionId));
             publishDone(sessionId);
         } catch (RuntimeException exception) {
+            log.error("[stream] streamReply caught exception sessionId={}", sessionId, exception);
             publishError(sessionId, exception.getMessage());
             throw exception;
         } finally {
             simulationInFlightRegistry.clearMessageInFlight(sessionId);
+            log.info("[stream] streamReply exit sessionId={}", sessionId);
         }
     }
 

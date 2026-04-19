@@ -1,58 +1,34 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-
-import { cn } from '@/components/ui/utils'
-
 interface Props {
     title?: string
     description?: string
-    compact?: boolean
-    class?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
     title: '',
     description: '',
-    compact: false,
-    class: '',
 })
-
-const wrapperClassName = computed(() => cn(
-    'rounded-2xl border border-dashed border-border-default bg-surface-elevated text-center',
-    props.compact ? 'px-4 py-4' : 'px-5 py-6',
-    props.class,
-))
 </script>
 
 <template>
-    <section :class="wrapperClassName">
-        <div
-            v-if="$slots.illustration"
-            class="mx-auto mb-3 inline-flex size-[5.6rem] items-center justify-center rounded-full bg-surface-sunken text-text-secondary"
+    <div class="flex flex-col items-center justify-center rounded-[1.4rem] border border-dashed border-[color:var(--color-line-2)] bg-surface-base px-[3rem] py-[5rem] text-center">
+        <h3
+            v-if="title || $slots.title"
+            class="font-serif text-[2rem] font-medium leading-[1.2] tracking-[-0.02em] text-text-primary"
         >
-            <slot name="illustration" />
-        </div>
-
-        <h2 class="text-h3 font-semibold text-text-primary">
-            <slot name="title">
-                {{ title }}
-            </slot>
-        </h2>
-
+            <slot name="title">{{ title }}</slot>
+        </h3>
         <p
-            v-if="description || $slots.default"
-            class="mx-auto mt-1 max-w-prose text-body text-text-secondary"
+            v-if="description || $slots.description"
+            class="mt-[0.8rem] max-w-[42rem] text-[1.35rem] text-text-secondary"
         >
-            <slot>
-                {{ description }}
-            </slot>
+            <slot name="description">{{ description }}</slot>
         </p>
-
         <div
             v-if="$slots.action"
-            class="mt-3 flex justify-center"
+            class="mt-[2rem]"
         >
             <slot name="action" />
         </div>
-    </section>
+    </div>
 </template>

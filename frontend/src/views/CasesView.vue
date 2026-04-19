@@ -16,57 +16,47 @@ const router = useRouter()
 const casesApi = useCasesApi()
 const simulationApi = useSimulationApi()
 
-// Data
 const cases = ref<CaseCardType[]>([])
 const activeSession = ref<ActiveSimulation | null>(null)
 
-// Loading states
 const isLoadingCases = ref(true)
 const isLoadingActive = ref(true)
 
-// Filters
 const selectedCategory = ref('')
 const selectedDifficulty = ref('')
+const searchQuery = ref('')
 
-// Action state
 const startPendingCaseId = ref<string | null>(null)
 const pageError = ref<string | null>(null)
 const conflictMessage = ref<string | null>(null)
 
 const isLoading = computed(() => isLoadingCases.value || isLoadingActive.value)
 
-const categories = computed<string[]>(() => {
-    const seen = new Set<string>()
-    return cases.value
-        .map((c) => c.category)
-        .filter((cat) => {
-            if (seen.has(cat)) return false
-            seen.add(cat)
-            return true
-        })
-})
+const SKELETON_KEYS = Array.from({ length: 6 }, (_, i) => `skeleton-card-${i}`)
 
-const difficulties = computed<string[]>(() => {
-    const seen = new Set<string>()
-    return cases.value
-        .map((c) => c.difficulty)
-        .filter((d) => {
-            if (seen.has(d)) return false
-            seen.add(d)
-            return true
-        })
-})
-
-const filteredCases = computed<CaseCardType[]>(() =>
-    cases.value.filter((c) => {
-        const matchesCategory = selectedCategory.value === '' || c.category === selectedCategory.value
-        const matchesDifficulty = selectedDifficulty.value === '' || c.difficulty === selectedDifficulty.value
-        return matchesCategory && matchesDifficulty
-    }),
+const categories = computed<string[]>(() =>
+    Array.from(new Set(cases.value.map((c) => c.category))),
 )
 
+const difficulties = computed<string[]>(() =>
+    Array.from(new Set(cases.value.map((c) => c.difficulty))),
+)
+
+const filteredCases = computed<CaseCardType[]>(() => {
+    const q = searchQuery.value.trim().toLowerCase()
+    return cases.value.filter((c) => {
+        const matchesCategory = selectedCategory.value === '' || c.category === selectedCategory.value
+        const matchesDifficulty = selectedDifficulty.value === '' || c.difficulty === selectedDifficulty.value
+        const matchesQuery = q === ''
+            || c.title.toLowerCase().includes(q)
+            || c.patientName.toLowerCase().includes(q)
+            || c.patientBrief.toLowerCase().includes(q)
+        return matchesCategory && matchesDifficulty && matchesQuery
+    })
+})
+
 const isFiltered = computed(
-    () => selectedCategory.value !== '' || selectedDifficulty.value !== '',
+    () => selectedCategory.value !== '' || selectedDifficulty.value !== '' || searchQuery.value.trim() !== '',
 )
 
 /**
@@ -78,14 +68,14 @@ async function fetchCases(): Promise<void> {
     try {
         cases.value = await casesApi.getCases()
     } catch {
-        pageError.value = 'Failed to load cases. Please refresh the page.'
+        pageError.value = 'Не удалось загрузить список кейсов. Попробуйте обновить страницу.'
     } finally {
         isLoadingCases.value = false
     }
 }
 
 /**
- * Fetches the currently active session. Non-blocking -- failures are silently ignored.
+ * Fetches the currently active session; silently ignores failures.
  */
 async function fetchActiveSession(): Promise<void> {
     isLoadingActive.value = true
@@ -99,12 +89,10 @@ async function fetchActiveSession(): Promise<void> {
 }
 
 /**
- * Starts a new simulation and navigates to chat.
- * On 409, refreshes active session state and shows resume guidance.
+ * Starts a new simulation and navigates to chat; handles 409 conflicts.
  */
 async function handleStart(caseId: string): Promise<void> {
     if (startPendingCaseId.value !== null) return
-
     startPendingCaseId.value = caseId
     conflictMessage.value = null
 
@@ -113,11 +101,10 @@ async function handleStart(caseId: string): Promise<void> {
         await router.push({ name: ROUTES.CHAT, params: { sessionId: String(response.sessionId) } })
     } catch (err: unknown) {
         if (isApiError(err) && err.status === 409) {
-            conflictMessage.value =
-                'You already have an active session. Resume it from the banner above or from the matching case card.'
+            conflictMessage.value = 'У вас уже есть активная симуляция. Продолжите её из баннера выше.'
             await fetchActiveSession()
         } else {
-            pageError.value = 'Failed to start the case. Please try again.'
+            pageError.value = 'Не удалось начать кейс. Попробуйте снова.'
         }
     } finally {
         startPendingCaseId.value = null
@@ -125,18 +112,16 @@ async function handleStart(caseId: string): Promise<void> {
 }
 
 /**
- * Navigates to an existing session's chat page.
+ * Navigates to an existing session.
  */
 async function handleResume(sessionId: number): Promise<void> {
     await router.push({ name: ROUTES.CHAT, params: { sessionId: String(sessionId) } })
 }
 
-/**
- * Resets all active filters.
- */
 function handleResetFilters(): void {
     selectedCategory.value = ''
     selectedDifficulty.value = ''
+    searchQuery.value = ''
 }
 
 onMounted(() => {
@@ -145,133 +130,156 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="mx-auto w-full max-w-384 px-4 py-8">
-        <div class="mb-6">
-            <h1 class="text-h1 font-semibold text-text-primary">Clinical Cases</h1>
-            <p class="mt-1 text-body text-text-secondary">
-                Choose a case to start a simulation session.
-            </p>
-        </div>
-
-        <!-- Active session banner -->
-        <div
-            v-if="!isLoadingActive && activeSession"
-            class="mb-6"
-        >
-            <ActiveSessionBanner
-                :session="activeSession"
-                @resume="handleResume"
-            />
-        </div>
-
-        <!-- Conflict message -->
-        <div
-            v-if="conflictMessage"
-            class="mb-4"
-        >
-            <VAlert
-                status="warning"
-                title="Session conflict"
-                :description="conflictMessage"
-            />
-        </div>
-
-        <!-- Page error -->
-        <div
-            v-if="pageError"
-            class="mb-4"
-        >
-            <VAlert
-                status="error"
-                title="Could not load cases"
-                :description="pageError"
-            />
-        </div>
-
-        <!-- Loading skeletons -->
-        <div
-            v-if="isLoading"
-            class="flex flex-col gap-4"
-        >
-            <div class="flex gap-3">
-                <VSkeleton
-                    width="18rem"
-                    height="3.6rem"
-                    shape="rectangle"
-                />
-                <VSkeleton
-                    width="18rem"
-                    height="3.6rem"
-                    shape="rectangle"
-                />
-            </div>
-            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <VSkeleton
-                    v-for="n in 6"
-                    :key="n"
-                    height="22rem"
-                    shape="rectangle"
-                />
-            </div>
-        </div>
-
-        <!-- Cases content -->
-        <template v-else-if="!pageError">
-            <CasesFilters
-                v-model:category="selectedCategory"
-                v-model:difficulty="selectedDifficulty"
-                :categories="categories"
-                :difficulties="difficulties"
-            />
-
-            <p class="mb-4 mt-4 text-body-sm text-text-secondary">
-                <template v-if="isFiltered">
-                    {{ filteredCases.length }} of {{ cases.length }} cases
-                </template>
-                <template v-else>
-                    {{ cases.length }} cases
-                </template>
-            </p>
-
-            <!-- Filtered empty state -->
-            <VEmptyState
-                v-if="filteredCases.length === 0 && isFiltered"
-                title="No cases match your filters"
-                description="Try clearing the filters to see all available cases."
+    <div class="flex h-full flex-col overflow-hidden">
+        <!-- Top bar -->
+        <header class="flex shrink-0 items-center gap-[1.2rem] border-b border-[color:var(--color-line)] bg-surface-base px-[2.4rem] py-[1.6rem]">
+            <nav
+                class="flex items-center gap-[0.8rem] text-[1.2rem] text-text-secondary"
+                aria-label="Breadcrumbs"
             >
-                <template #action>
-                    <VButton
-                        variant="secondary"
-                        @click="handleResetFilters"
+                <span>MedMentor</span>
+                <svg
+                    width="8"
+                    height="8"
+                    viewBox="0 0 8 8"
+                    class="opacity-50"
+                ><path
+                    d="M3 2l3 2-3 2"
+                    stroke="currentColor"
+                    stroke-width="1.2"
+                    fill="none"
+                /></svg>
+                <span class="font-medium text-text-primary">Библиотека кейсов</span>
+            </nav>
+        </header>
+
+        <div class="flex-1 overflow-y-auto">
+            <div class="mx-auto w-full max-w-[132rem] px-[2.4rem] py-[2.4rem]">
+                <div class="mb-[2.4rem]">
+                    <p class="mb-[0.8rem] text-eyebrow text-brand">Библиотека</p>
+                    <h1 class="font-serif text-[3.6rem] font-medium leading-[1.1] tracking-[-0.02em] text-text-primary">
+                        Клинические кейсы
+                    </h1>
+                    <p class="mt-[0.6rem] text-[1.45rem] text-text-secondary">
+                        Выберите кейс, чтобы начать симуляцию.
+                    </p>
+                </div>
+
+                <div
+                    v-if="!isLoadingActive && activeSession"
+                    class="mb-[2rem]"
+                >
+                    <ActiveSessionBanner
+                        :session="activeSession"
+                        @resume="handleResume"
+                    />
+                </div>
+
+                <div
+                    v-if="conflictMessage"
+                    class="mb-[1.6rem]"
+                >
+                    <VAlert
+                        status="warning"
+                        title="Конфликт сессии"
+                        :description="conflictMessage"
+                    />
+                </div>
+
+                <div
+                    v-if="pageError"
+                    class="mb-[1.6rem]"
+                >
+                    <VAlert
+                        status="error"
+                        title="Ошибка загрузки"
+                        :description="pageError"
+                    />
+                </div>
+
+                <div
+                    v-if="isLoading"
+                    class="flex flex-col gap-[1.6rem]"
+                >
+                    <div class="flex gap-[1.2rem]">
+                        <VSkeleton
+                            width="28rem"
+                            height="4rem"
+                        />
+                        <VSkeleton
+                            width="18rem"
+                            height="4rem"
+                        />
+                        <VSkeleton
+                            width="18rem"
+                            height="4rem"
+                        />
+                    </div>
+                    <div class="grid gap-[1.6rem] sm:grid-cols-2 lg:grid-cols-3">
+                        <VSkeleton
+                            v-for="key in SKELETON_KEYS"
+                            :key="key"
+                            height="22rem"
+                        />
+                    </div>
+                </div>
+
+                <template v-else-if="!pageError">
+                    <CasesFilters
+                        v-model:category="selectedCategory"
+                        v-model:difficulty="selectedDifficulty"
+                        v-model:query="searchQuery"
+                        :categories="categories"
+                        :difficulties="difficulties"
+                    />
+
+                    <p class="mb-[1.6rem] mt-[1.6rem] text-[1.3rem] text-text-secondary">
+                        <template v-if="isFiltered">
+                            Показано {{ filteredCases.length }} из {{ cases.length }} кейсов
+                        </template>
+                        <template v-else>
+                            {{ cases.length }} кейсов
+                        </template>
+                    </p>
+
+                    <VEmptyState
+                        v-if="filteredCases.length === 0 && isFiltered"
+                        title="Ничего не нашлось"
+                        description="Попробуйте сбросить фильтры или изменить запрос."
                     >
-                        Clear filters
-                    </VButton>
+                        <template #action>
+                            <VButton
+                                variant="secondary"
+                                @click="handleResetFilters"
+                            >
+                                Сбросить фильтры
+                            </VButton>
+                        </template>
+                    </VEmptyState>
+
+                    <VEmptyState
+                        v-else-if="cases.length === 0"
+                        title="Пока нет кейсов"
+                        description="Загляните позже — библиотека постоянно пополняется."
+                    />
+
+                    <div
+                        v-else
+                        class="grid gap-[1.6rem] sm:grid-cols-2 lg:grid-cols-3"
+                    >
+                        <CaseCard
+                            v-for="caseData in filteredCases"
+                            :key="caseData.id"
+                            :case-data="caseData"
+                            :is-active="activeSession !== null && activeSession.caseId === caseData.id"
+                            :active-session-id="activeSession !== null ? activeSession.id : null"
+                            :is-start-pending="startPendingCaseId === caseData.id"
+                            @start="handleStart"
+                            @resume="handleResume"
+                        />
+                    </div>
                 </template>
-            </VEmptyState>
-
-            <!-- All-cases empty state -->
-            <VEmptyState
-                v-else-if="cases.length === 0"
-                title="No cases available"
-                description="Check back later for available clinical cases."
-            />
-
-            <!-- Case grid -->
-            <div
-                v-else
-                class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            >
-                <CaseCard
-                    v-for="caseData in filteredCases"
-                    :key="caseData.id"
-                    :case-data="caseData"
-                    :is-active="activeSession !== null && activeSession.caseId === caseData.id"
-                    :active-session-id="activeSession !== null ? activeSession.id : null"
-                    :is-start-pending="startPendingCaseId === caseData.id"
-                    @start="handleStart"
-                    @resume="handleResume"
-                />
             </div>
-        </template>
+        </div>
     </div>
 </template>

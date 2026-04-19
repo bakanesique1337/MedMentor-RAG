@@ -1,111 +1,102 @@
-@keyframes skeleton-shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-
-    100% {
-        background-position: -200% 0;
-    }
+@keyframes mm-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
 }
 
-@keyframes ripple-effect {
-    0% {
-        opacity: 0.22;
-        transform: scale(0);
-    }
+@keyframes mm-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-0.6rem); }
+    75% { transform: translateX(0.6rem); }
+}
 
-    100% {
-        opacity: 0;
-        transform: scale(1);
-    }
+@keyframes mm-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+@keyframes mm-fade-up {
+    from { opacity: 0; transform: translateY(1.2rem); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mm-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes mm-pop-in {
+    from { opacity: 0; transform: translateY(1.2rem) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes mm-caret {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
 }
 
 @layer utilities {
-    .focus-ring {
-        outline: 2px solid transparent;
-        outline-offset: 2px;
-        transition: outline-color var(--duration-fast) var(--ease-default),
-        box-shadow var(--duration-fast) var(--ease-default);
+    .anim-blink {
+        animation: mm-blink 1.8s ease-in-out infinite;
     }
 
-    .focus-ring:focus {
-        outline: none;
+    .anim-pulse {
+        animation: mm-pulse 1.6s ease-in-out infinite;
     }
 
-    .focus-ring:focus-visible {
-        outline-color: var(--focus-ring);
-        box-shadow: 0 0 0 2px var(--focus-ring-offset), var(--shadow-focus);
+    .anim-shake {
+        animation: mm-shake 0.4s ease-in-out;
     }
 
-    .skeleton {
-        border-radius: var(--skeleton-radius);
-        background-color: var(--skeleton-base);
-        background-image: linear-gradient(
-            90deg,
-            var(--skeleton-base) 0%,
-            var(--skeleton-highlight) 50%,
-            var(--skeleton-base) 100%
-        );
-        background-size: 200% 100%;
-        animation: var(--animate-skeleton-shimmer);
+    .anim-fade-up {
+        animation: mm-fade-up 0.6s var(--ease-soft) both;
     }
 
-    .prose-measure {
-        max-width: var(--prose-width);
+    .anim-fade-in {
+        animation: mm-fade-in 0.22s ease-out both;
+    }
+
+    .anim-pop-in {
+        animation: mm-pop-in 0.38s var(--ease-soft) both;
+    }
+
+    .anim-caret::after {
+        content: "";
+        display: inline-block;
+        width: 0.2rem;
+        height: 1em;
+        margin-left: 0.2rem;
+        vertical-align: text-bottom;
+        background: var(--brand-primary);
+        animation: mm-caret 0.9s steps(1) infinite;
+        border-radius: 1px;
+    }
+
+    .grid-backdrop {
+        background-image:
+            linear-gradient(rgb(13 115 119 / 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgb(13 115 119 / 0.05) 1px, transparent 1px);
+        background-size: 4.8rem 4.8rem;
     }
 
     .tabular {
         font-variant-numeric: tabular-nums;
     }
 
-    .ripple {
-        position: absolute;
-        border-radius: 9999px;
-        background: color-mix(in srgb, currentColor 24%, transparent);
-        opacity: 0;
-        transform: scale(0);
-        animation: ripple-effect 550ms ease-out;
+    .skeleton {
+        border-radius: 0.8rem;
+        background-color: color-mix(in srgb, var(--color-ink-4) 22%, transparent);
+        background-image: linear-gradient(
+            90deg,
+            transparent 0%,
+            color-mix(in srgb, var(--surface-paper) 55%, transparent) 50%,
+            transparent 100%
+        );
+        background-size: 200% 100%;
+        animation: skeleton-shimmer 1400ms ease-in-out infinite;
     }
 
-    .squircle {
-        --squircle-radius: 1.6rem;
-        --squircle-fallback-svg: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'><path fill='black' d='M50 0C74 0 87 0 93.5 6.5S100 26 100 50 100 74 93.5 80.5 74 100 50 100 26 100 19.5 93.5 0 74 0 50 0 26 6.5 19.5 26 0 50 0Z'/></svg>");
-
-        border-radius: var(--squircle-radius);
-    }
-
-    @supports (corner-shape: squircle) {
-        .squircle {
-            corner-shape: squircle;
-        }
-    }
-
-    @supports not (corner-shape: squircle) {
-        .squircle {
-            -webkit-mask-image: var(--squircle-fallback-svg);
-            -webkit-mask-repeat: no-repeat;
-            -webkit-mask-position: center;
-            -webkit-mask-size: 100% 100%;
-            mask-image: var(--squircle-fallback-svg);
-            mask-repeat: no-repeat;
-            mask-position: center;
-            mask-size: 100% 100%;
-        }
-    }
-
-    .squircle-sm {
-        --squircle-radius: 1.2rem;
-    }
-
-    .squircle-md {
-        --squircle-radius: 1.6rem;
-    }
-
-    .squircle-lg {
-        --squircle-radius: 2.4rem;
-    }
-
-    .squircle-xl {
-        --squircle-radius: 3.2rem;
+    @keyframes skeleton-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
     }
 }

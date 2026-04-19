@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MedMentor-RAG — Кейс C-0342</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#f4f7f7; font-family: Manrope, -apple-system, system-ui, sans-serif; height: 100%; overflow: hidden; color: #0a1f1f; }
+  #root { height: 100vh; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes modalPop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-3px); opacity: 1; } }
+  @keyframes caretBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  @keyframes skeletonSweep {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  @keyframes thinkPulse {
+    0%, 100% { opacity: 0.4; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+  @keyframes streamIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(10,31,31,0.15); border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(13,115,119,0.35); }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="chat-sidebar.jsx"></script>
+<script type="text/babel" src="chat-area.jsx"></script>
+
+<script type="text/babel" data-presets="env,react">
+const { useState, useEffect, useRef } = React;
+
+const INITIAL_MESSAGES = [
+  { role: 'system', content: 'Начало симуляции · 10:47' },
+  {
+    role: 'patient',
+    content: 'Доктор… грудь как будто сдавило. Минут 40 уже болит, отдаёт в левую руку. Раньше такого не было.',
+    emotion: 'тревожен',
+    meta: '10:47',
+  },
+  {
+    role: 'student',
+    content: 'Здравствуйте. Расскажите подробнее — когда именно началась боль? Что вы делали в тот момент?',
+    meta: '10:48',
+  },
+  {
+    role: 'patient',
+    content: 'Шёл в магазин, поднимался в горку. Минут через пять почувствовал давление вот тут, за грудиной. Думал, пройдёт — сел на скамейку, но стало только хуже. Холодный пот прошиб.',
+    meta: '10:49',
+  },
+  {
+    role: 'student',
+    content: 'Принимали ли вы что-то? Нитроглицерин, аспирин?',
+    meta: '10:50',
+  },
+  {
+    role: 'patient',
+    content: 'Нет, у меня нет. Я и к врачам-то давно не ходил. Только от давления таблетки пью — эналаприл.',
+    meta: '10:51',
+  },
+  {
+    role: 'student',
+    content: 'В семье у кого-то были инфаркты или инсульты в молодом возрасте?',
+    meta: '10:53',
+  },
+  {
+    role: 'patient',
+    content: 'Отец умер в 58 — сказали, инфаркт. Брат старший тоже сердцем мучается, стенты ставили.',
+    emotion: 'встревожен',
+    meta: '10:54',
+    think: 'RAG-контекст: отягощённый семейный анамнез + факторы риска (курение, СД, АГ) дают ≥3 из 6 по шкале TIMI. Рассмотрите ACS.',
+  },
+];
+
+const SUGGESTIONS_INITIAL = [
+  'Провести физикальный осмотр',
+  'Запросить лабораторные данные',
+  'Провести инструментальную диагностику',
+];
+
+function Thinking() {
+  // Compact single-line "thinking" indicator — pulse + traveling dots
+  return (
+    <div style={{
+      display: 'flex', gap: 12, padding: '10px 0', alignItems: 'center',
+      animation: 'streamIn 260ms ease-out',
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 999, flexShrink: 0,
+        background: 'linear-gradient(135deg, #3a4a48, #1e2e2c)',
+        color: '#ffffff',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 11, fontWeight: 700, letterSpacing: 0.3,
+        fontFamily: 'Manrope, system-ui, sans-serif',
+      }}>ИП</div>
+      <div style={{
+        background: '#ffffff',
+        border: '0.5px solid rgba(10,31,31,0.1)',
+        borderRadius: 14, borderTopLeftRadius: 4,
+        padding: '10px 14px',
+        display: 'flex', alignItems: 'center', gap: 10,
+        boxShadow: '0 1px 2px rgba(10,31,31,0.03)',
+      }}>
+        <span style={{
+          fontSize: 12, color: '#4a6060',
+          fontFamily: 'Manrope, system-ui, sans-serif',
+          letterSpacing: -0.1,
+        }}>Пациент обдумывает</span>
+        <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+          {[0, 1, 2].map(i => (
+            <span key={i} style={{
+              width: 4, height: 4, borderRadius: 999,
+              background: '#0d7377',
+              animation: `typingDot 1.3s ease-in-out ${i * 0.16}s infinite`,
+            }} />
+          ))}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [activeNav, setActiveNav] = useState('cases');
+  const [collapsed, setCollapsed] = useState(false);
+  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [input, setInput] = useState('');
+  const [thinking, setThinking] = useState(false);
+  const [streamingIdx, setStreamingIdx] = useState(-1);
+  const [dxOpen, setDxOpen] = useState(false);
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [completed, setCompleted] = useState(null);
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages, thinking]);
+
+  const send = () => {
+    const t = input.trim();
+    if (!t) return;
+    const now = new Date();
+    const ts = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    setMessages(m => [...m, { role: 'student', content: t, meta: ts }]);
+    setInput('');
+    setThinking(true);
+
+    // Phase 1: "analysing" (skeleton + pulse)
+    setTimeout(() => {
+      const reply = pickReply(t);
+      const tokens = reply.content.split(/(\s+)/); // preserve whitespace
+      setThinking(false);
+
+      // Phase 2: create empty message and stream tokens into it
+      setMessages(m => {
+        const next = [...m, { role: 'patient', content: '', emotion: reply.emotion, meta: ts, think: reply.think, streaming: true }];
+        return next;
+      });
+
+      let i = 0;
+      const startStream = () => {
+        setStreamingIdx(prev => prev); // trigger re-render
+        const tick = () => {
+          i++;
+          setMessages(m => {
+            const last = m.length - 1;
+            const acc = tokens.slice(0, i).join('');
+            const updated = [...m];
+            updated[last] = { ...updated[last], content: acc, streaming: i < tokens.length };
+            return updated;
+          });
+          if (i < tokens.length) {
+            // randomized cadence: 22–60ms per token, slight pause after punctuation
+            const lastTok = tokens[i - 1] || '';
+            const punct = /[.!?…,]$/.test(lastTok);
+            const delay = punct ? 220 + Math.random() * 120 : 28 + Math.random() * 38;
+            setTimeout(tick, delay);
+          }
+        };
+        tick();
+      };
+      setTimeout(startStream, 40);
+    }, 900);
+  };
+
+  const pickReply = (q) => {
+    const s = q.toLowerCase();
+    if (s.includes('бол') || s.includes('характер') || s.includes('какая')) {
+      return { content: 'Это не колющая, скорее давящая. Как будто кирпич на грудь положили. Глубоко вдохнуть тяжеловато.', emotion: null };
+    }
+    if (s.includes('экг') || s.includes('исслед') || s.includes('тропон')) {
+      return { content: '(медсестра снимает ЭКГ в 12 отведениях; результат готов через 30 секунд)', emotion: 'молчит', think: 'ЭКГ прилагается справа. Оцените ST-сегмент в V2–V4.' };
+    }
+    if (s.includes('давлен') || s.includes('ад')) {
+      return { content: 'На последнем приёме было 160/95. Таблетки не всегда пил, каюсь.', emotion: null };
+    }
+    if (s.includes('кур') || s.includes('алко') || s.includes('пьё')) {
+      return { content: 'Курю с армии, почти 30 лет. Пачка в день. Алкоголь — по праздникам, немного.', emotion: null };
+    }
+    return { content: 'Мне просто очень тяжело говорить сейчас. Пожалуйста, что-нибудь сделайте.', emotion: 'напуган' };
+  };
+
+  const onSuggest = (s) => setInput(v => v ? v + ' ' + s : s);
+
+  const onConfirmDiagnosis = (dx) => {
+    setCompleted(dx);
+    setDxOpen(false);
+  };
+
+  if (completed) {
+    return <Completed dx={completed} onRestart={() => { setCompleted(null); setMessages(INITIAL_MESSAGES); }} />;
+  }
+
+  return (
+    <div style={{
+      display: 'flex', height: '100vh', width: '100vw',
+      background: '#f4f7f7', overflow: 'hidden',
+    }}>
+      <Sidebar activeNav={activeNav} setActiveNav={setActiveNav} collapsed={collapsed} setCollapsed={setCollapsed} />
+
+      {/* Main column */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <TopBar onFinish={() => setFinishOpen(true)} onDiagnose={() => setDxOpen(true)} />
+
+        {/* Case summary strip */}
+        <div style={{
+          padding: '14px 40px 12px',
+          borderBottom: `0.5px solid rgba(10,31,31,0.06)`,
+          display: 'flex', alignItems: 'baseline', gap: 20,
+          background: 'linear-gradient(180deg, #e8f2f1 0%, #f4f7f7 100%)',
+        }}>
+          <div>
+            <div style={{
+              fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace', fontSize: 10.5,
+              color: '#0d7377', letterSpacing: 1.2, marginBottom: 3, fontWeight: 600,
+            }}>CHIEF COMPLAINT</div>
+            <div style={{
+              fontFamily: 'Fraunces, Georgia, serif',
+              fontSize: 22, letterSpacing: -0.3, lineHeight: 1.2,
+              color: '#0a1f1f', fontWeight: 400,
+            }}>
+              «Острая давящая боль за грудиной, 40 мин, иррадиация в левую руку»
+            </div>
+          </div>
+          <div style={{ flex: 1 }} />
+        </div>
+
+        {/* Messages */}
+        <div ref={scrollRef} style={{
+          flex: 1, overflowY: 'auto',
+          padding: '8px 40px',
+        }}>
+          <div style={{ maxWidth: 820, margin: '0 auto' }}>
+            {messages.map((m, i) => <Message key={i} {...m} />)}
+            {thinking && <Thinking />}
+            <div style={{ height: 12 }} />
+          </div>
+        </div>
+
+        <ChatInput
+          value={input}
+          onChange={setInput}
+          onSend={send}
+          suggestions={SUGGESTIONS_INITIAL}
+          onSuggest={onSuggest}
+        />
+      </div>
+
+      <DiagnosisModal open={dxOpen} onClose={() => setDxOpen(false)} onConfirm={onConfirmDiagnosis} />
+      <FinishModal open={finishOpen} onClose={() => setFinishOpen(false)} onConfirm={() => { setFinishOpen(false); setCompleted({ incomplete: true }); }} />
+    </div>
+  );
+}
+
+function Completed({ dx, onRestart }) {
+  const incomplete = dx.incomplete;
+
+  if (incomplete) {
+    return (
+      <div style={{
+        height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'linear-gradient(180deg, #f4f7f7 0%, #e8f2f1 100%)',
+        fontFamily: 'Manrope, system-ui, sans-serif',
+      }}>
+        <div style={{
+          width: 480, padding: 36, background: '#fff',
+          border: '1px solid rgba(10,31,31,0.14)', borderRadius: 14,
+          boxShadow: '0 20px 60px rgba(8,72,75,0.1)',
+        }}>
+          <div style={{
+            fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace', fontSize: 11,
+            color: '#c44a38', letterSpacing: 1.2, marginBottom: 10, fontWeight: 600,
+          }}>КЕЙС НЕ ЗАВЕРШЁН · #C-0342</div>
+          <div style={{
+            fontFamily: 'Fraunces, Georgia, serif',
+            fontSize: 28, letterSpacing: -0.4, lineHeight: 1.15, marginBottom: 14,
+            color: '#0a1f1f', fontWeight: 500,
+          }}>Кейс завершён без диагноза.</div>
+          <button onClick={onRestart} style={{
+            height: 36, padding: '0 16px', borderRadius: 7,
+            background: '#0d7377', color: '#fff', border: 'none',
+            fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(13,115,119,0.3)',
+          }}>Начать заново</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Simple scoring heuristic based on what student entered
+  const score = 78;
+  const correctDx = 'Острый инфаркт миокарда без подъёма ST (NSTEMI)';
+  const studentDxMatches = (dx.dx || '').toLowerCase().includes('инфаркт') || (dx.dx || '').toLowerCase().includes('stemi') || (dx.dx || '').toLowerCase().includes('окс');
+
+  return (
+    <div style={{
+      height: '100vh', overflowY: 'auto',
+      background: '#f4f7f7',
+      fontFamily: 'Manrope, system-ui, sans-serif',
+      color: '#0a1f1f',
+    }}>
+      {/* Hero */}
+      <div style={{
+        background: 'linear-gradient(180deg, #e8f2f1 0%, #f4f7f7 100%)',
+        borderBottom: '0.5px solid rgba(10,31,31,0.08)',
+        padding: '28px 28px 24px',
+      }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          <div style={{
+            display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 20, marginBottom: 16,
+          }}>
+            <div style={{
+              fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace', fontSize: 11,
+              color: '#0d7377', letterSpacing: 1.2, fontWeight: 600,
+            }}>РАЗБОР КЕЙСА · #C-0342 · КАРДИОЛОГИЯ</div>
+            <button onClick={onRestart} style={{
+              height: 32, padding: '0 14px', borderRadius: 7,
+              background: 'transparent', color: '#0a1f1f',
+              border: '0.5px solid rgba(10,31,31,0.14)',
+              fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+              fontFamily: 'Manrope, system-ui, sans-serif',
+            }}>Начать заново</button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                fontFamily: 'Fraunces, Georgia, serif',
+                fontSize: 30, letterSpacing: -0.5, lineHeight: 1.15,
+                fontWeight: 500, marginBottom: 4,
+              }}>Разбор вашей <em style={{ color: '#0d7377', fontStyle: 'italic' }}>диагностики</em></div>
+              <div style={{ fontSize: 13, color: '#4a6060', lineHeight: 1.5, maxWidth: 560 }}>
+                Модель оценила ход рассуждения, полноту анамнеза и точность диагноза. Режим только для чтения.
+              </div>
+            </div>
+            <ScoreRing score={score} />
+          </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 28px 36px' }}>
+        {/* Diagnosis comparison */}
+        <SectionTitle>Ваш диагноз vs эталон</SectionTitle>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+          <DxCard
+            label="ВАШ ОТВЕТ"
+            labelColor="#4a6060"
+            text={dx.dx}
+            confidence={dx.confidence}
+            match={studentDxMatches}
+          />
+          <DxCard
+            label="ЭТАЛОННЫЙ ДИАГНОЗ"
+            labelColor="#0d7377"
+            text={correctDx}
+            reference
+          />
+        </div>
+
+        {/* Scores breakdown */}
+        <SectionTitle>Оценка по критериям</SectionTitle>
+        <div style={{
+          background: '#fff', border: '0.5px solid rgba(10,31,31,0.08)',
+          borderRadius: 12, padding: 4, marginBottom: 24,
+        }}>
+          {[
+            { k: 'Сбор анамнеза', v: 85, note: 'Уточнены характер боли, семейный анамнез, факторы риска.' },
+            { k: 'Логика рассуждения', v: 80, note: 'Приоритет ОКС обоснован, но перикардит исключён поздно.' },
+            { k: 'Коммуникация с пациентом', v: 76, note: 'Вежливый тон, открытые вопросы; местами не хватало эмпатии при тревожности пациента.' },
+            { k: 'Точность диагноза', v: studentDxMatches ? 90 : 40, note: studentDxMatches ? 'Диагноз совпадает с эталоном по нозологии.' : 'Диагноз не совпадает с эталоном.' },
+          ].map((r, i, arr) => (
+            <CriterionRow key={i} {...r} isLast={i === arr.length - 1} />
+          ))}
+        </div>
+
+        {/* Timeline of turns */}
+        <SectionTitle>Ключевые ходы в диалоге</SectionTitle>
+        <div style={{
+          background: '#fff', border: '0.5px solid rgba(10,31,31,0.08)',
+          borderRadius: 12, padding: '4px 0', marginBottom: 24,
+        }}>
+          {[
+            { turn: 1, kind: 'good', text: 'Уточнение характера боли («давящая, иррадиация в левую руку»).', tag: 'Верно' },
+            { turn: 2, kind: 'good', text: 'Сбор анамнеза: курение, АГ, СД 2 типа.', tag: 'Верно' },
+            { turn: 3, kind: 'warn', text: 'Не запрошены данные по приёму нитратов до обращения.', tag: 'Пропуск' },
+            { turn: 5, kind: 'good', text: 'Назначение ЭКГ в 12 отведениях.', tag: 'Верно' },
+            { turn: 7, kind: 'warn', text: 'Тропонин назначен однократно, без повтора через 3 ч.', tag: 'Частично' },
+          ].map((t, i, arr) => <TurnRow key={i} {...t} isLast={i === arr.length - 1} />)}
+        </div>
+
+        {/* Missed findings */}
+        <SectionTitle>Что было упущено</SectionTitle>
+        <div style={{
+          background: '#fff', border: '0.5px solid rgba(10,31,31,0.08)',
+          borderRadius: 12, padding: '14px 16px', marginBottom: 24,
+        }}>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13.5, lineHeight: 1.65, color: '#0a1f1f' }}>
+            <li>Не была оценена шкала <b>GRACE</b> для стратификации риска.</li>
+            <li>Не проведена аускультация лёгких — могло дать дополнительную информацию о застое.</li>
+            <li>Не выяснено, принимал ли пациент нитроглицерин до обращения.</li>
+          </ul>
+        </div>
+
+        {/* Recommendations */}
+        <SectionTitle>Рекомендации модели</SectionTitle>
+        <div style={{
+          background: 'linear-gradient(135deg, #e8f2f1 0%, #d5e9e8 100%)',
+          border: '0.5px solid rgba(13,115,119,0.2)',
+          borderRadius: 12, padding: '14px 16px', marginBottom: 16,
+        }}>
+          <div style={{
+            fontFamily: 'Fraunces, Georgia, serif',
+            fontSize: 15.5, fontStyle: 'italic', lineHeight: 1.5,
+            color: '#0a1f1f', marginBottom: 10,
+          }}>
+            «Студент продемонстрировал уверенную диагностическую логику и правильно определил ведущую нозологию. Основные зоны роста — стратификация риска по валидированным шкалам и повторное измерение биомаркеров в динамике.»
+          </div>
+          <div style={{
+            fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace', fontSize: 10.5,
+            color: '#08484b', letterSpacing: 1, fontWeight: 600,
+          }}>MEDMENTOR-RAG v1.2 · 12 секунд анализа</div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button onClick={onRestart} style={{
+            height: 38, padding: '0 18px', borderRadius: 7,
+            background: 'transparent', color: '#0a1f1f',
+            border: '0.5px solid rgba(10,31,31,0.14)',
+            fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>Начать заново</button>
+          <button style={{
+            height: 38, padding: '0 18px', borderRadius: 7,
+            background: '#0d7377', color: '#fff', border: 'none',
+            fontSize: 13, fontWeight: 500, cursor: 'pointer',
+            boxShadow: '0 2px 10px rgba(13,115,119,0.3)',
+          }}>Перейти к следующему кейсу →</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScoreRing({ score }) {
+  const r = 36;
+  const c = 2 * Math.PI * r;
+  const offset = c * (1 - score / 100);
+  const color = score >= 80 ? '#0d7377' : score >= 60 ? '#d89a2a' : '#c44a38';
+  return (
+    <div style={{ position: 'relative', width: 96, height: 96, flexShrink: 0 }}>
+      <svg width="96" height="96" style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx="48" cy="48" r={r} fill="none" stroke="rgba(10,31,31,0.08)" strokeWidth="5" />
+        <circle cx="48" cy="48" r={r} fill="none" stroke={color} strokeWidth="5" strokeLinecap="round"
+          strokeDasharray={c} strokeDashoffset={offset} style={{ transition: 'stroke-dashoffset 900ms cubic-bezier(0.22,1,0.36,1)' }} />
+      </svg>
+      <div style={{
+        position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{
+          fontFamily: 'Fraunces, Georgia, serif',
+          fontSize: 26, fontWeight: 500, color: '#0a1f1f', lineHeight: 1,
+          fontVariantNumeric: 'tabular-nums',
+        }}>{score}</div>
+        <div style={{
+          fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace', fontSize: 8.5,
+          color: '#4a6060', letterSpacing: 1.4, marginTop: 3, fontWeight: 600,
+        }}>ИЗ 100</div>
+      </div>
+    </div>
+  );
+}
+
+function SectionTitle({ children }) {
+  return (
+    <div style={{
+      fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace', fontSize: 10.5,
+      color: '#4a6060', letterSpacing: 1.6, textTransform: 'uppercase',
+      fontWeight: 600, marginBottom: 10, marginTop: 0,
+    }}>{children}</div>
+  );
+}
+
+function DxCard({ label, labelColor, text, confidence, match, reference }) {
+  const tint = reference ? '#e8f2f1' : match ? '#e8f2f1' : '#f5dcd6';
+  const border = reference ? 'rgba(13,115,119,0.25)' : match ? 'rgba(13,115,119,0.25)' : 'rgba(196,74,56,0.3)';
+  const icon = reference
+    ? null
+    : match
+      ? <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="#0d7377"/><path d="M4 7l2 2 4-5" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+      : <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="#c44a38"/><path d="M5 5l4 4M9 5l-4 4" stroke="#fff" strokeWidth="1.6" strokeLinecap="round"/></svg>;
+  return (
+    <div style={{
+      background: '#fff',
+      border: `0.5px solid ${border}`,
+      borderRadius: 12, padding: '14px 16px',
+      position: 'relative', overflow: 'hidden',
+    }}>
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+        background: tint,
+      }} />
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6,
+        fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace', fontSize: 10,
+        color: labelColor, letterSpacing: 1.4, fontWeight: 600,
+      }}>
+        {icon}
+        {label}
+      </div>
+      <div style={{
+        fontFamily: 'Fraunces, Georgia, serif',
+        fontSize: 16, lineHeight: 1.3, color: '#0a1f1f',
+        marginBottom: confidence !== undefined ? 8 : 0,
+      }}>{text}</div>
+      {confidence !== undefined && (
+        <div style={{
+          fontSize: 10.5, color: '#4a6060',
+          fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace',
+          fontVariantNumeric: 'tabular-nums',
+        }}>УВЕРЕННОСТЬ · {confidence}%</div>
+      )}
+    </div>
+  );
+}
+
+function CriterionRow({ k, v, note, isLast }) {
+  const color = v >= 80 ? '#0d7377' : v >= 60 ? '#d89a2a' : '#c44a38';
+  return (
+    <div style={{
+      padding: '12px 16px',
+      borderBottom: isLast ? 'none' : '0.5px solid rgba(10,31,31,0.06)',
+      display: 'grid', gridTemplateColumns: '1fr 64px', gap: 14, alignItems: 'center',
+    }}>
+      <div>
+        <div style={{ fontSize: 13.5, fontWeight: 500, color: '#0a1f1f', marginBottom: 4 }}>{k}</div>
+        <div style={{ fontSize: 12, color: '#4a6060', lineHeight: 1.45 }}>{note}</div>
+        <div style={{ marginTop: 6, height: 3, background: 'rgba(10,31,31,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{ width: `${v}%`, height: '100%', background: color, transition: 'width 700ms ease' }} />
+        </div>
+      </div>
+      <div style={{
+        fontFamily: 'Fraunces, Georgia, serif',
+        fontSize: 22, fontWeight: 500, color, textAlign: 'right',
+        fontVariantNumeric: 'tabular-nums',
+      }}>{v}</div>
+    </div>
+  );
+}
+
+function TurnRow({ turn, kind, text, tag, isLast }) {
+  const tagBg = kind === 'good' ? '#e8f2f1' : kind === 'warn' ? '#f5ead0' : '#f5dcd6';
+  const tagColor = kind === 'good' ? '#0d7377' : kind === 'warn' ? '#8a6612' : '#8a2e20';
+  return (
+    <div style={{
+      padding: '10px 16px',
+      display: 'flex', alignItems: 'center', gap: 12,
+      borderBottom: isLast ? 'none' : '0.5px solid rgba(10,31,31,0.06)',
+    }}>
+      <div style={{
+        width: 26, height: 26, borderRadius: 999, flexShrink: 0,
+        background: 'rgba(10,31,31,0.04)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace',
+        fontSize: 10.5, fontWeight: 600, color: '#4a6060',
+      }}>{String(turn).padStart(2, '0')}</div>
+      <div style={{ flex: 1, fontSize: 13, color: '#0a1f1f', lineHeight: 1.45 }}>{text}</div>
+      <div style={{
+        padding: '3px 9px', borderRadius: 4,
+        background: tagBg, color: tagColor,
+        fontSize: 10.5, letterSpacing: 0.8, fontWeight: 600,
+        fontFamily: '"Geist Mono", "JetBrains Mono", ui-monospace, monospace',
+        textTransform: 'uppercase',
+        alignSelf: 'center',
+      }}>{tag}</div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

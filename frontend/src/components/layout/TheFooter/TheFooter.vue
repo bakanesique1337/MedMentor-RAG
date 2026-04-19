@@ -1,123 +1,46 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import BrandLogo from '@/components/common/BrandLogo.vue'
 
-import { ROUTES } from '@/constants/routes'
-import { useAuthGateStore } from '@/stores/authGate'
-
-export type FooterVariant = 'public' | 'app'
+export type FooterVariant = 'public' | 'app' | 'error'
 
 interface Props {
     variant: FooterVariant
 }
 
 defineProps<Props>()
-
-const authGate = useAuthGateStore()
-
-const currentYear = computed(() => new Date().getFullYear())
-
-/**
- * Handles the footer sign-in CTA, opening the auth modal for guests.
- */
-function handleSignIn(): void {
-    authGate.openAuthModal()
-}
 </script>
 
 <template>
-    <!-- Public footer: informational, product-oriented -->
     <footer
-        v-if="variant === 'public'"
-        class="border-t border-border-subtle bg-surface-sunken"
+        v-if="variant === 'public' || variant === 'error'"
+        class="bg-[color:var(--color-ink)] text-[color:rgb(234_244_243_/_0.72)]"
     >
-        <div class="mx-auto w-full max-w-384 px-4 py-8">
-            <div class="grid gap-8 sm:grid-cols-3">
-                <!-- Brand column -->
-                <div class="flex flex-col gap-3">
-                    <RouterLink
-                        :to="{ name: ROUTES.HOME }"
-                        class="flex items-center gap-2 text-body-sm font-semibold text-text-primary"
-                        aria-label="MedMentor home"
-                    >
-                        <span
-                            class="inline-flex size-[3.2rem] items-center justify-center rounded-lg bg-interactive-primary-default text-label font-bold text-text-inverse"
-                            aria-hidden="true"
-                        >
-                            M
-                        </span>
-                        <span>MedMentor</span>
-                    </RouterLink>
-
-                    <p class="max-w-[28rem] text-body-sm text-text-secondary">
-                        AI-powered clinical training simulator. Every response is grounded
-                        in structured clinical evidence through retrieval-augmented generation.
-                    </p>
-                </div>
-
-                <!-- Product column -->
-                <div class="flex flex-col gap-3">
-                    <p class="text-label font-semibold uppercase tracking-wide text-text-tertiary">
-                        Product
-                    </p>
-                    <nav
-                        class="flex flex-col gap-2"
-                        aria-label="Footer navigation"
-                    >
-                        <button
-                            v-if="!authGate.isAuthenticated"
-                            class="w-fit text-left text-body-sm text-text-secondary transition-colors hover:text-text-primary"
-                            @click="handleSignIn"
-                        >
-                            Sign in
-                        </button>
-                        <RouterLink
-                            v-else
-                            :to="{ name: ROUTES.CASES }"
-                            class="w-fit text-body-sm text-text-secondary transition-colors hover:text-text-primary"
-                        >
-                            Cases
-                        </RouterLink>
-                    </nav>
-                </div>
-
-                <!-- About column -->
-                <div class="flex flex-col gap-3">
-                    <p class="text-label font-semibold uppercase tracking-wide text-text-tertiary">
-                        About
-                    </p>
-                    <p class="max-w-[28rem] text-body-sm text-text-secondary">
-                        Designed for medical students and continuing medical education.
-                        Practice history taking, clinical reasoning, and diagnostic
-                        hypothesis building with virtual patients.
+        <div class="mx-auto w-full max-w-[124rem] px-[3.2rem] pb-[3.2rem] pt-[6.4rem]">
+            <div class="mb-[4.8rem] flex flex-wrap items-start gap-[4.8rem]">
+                <div class="max-w-[36rem]">
+                    <BrandLogo
+                        variant="dark"
+                        :size="28"
+                    />
+                    <p class="mt-[1.6rem] text-[1.35rem] leading-[1.6]">
+                        Клинический тренажёр для будущих врачей. Разработан при участии кафедр РНИМУ им.&nbsp;Н.И.&nbsp;Пирогова.
                     </p>
                 </div>
             </div>
 
-            <!-- Bottom bar -->
-            <div class="mt-8 border-t border-border-subtle pt-6">
-                <p class="text-label text-text-tertiary">
-                    &copy; {{ currentYear }} MedMentor. All rights reserved.
-                </p>
+            <div class="flex flex-wrap items-center justify-between gap-[1.6rem] border-t border-[color:rgb(159_198_194_/_0.2)] pt-[2.8rem] font-mono text-[1.2rem] tracking-[0.04em] text-[color:rgb(234_244_243_/_0.5)]">
+                <div>&copy; 2026 MedMentor RAG &middot; Все права защищены</div>
+                <div class="flex gap-[2rem]">
+                    <a
+                        href="#"
+                        class="transition-colors hover:text-[color:var(--color-mint)]"
+                    >Условия использования</a>
+                    <a
+                        href="#"
+                        class="transition-colors hover:text-[color:var(--color-mint)]"
+                    >Конфиденциальность</a>
+                </div>
             </div>
-        </div>
-    </footer>
-
-    <!-- App footer: compact, low noise -->
-    <footer
-        v-else
-        class="border-t border-border-subtle"
-    >
-        <div class="mx-auto flex h-[4.8rem] w-full max-w-384 items-center justify-between px-4">
-            <RouterLink
-                :to="{ name: ROUTES.HOME }"
-                class="text-label text-text-tertiary transition-colors hover:text-text-secondary"
-                aria-label="MedMentor home"
-            >
-                MedMentor
-            </RouterLink>
-            <p class="text-label text-text-tertiary">
-                &copy; {{ currentYear }}
-            </p>
         </div>
     </footer>
 </template>

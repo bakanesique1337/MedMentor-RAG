@@ -2,8 +2,9 @@
 import { onClickOutside, onKeyStroke, useScrollLock } from '@vueuse/core'
 import { computed, nextTick, ref, watch } from 'vue'
 
-import VButton from '@/components/ui/VButton.vue'
 import { cn } from '@/components/ui/utils'
+
+type ModalAccent = 'none' | 'brand' | 'amber' | 'danger'
 
 interface Props {
     modelValue?: boolean
@@ -11,8 +12,11 @@ interface Props {
     closeOnEscape?: boolean
     title?: string
     description?: string
+    eyebrow?: string
+    accent?: ModalAccent
     rootClass?: string
     fullscreen?: boolean
+    maxWidth?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -21,8 +25,11 @@ const props = withDefaults(defineProps<Props>(), {
     closeOnEscape: true,
     title: '',
     description: '',
+    eyebrow: '',
+    accent: 'none',
     rootClass: '',
     fullscreen: false,
+    maxWidth: '56rem',
 })
 
 const emit = defineEmits<{
@@ -36,10 +43,7 @@ const isOpen = computed({
     get: () => props.modelValue,
     set: (value: boolean) => {
         emit('update:modelValue', value)
-
-        if (!value) {
-            emit('close')
-        }
+        if (!value) emit('close')
     },
 })
 
@@ -48,17 +52,14 @@ let lastActiveElement: HTMLElement | null = null
 
 watch(isOpen, async (value) => {
     scrollLocked.value = value
-
     if (!value) {
         lastActiveElement?.focus()
         lastActiveElement = null
         return
     }
-
     if (document.activeElement instanceof HTMLElement) {
         lastActiveElement = document.activeElement
     }
-
     await nextTick()
     focusFirstElement()
 })
@@ -70,31 +71,29 @@ onClickOutside(panelRef, () => {
 })
 
 onKeyStroke('Escape', (event) => {
-    if (!props.closeOnEscape || !isOpen.value) {
-        return
-    }
-
+    if (!props.closeOnEscape || !isOpen.value) return
     event.preventDefault()
     isOpen.value = false
 })
 
 function focusFirstElement(): void {
-    if (!panelRef.value) {
-        return
-    }
-
-    const focusableElements = panelRef.value.querySelectorAll<HTMLElement>(
+    if (!panelRef.value) return
+    const focusable = panelRef.value.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     )
-
-    const firstFocusable = focusableElements[0]
-
-    if (firstFocusable) {
-        firstFocusable.focus()
+    const first = focusable[0]
+    if (first) {
+        first.focus()
         return
     }
-
     panelRef.value.focus()
+}
+
+const ACCENT_BAR: Record<ModalAccent, string> = {
+    none: '',
+    brand: 'bg-gradient-to-r from-brand to-brand-bright',
+    amber: 'bg-gradient-to-r from-[color:var(--color-amber)] to-[#e8b54a]',
+    danger: 'bg-gradient-to-r from-[color:var(--color-danger)] to-[color:var(--color-danger-bright)]',
 }
 </script>
 
@@ -103,67 +102,81 @@ function focusFirstElement(): void {
         <div
             v-if="isOpen"
             ref="containerRef"
-            :class="props.fullscreen
-                ? 'fixed inset-0 z-modal flex flex-col bg-surface-elevated'
-                : 'fixed inset-0 z-modal flex items-center justify-center bg-surface-overlay px-2 py-3'"
+            class="fixed inset-0 z-[100] flex items-center justify-center px-[2rem] anim-fade-in"
+            style="background: rgba(10, 31, 31, 0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
         >
             <div
                 ref="panelRef"
                 :class="cn(
-                    props.fullscreen
-                        ? 'flex flex-1 flex-col overflow-hidden'
-                        : 'relative w-full max-w-[56rem] rounded-2xl border border-border-default bg-surface-elevated shadow-overlay',
+                    'anim-pop-in relative flex w-full flex-col overflow-hidden rounded-[2rem] border border-[color:var(--color-line)] bg-white shadow-modal',
                     props.rootClass,
                 )"
+                :style="{ maxWidth: props.maxWidth, maxHeight: '90vh' }"
                 role="dialog"
                 aria-modal="true"
                 :aria-label="title || undefined"
                 tabindex="-1"
             >
-                <div class="flex items-start justify-between gap-2 border-b border-border-subtle px-3 py-2">
-                    <div class="space-y-0.5">
-                        <h2
-                            v-if="title || $slots.title"
-                            class="text-h2 font-semibold text-text-primary"
-                        >
-                            <slot name="title">
-                                {{ title }}
-                            </slot>
-                        </h2>
+                <div
+                    v-if="accent !== 'none'"
+                    class="h-[0.4rem] shrink-0"
+                    :class="ACCENT_BAR[accent]"
+                    aria-hidden="true"
+                />
 
-                        <p
-                            v-if="description || $slots.description"
-                            class="text-body-sm text-text-secondary"
-                        >
-                            <slot name="description">
-                                {{ description }}
-                            </slot>
-                        </p>
-                    </div>
-
-                    <VButton
-                        variant="ghost"
-                        size="sm"
-                        aria-label="Close modal"
-                        @click="isOpen = false"
-                    >
-                        Close
-                    </VButton>
-                </div>
+                <button
+                    type="button"
+                    class="absolute right-[1.6rem] top-[1.6rem] z-10 flex size-[3.2rem] items-center justify-center rounded-full border border-[color:var(--color-line-2)] text-text-secondary hover:bg-surface-base"
+                    :class="accent !== 'none' ? 'top-[2rem]' : ''"
+                    aria-label="Close"
+                    @click="isOpen = false"
+                >
+                    <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                    ><path
+                        d="M3 3l6 6M9 3l-6 6"
+                        stroke="currentColor"
+                        stroke-width="1.4"
+                        stroke-linecap="round"
+                    /></svg>
+                </button>
 
                 <div
-                    :class="props.fullscreen
-                        ? 'flex flex-1 items-center justify-center overflow-auto px-3 py-6'
-                        : 'px-3 py-3'"
+                    v-if="eyebrow || title || description || $slots.header"
+                    class="px-[3.2rem] pb-[1.8rem] pt-[3rem]"
                 >
-                    <div :class="props.fullscreen ? 'w-full max-w-[42rem]' : ''">
-                        <slot />
-                    </div>
+                    <slot name="header">
+                        <p
+                            v-if="eyebrow"
+                            class="text-eyebrow text-brand"
+                        >
+                            {{ eyebrow }}
+                        </p>
+                        <h2
+                            v-if="title"
+                            class="mt-[0.8rem] font-serif text-[2.8rem] font-medium leading-[1.12] tracking-[-0.02em] text-text-primary"
+                        >
+                            <slot name="title">{{ title }}</slot>
+                        </h2>
+                        <p
+                            v-if="description"
+                            class="mt-[0.6rem] text-[1.35rem] text-text-secondary"
+                        >
+                            <slot name="description">{{ description }}</slot>
+                        </p>
+                    </slot>
+                </div>
+
+                <div class="flex-1 overflow-y-auto px-[3.2rem] pb-[2.8rem]">
+                    <slot />
                 </div>
 
                 <footer
                     v-if="$slots.footer"
-                    class="border-t border-border-subtle px-3 py-2"
+                    class="shrink-0 border-t border-[color:var(--color-line)] bg-[color:var(--color-teal-ghost)] px-[2.4rem] py-[1.6rem]"
                 >
                     <slot name="footer" />
                 </footer>

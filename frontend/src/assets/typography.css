@@ -5,52 +5,26 @@
     h4,
     h5,
     h6 {
+        font-family: var(--font-serif), serif;
         color: var(--text-primary);
-        font-weight: var(--font-weight-semibold);
+        font-weight: 500;
         letter-spacing: -0.02em;
         text-wrap: balance;
-    }
-
-    h1 {
-        font-size: var(--text-h1);
-        line-height: var(--leading-tight);
-    }
-
-    h2 {
-        font-size: var(--text-h2);
-        line-height: var(--leading-tight);
-    }
-
-    h3 {
-        font-size: var(--text-h3);
-        line-height: var(--leading-tight);
     }
 
     p,
     li,
     dd,
     dt {
-        max-width: var(--prose-width);
-    }
-
-    p,
-    li {
         color: var(--text-secondary);
-        font-size: var(--text-body);
-        line-height: var(--leading-relaxed);
+        font-size: 1.5rem;
+        line-height: 1.55;
     }
 
     small {
         color: var(--text-tertiary);
-        font-size: var(--text-caption);
+        font-size: 1.2rem;
         line-height: 1.4;
-    }
-
-    label,
-    th {
-        font-size: var(--text-label);
-        font-weight: var(--font-weight-medium);
-        line-height: 1.35;
     }
 
     code,
@@ -58,11 +32,42 @@
     samp,
     pre {
         font-family: var(--font-mono), monospace;
-        font-size: var(--text-mono);
+        font-size: 1.3rem;
     }
 
     pre {
         max-width: 100%;
         overflow-x: auto;
+    }
+}
+
+@layer utilities {
+    .font-serif {
+        font-family: var(--font-serif), serif;
+    }
+
+    .font-mono {
+        font-family: var(--font-mono), monospace;
+    }
+
+    .text-eyebrow {
+        font-family: var(--font-mono), monospace;
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+    }
+
+    .text-eyebrow-sm {
+        font-family: var(--font-mono), monospace;
+        font-size: 0.95rem;
+        font-weight: 600;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+    }
+
+    .text-accent-italic {
+        font-style: italic;
+        color: var(--brand-primary);
     }
 }

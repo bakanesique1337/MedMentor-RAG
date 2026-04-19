@@ -71,9 +71,9 @@ export interface StreamingStatus {
 
 export interface StreamChunk {
     conversationId: string;
-    content?: string;
+    content?: string | null;
     type: StreamChunkType;
-    error?: string;
+    error?: string | null;
     timestamp: number;
 }
 
@@ -224,10 +224,12 @@ export function isStreamChunk(value: unknown): value is StreamChunk {
     const content = candidate.content
     const error = candidate.error
 
+    // Backend serializes absent fields as JSON null (no @JsonInclude), so null
+    // must be accepted alongside undefined for optional fields.
     return typeof candidate.conversationId === 'string'
-        && (typeof content === 'string' || content === undefined)
+        && (typeof content === 'string' || content === undefined || content === null)
         && isStreamChunkType(candidate.type)
-        && (typeof error === 'string' || error === undefined)
+        && (typeof error === 'string' || error === undefined || error === null)
         && typeof candidate.timestamp === 'number'
 }
 

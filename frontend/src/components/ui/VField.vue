@@ -25,80 +25,67 @@ const props = withDefaults(defineProps<Props>(), {
     rootClass: '',
 })
 
-const fieldUid = useId()
-const controlId = computed(() => props.id || `field-${fieldUid}`)
+const uid = useId()
+const controlId = computed(() => props.id || `field-${uid}`)
 const hintId = computed(() => `${controlId.value}-hint`)
 const errorId = computed(() => `${controlId.value}-error`)
+const hasError = computed(() => props.invalid || Boolean(props.error))
 
 const describedBy = computed(() => {
     const ids: string[] = []
-
-    if (props.hint) {
-        ids.push(hintId.value)
-    }
-
-    if (props.error) {
-        ids.push(errorId.value)
-    }
-
-    return ids.join(' ')
+    if (props.hint) ids.push(hintId.value)
+    if (props.error) ids.push(errorId.value)
+    return ids.length > 0 ? ids.join(' ') : undefined
 })
 
-const hasError = computed(() => props.invalid || Boolean(props.error))
+const rootClass = computed(() => cn('flex flex-col gap-[0.6rem]', props.rootClass))
 </script>
 
 <template>
-    <div
-        :class="cn(
-            'flex w-full flex-col gap-2',
-            disabled ? 'opacity-75' : '',
-            props.rootClass,
-        )"
-    >
-        <label
-            v-if="label || $slots.label"
-            :for="controlId"
-            class="flex items-center gap-1 text-[1.25rem] font-medium tracking-[-0.01em] text-text-primary/88"
+    <div :class="rootClass">
+        <div
+            v-if="label || $slots.action"
+            class="flex items-baseline justify-between"
         >
-            <slot name="label">
-                <span>{{ label }}</span>
-            </slot>
-
-            <span
-                v-if="required"
-                class="text-error-text"
-                aria-hidden="true"
+            <label
+                v-if="label"
+                :for="controlId"
+                class="text-eyebrow text-text-secondary"
+                :class="disabled ? 'opacity-60' : ''"
             >
-                *
+                {{ label }}
+                <span
+                    v-if="required"
+                    class="text-[color:var(--color-danger-bright)]"
+                >*</span>
+            </label>
+            <span
+                v-if="$slots.action"
+                class="text-[1.15rem] text-brand"
+            >
+                <slot name="action" />
             </span>
-        </label>
+        </div>
 
         <slot
             :control-id="controlId"
-            :described-by="describedBy || undefined"
+            :described-by="describedBy"
             :invalid="hasError"
-            :hint-id="hintId"
-            :error-id="errorId"
         />
 
         <p
-            v-if="hint || $slots.hint"
-            :id="hintId"
-            class="text-[1.25rem] leading-[1.45] text-text-secondary/88"
-        >
-            <slot name="hint">
-                {{ hint }}
-            </slot>
-        </p>
-
-        <p
-            v-if="error || $slots.error"
+            v-if="error"
             :id="errorId"
-            class="text-[1.25rem] font-medium leading-[1.45] text-error-text"
+            class="text-[1.2rem] text-[color:var(--color-danger-bright)]"
         >
-            <slot name="error">
-                {{ error }}
-            </slot>
+            {{ error }}
+        </p>
+        <p
+            v-else-if="hint"
+            :id="hintId"
+            class="text-[1.2rem] text-text-tertiary"
+        >
+            {{ hint }}
         </p>
     </div>
 </template>

@@ -1,112 +1,54 @@
 <script setup lang="ts">
 import { onClickOutside, onKeyStroke } from '@vueuse/core'
-import { computed, ref, useId, watch } from 'vue'
-
-import { cn } from '@/components/ui/utils'
+import { ref } from 'vue'
 
 interface Props {
-    modelValue?: boolean
-    align?: 'start' | 'end'
-    width?: 'sm' | 'md' | 'lg'
-    closeOnSelect?: boolean
-    rootClass?: string
+    align?: 'left' | 'right'
 }
 
-const props = withDefaults(defineProps<Props>(), {
-    modelValue: false,
-    align: 'end',
-    width: 'md',
-    closeOnSelect: true,
-    rootClass: '',
+withDefaults(defineProps<Props>(), {
+    align: 'right',
 })
 
-const emit = defineEmits<{
-    (event: 'update:modelValue', value: boolean): void
-}>()
-
-const dropdownId = useId()
 const rootRef = ref<HTMLElement | null>(null)
-const buttonRef = ref<HTMLButtonElement | null>(null)
-const panelRef = ref<HTMLElement | null>(null)
+const isOpen = ref(false)
 
-const isOpen = computed({
-    get: () => props.modelValue,
-    set: (value: boolean) => emit('update:modelValue', value),
-})
-
-const widthClasses = computed<Record<NonNullable<Props['width']>, string>>(() => ({
-    sm: 'min-w-[16rem]',
-    md: 'min-w-[22rem]',
-    lg: 'min-w-[28rem]',
-}))
-
-watch(isOpen, (value) => {
-    if (!value) {
-        buttonRef.value?.focus()
-    }
-})
-
-onClickOutside(rootRef, () => {
-    if (isOpen.value) {
-        isOpen.value = false
-    }
-})
-
-onKeyStroke('Escape', (event) => {
-    if (!isOpen.value) {
-        return
-    }
-
-    event.preventDefault()
-    isOpen.value = false
-})
-
-function toggleDropdown(): void {
+function toggle(): void {
     isOpen.value = !isOpen.value
 }
 
-function closeDropdown(): void {
+function close(): void {
     isOpen.value = false
 }
+
+onClickOutside(rootRef, () => {
+    if (isOpen.value) close()
+})
+
+onKeyStroke('Escape', () => {
+    if (isOpen.value) close()
+})
 </script>
 
 <template>
     <div
         ref="rootRef"
-        class="relative inline-flex"
+        class="relative inline-block"
     >
-        <button
-            :id="`dropdown-trigger-${dropdownId}`"
-            ref="buttonRef"
-            type="button"
-            :aria-expanded="isOpen"
-            :aria-controls="`dropdown-panel-${dropdownId}`"
-            class="inline-flex"
-            @click="toggleDropdown"
-        >
+        <div @click="toggle">
             <slot
                 name="trigger"
-                :open="isOpen"
+                :is-open="isOpen"
+                :toggle="toggle"
             />
-        </button>
-
+        </div>
         <div
             v-if="isOpen"
-            :id="`dropdown-panel-${dropdownId}`"
-            ref="panelRef"
-            :class="cn(
-                'absolute top-[calc(100%+0.8rem)] z-dropdown rounded-xl border border-border-default bg-surface-elevated p-1 shadow-md',
-                align === 'end' ? 'right-0' : 'left-0',
-                widthClasses[width],
-                props.rootClass,
-            )"
-            role="menu"
-            :aria-labelledby="`dropdown-trigger-${dropdownId}`"
-            @click="closeOnSelect ? closeDropdown() : undefined"
+            class="absolute top-[calc(100%+0.6rem)] z-[90] min-w-[20rem] overflow-hidden rounded-[1rem] border border-[color:var(--color-line-2)] bg-white p-[0.6rem] shadow-[0_20px_40px_-20px_rgb(10_31_31_/_0.3)]"
+            :class="align === 'right' ? 'right-0' : 'left-0'"
         >
             <slot
-                :open="isOpen"
-                :close="closeDropdown"
+                :close="close"
             />
         </div>
     </div>

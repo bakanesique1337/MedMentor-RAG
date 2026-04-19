@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { VBadge, VSkeleton } from '@/components/ui'
+import { computed } from 'vue'
+
+import VSkeleton from '@/components/ui/VSkeleton.vue'
 import type { HistorySession, MessageRole, Score, SimulationSession } from '@/types'
 
 interface Props {
@@ -18,24 +20,28 @@ const props = defineProps<Props>()
 type ScoreKey = Exclude<keyof Score, 'createdAt'>
 
 const SCORE_LABELS: Array<[ScoreKey, string]> = [
-    ['politeness', 'Politeness'],
-    ['questioningStructure', 'Questioning'],
-    ['thoroughness', 'Thoroughness'],
-    ['empathy', 'Empathy'],
-    ['diagnosisCorrect', 'Diagnosis'],
+    ['politeness', 'Вежливость'],
+    ['questioningStructure', 'Опрос'],
+    ['thoroughness', 'Полнота'],
+    ['empathy', 'Эмпатия'],
+    ['diagnosisCorrect', 'Диагноз'],
 ]
 
 const ROLE_LABEL: Record<MessageRole, string> = {
-    DOCTOR: 'Doctor',
-    PATIENT: 'Patient',
-    SYSTEM: 'System',
+    DOCTOR: 'Студент',
+    PATIENT: 'Пациент',
+    SYSTEM: 'Система',
 }
+
+const isCompleted = computed(() => props.session.state === 'COMPLETED')
 
 /**
  * Returns a short locale date string for display.
  */
 function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return '—'
+    return date.toLocaleDateString('ru-RU', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -46,117 +52,114 @@ function formatDate(dateString: string): string {
  * Formats a 0-1 score as a percentage string.
  */
 function formatScore(value: number | null): string {
-    if (value === null) return 'N/A'
-    return `${Math.round(value * 100)}%`
+    if (value === null) return '—'
+    return `${Math.round(value * 100)}`
 }
 
-/**
- * Emits toggle for this session entry.
- */
 function handleToggle(): void {
     emit('toggle', props.session.id)
 }
 </script>
 
 <template>
-    <div class="border-b border-border-subtle last:border-b-0">
-        <!-- Summary row -->
+    <div class="border-b border-[color:var(--color-line)] last:border-b-0">
         <button
             type="button"
-            class="flex w-full items-center justify-between gap-3 px-1 py-3 text-left transition-colors hover:bg-interactive-ghost-hover"
+            class="flex w-full items-center justify-between gap-[1.2rem] px-[0.4rem] py-[1.4rem] text-left transition-colors hover:bg-surface-base"
             @click="handleToggle"
         >
-            <div class="flex flex-1 flex-col gap-0.5">
-                <p class="text-body-sm font-medium text-text-primary">{{ session.caseTitle }}</p>
-                <p class="text-label text-text-secondary">
+            <div class="flex flex-1 flex-col gap-[0.2rem]">
+                <p class="font-serif text-[1.5rem] font-medium leading-[1.25] tracking-[-0.01em] text-text-primary">
+                    {{ session.caseTitle }}
+                </p>
+                <p class="text-[1.15rem] text-text-tertiary">
                     {{ session.patientName }} &middot; {{ formatDate(session.updatedAt) }}
                 </p>
             </div>
-            <div class="flex shrink-0 items-center gap-2">
-                <VBadge
-                    v-if="session.state === 'COMPLETED'"
-                    variant="success"
-                >
-                    Completed
-                </VBadge>
-                <VBadge
-                    v-else
-                    variant="warning"
-                >
-                    Incomplete
-                </VBadge>
+            <div class="flex shrink-0 items-center gap-[1rem]">
                 <span
-                    class="text-label text-text-tertiary"
-                    aria-hidden="true"
-                >{{ isExpanded ? '-' : '+' }}</span>
+                    class="inline-flex items-center gap-[0.4rem] rounded-full px-[1rem] py-[0.3rem] text-eyebrow-sm"
+                    :class="isCompleted
+                        ? 'bg-brand-ghost text-brand-deep'
+                        : 'bg-[color:var(--color-amber-soft)] text-[color:var(--color-amber-text)]'"
+                >
+                    {{ isCompleted ? 'Завершён' : 'Не завершён' }}
+                </span>
+                <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 14 14"
+                    fill="none"
+                    class="text-text-tertiary transition-transform"
+                    :style="{ transform: isExpanded ? 'rotate(180deg)' : 'none' }"
+                ><path
+                    d="M4 5.5l3 3 3-3"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                /></svg>
             </div>
         </button>
 
-        <!-- Expanded detail -->
         <div
             v-if="isExpanded"
-            class="pb-4 pl-1"
+            class="pb-[1.6rem] pl-[0.4rem]"
         >
-            <!-- Loading -->
             <div
                 v-if="isDetailLoading"
-                class="flex flex-col gap-2 py-2"
+                class="flex flex-col gap-[0.8rem] py-[0.8rem]"
             >
-                <VSkeleton
-                    height="2rem"
-                    shape="rectangle"
-                />
+                <VSkeleton height="2rem" />
                 <VSkeleton
                     width="80%"
                     height="2rem"
-                    shape="rectangle"
                 />
             </div>
 
             <template v-else-if="detail">
-                <!-- Score grid -->
                 <div
                     v-if="detail.score"
-                    class="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-5"
+                    class="mb-[1.6rem] grid grid-cols-3 gap-[0.8rem] sm:grid-cols-5"
                 >
                     <div
                         v-for="[key, label] in SCORE_LABELS"
                         :key="key"
-                        class="flex flex-col items-center gap-0.5 rounded-xl border border-border-subtle bg-surface-sunken p-2 text-center"
+                        class="flex flex-col items-center gap-[0.2rem] rounded-[0.8rem] border border-[color:var(--color-line)] bg-surface-base p-[1rem] text-center"
                     >
-                        <p class="text-label text-text-secondary">{{ label }}</p>
-                        <p class="text-body-sm font-semibold text-text-primary">
+                        <p class="text-eyebrow-sm text-text-tertiary">{{ label }}</p>
+                        <p class="font-serif text-[1.8rem] font-medium text-text-primary">
                             {{ formatScore(detail.score[key]) }}
                         </p>
                     </div>
                 </div>
 
-                <!-- Result summary -->
                 <p
                     v-if="detail.result"
-                    class="mb-4 text-body-sm text-text-secondary"
+                    class="mb-[1.6rem] rounded-[0.8rem] border border-[color:rgb(13_115_119_/_0.2)] bg-brand-ghost p-[1.2rem] font-serif text-[1.4rem] italic leading-[1.5] text-text-primary"
                 >
-                    {{ detail.result.summary }}
+                    &laquo;{{ detail.result.summary }}&raquo;
                 </p>
 
-                <!-- Conversation -->
-                <div class="flex flex-col gap-1.5">
+                <div class="flex flex-col gap-[0.8rem]">
                     <div
                         v-for="msg in detail.messages"
                         :key="msg.id"
-                        class="text-body-sm"
+                        class="text-[1.3rem] leading-[1.55]"
                     >
-                        <span class="font-medium text-text-tertiary">{{ ROLE_LABEL[msg.role] }}:</span>
-                        <span class="ml-1 text-text-secondary">{{ msg.content }}</span>
+                        <span class="font-mono text-eyebrow-sm text-text-tertiary">
+                            {{ ROLE_LABEL[msg.role] }}:
+                        </span>
+                        <span class="ml-[0.4rem] text-text-primary">{{ msg.content }}</span>
                     </div>
                 </div>
             </template>
 
             <p
                 v-else
-                class="text-body-sm text-text-secondary"
+                class="text-[1.3rem] text-text-secondary"
             >
-                Session details are not available.
+                Детали сессии недоступны.
             </p>
         </div>
     </div>

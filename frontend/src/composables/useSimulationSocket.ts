@@ -37,6 +37,7 @@ export function useSimulationSocket() {
     let activeSessionId: number | null = null
     let chunkHandlers: ChunkHandler[] = []
     let pendingConnect = false
+    let pendingSessionId: number | null = null
 
     // -----------------------------------------------------------------------
     // Internal helpers
@@ -60,29 +61,29 @@ export function useSimulationSocket() {
     }
 
     function handleIncomingMessage(body: string): void {
+        console.debug('[useSimulationSocket] raw frame body:', body)
+
         let parsed: unknown
 
         try {
             parsed = JSON.parse(body)
         } catch {
-            if (import.meta.env.DEV) {
-                console.warn('[useSimulationSocket] Failed to parse message body:', body)
-            }
+            console.warn('[useSimulationSocket] Failed to parse message body:', body)
             return
         }
 
         if (!isStreamChunk(parsed)) {
-            if (import.meta.env.DEV) {
-                console.warn('[useSimulationSocket] Received unrecognized chunk shape:', parsed)
-            }
+            console.warn('[useSimulationSocket] Received unrecognized chunk shape:', parsed)
             return
         }
 
+        console.debug('[useSimulationSocket] dispatching chunk:', parsed)
         dispatchChunk(parsed)
     }
 
     function subscribeToSession(sessionId: number): void {
         if (!client?.connected) {
+            console.debug('[useSimulationSocket] subscribe skipped -- client not connected', { sessionId })
             return
         }
 
@@ -92,6 +93,7 @@ export function useSimulationSocket() {
         client.unsubscribe(`sub-${activeSessionId ?? ''}`)
         activeSessionId = sessionId
 
+        console.debug('[useSimulationSocket] subscribing to topic', topic)
         client.subscribe(
             topic,
             (frame) => {
@@ -115,6 +117,7 @@ export function useSimulationSocket() {
         client = null
         activeSessionId = null
         pendingConnect = false
+        pendingSessionId = null
     }
 
     // -----------------------------------------------------------------------
@@ -123,19 +126,20 @@ export function useSimulationSocket() {
 
     /**
      * Opens the socket transport and subscribes to the given session topic.
-     * Safe to call multiple times — reconnects and resubscribes if needed.
+     * Safe to call multiple times -- reconnects and resubscribes if needed.
      */
     function connect(sessionId: number): void {
         if (pendingConnect) {
+            pendingSessionId = sessionId  // store latest intent even when early-returning
             return
         }
 
-        // Already connected to the same session — nothing to do
+        // Already connected to the same session -- nothing to do
         if (client?.connected && activeSessionId === sessionId) {
             return
         }
 
-        // Already connected but different session — resubscribe without reconnect
+        // Already connected but different session -- resubscribe without reconnect
         if (client?.connected && activeSessionId !== sessionId) {
             subscribeToSession(sessionId)
             return
@@ -143,6 +147,7 @@ export function useSimulationSocket() {
 
         teardownClient()
         pendingConnect = true
+        pendingSessionId = sessionId       // store for onConnect
         status.value = 'connecting'
         error.value = null
 
@@ -153,11 +158,14 @@ export function useSimulationSocket() {
             onConnect: () => {
                 pendingConnect = false
                 status.value = 'open'
-                subscribeToSession(sessionId)
+                // Use the latest intended sessionId, not the closure-captured one
+                const targetSession = pendingSessionId ?? sessionId
+                console.debug('[useSimulationSocket] STOMP connected, subscribing', { targetSession })
+                subscribeToSession(targetSession)
             },
 
             onDisconnect: () => {
-                if (status.value === 'open') {
+                if (status.value === 'open' || status.value === 'connecting') {
                     status.value = 'reconnecting'
                 }
             },
@@ -203,11 +211,12 @@ export function useSimulationSocket() {
 
     /**
      * Forces a full reconnect. Re-subscribes to the last known session on success.
+     * Bypasses disconnect() to avoid emitting a spurious 'closed' transient state.
      */
     function reconnect(): void {
         const sessionId = activeSessionId
 
-        disconnect()
+        teardownClient()
 
         if (sessionId !== null) {
             connect(sessionId)

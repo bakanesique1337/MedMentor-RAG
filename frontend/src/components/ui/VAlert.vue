@@ -1,10 +1,6 @@
 <script setup lang="ts">
-import { type Component, computed } from 'vue'
+import { computed } from 'vue'
 
-import VErrorIcon from '@/components/icons/VErrorIcon.vue'
-import VInfoIcon from '@/components/icons/VInfoIcon.vue'
-import VSuccessIcon from '@/components/icons/VSuccessIcon.vue'
-import VWarningIcon from '@/components/icons/VWarningIcon.vue'
 import { cn } from '@/components/ui/utils'
 
 type AlertStatus = 'info' | 'success' | 'warning' | 'error'
@@ -24,60 +20,42 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const STATUS_CLASSES: Record<AlertStatus, string> = {
-    info: 'border-info-border bg-info-surface text-info-text',
-    success: 'border-success-border bg-success-surface text-success-text',
-    warning: 'border-warning-border bg-warning-surface text-warning-text',
-    error: 'border-error-border bg-error-surface text-error-text',
+    info: 'border-[color:var(--color-teal-soft)] bg-brand-ghost text-brand-deep',
+    success: 'border-[color:var(--color-teal-soft)] bg-brand-ghost text-brand-deep',
+    warning: 'border-[color:rgb(181_138_78_/_0.3)] bg-[color:var(--color-amber-soft)] text-[color:var(--color-amber-text)]',
+    error: 'border-[color:rgb(138_46_32_/_0.3)] bg-[color:var(--color-rose-soft)] text-[color:var(--color-rose-text)]',
 }
 
-const STATUS_ICON: Record<AlertStatus, Component> = {
-    info: VInfoIcon,
-    success: VSuccessIcon,
-    warning: VWarningIcon,
-    error: VErrorIcon,
-}
-
-const alertClassName = computed(() => cn(
-    'flex items-start gap-2 squircle squircle-md border px-3 py-2',
-    STATUS_CLASSES[props.status],
-    props.class,
-))
+const alertClass = computed(() =>
+    cn(
+        'flex items-start gap-[1.2rem] rounded-[1rem] border px-[1.6rem] py-[1.2rem]',
+        STATUS_CLASSES[props.status],
+        props.class,
+    ),
+)
 </script>
 
 <template>
     <div
-        :class="alertClassName"
+        :class="alertClass"
         role="alert"
     >
-        <span
-            class="mt-[0.1rem] inline-flex size-[2rem] shrink-0 items-center justify-center squircle squircle-sm border border-current/20"
-            aria-hidden="true"
-        >
-            <component :is="STATUS_ICON[status]"/>
-        </span>
-
-        <div class="min-w-0 flex-1 space-y-1">
+        <div class="min-w-0 flex-1 space-y-[0.4rem]">
             <p
                 v-if="title || $slots.title"
-                class="text-body-sm font-semibold"
+                class="text-[1.35rem] font-semibold"
             >
-                <slot name="title">
-                    {{ title }}
-                </slot>
+                <slot name="title">{{ title }}</slot>
             </p>
-
-            <div class="text-body-sm">
-                <slot>
-                    {{ description }}
-                </slot>
+            <div class="text-[1.3rem]">
+                <slot>{{ description }}</slot>
             </div>
         </div>
-
         <div
             v-if="$slots.action"
             class="shrink-0"
         >
-            <slot name="action"/>
+            <slot name="action" />
         </div>
     </div>
 </template>

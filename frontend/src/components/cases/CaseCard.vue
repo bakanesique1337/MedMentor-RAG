@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { VBadge, VButton, VTag } from '@/components/ui'
+import DifficultyPips from '@/components/common/DifficultyPips.vue'
+import MmArrow from '@/components/common/MmArrow.vue'
+import PatientAvatar from '@/components/common/PatientAvatar.vue'
+import VSpinner from '@/components/ui/VSpinner.vue'
 import type { CaseCard } from '@/types'
 
 interface Props {
@@ -16,96 +19,87 @@ const emit = defineEmits<{
 
 const props = defineProps<Props>()
 
-const DIFFICULTY_VARIANT: Record<string, 'neutral' | 'warning' | 'error' | 'primary'> = {
-    easy: 'neutral',
-    beginner: 'neutral',
-    medium: 'warning',
-    intermediate: 'warning',
-    hard: 'error',
-    advanced: 'error',
-}
-
 /**
- * Returns a badge variant for the given difficulty string.
- */
-function getDifficultyVariant(difficulty: string): 'neutral' | 'warning' | 'error' | 'primary' {
-    return DIFFICULTY_VARIANT[difficulty.toLowerCase()] ?? 'primary'
-}
-
-/**
- * Emits the start event with this case's ID.
+ * Emits start event with this case's ID.
  */
 function handleStart(): void {
-    emit('start', props.caseData.id)
-}
-
-/**
- * Emits the resume event with the active session ID.
- */
-function handleResume(): void {
-    if (props.activeSessionId !== null) {
+    if (props.isActive && props.activeSessionId !== null) {
         emit('resume', props.activeSessionId)
+        return
     }
+    emit('start', props.caseData.id)
 }
 </script>
 
 <template>
-    <VCard
-        variant="default"
-        as="article"
+    <article
+        class="group flex h-full cursor-pointer flex-col rounded-[1.4rem] border border-[color:var(--color-line)] bg-white p-[1.6rem] transition-all duration-200 hover:-translate-y-[0.2rem] hover:border-[color:rgb(13_115_119_/_0.25)] hover:shadow-hover-card"
+        @click="handleStart"
     >
-        <template #header>
-            <div class="flex items-start justify-between gap-2">
-                <h3 class="text-body font-semibold text-text-primary">{{ caseData.title }}</h3>
-                <div class="flex shrink-0 flex-wrap gap-1">
-                    <VBadge variant="primary">{{ caseData.category }}</VBadge>
-                    <VBadge :variant="getDifficultyVariant(caseData.difficulty)">
-                        {{ caseData.difficulty }}
-                    </VBadge>
+        <div class="mb-[1.2rem] flex items-center gap-[1.2rem]">
+            <PatientAvatar
+                :name="caseData.patientName"
+                :category="caseData.category"
+                :size="44"
+            />
+            <div class="flex min-w-0 flex-1 flex-col gap-[0.4rem]">
+                <div class="truncate text-eyebrow-sm text-brand">
+                    {{ caseData.category }}
+                </div>
+                <div class="truncate text-[1.15rem] text-text-tertiary">
+                    <span class="font-medium text-text-secondary">{{ caseData.patientName }}</span>
+                    <span class="mx-[0.6rem]">&middot;</span>
+                    <span>{{ caseData.patientAge }}&nbsp;л.</span>
+                    <span class="mx-[0.6rem]">&middot;</span>
+                    <span>{{ caseData.patientSex === 'FEMALE' || caseData.patientSex === 'female' ? 'жен.' : 'муж.' }}</span>
                 </div>
             </div>
-        </template>
-
-        <div class="flex flex-col gap-3">
-            <div>
-                <p class="text-body-sm font-medium text-text-primary">{{ caseData.patientName }}</p>
-                <p class="text-label text-text-secondary">
-                    {{ caseData.patientAge }} years &middot; {{ caseData.patientSex }}
-                </p>
-            </div>
-
-            <p class="text-body-sm text-text-secondary">{{ caseData.patientBrief }}</p>
-
-            <div
-                v-if="caseData.tags.length > 0"
-                class="flex flex-wrap gap-1"
-            >
-                <VTag
-                    v-for="tag in caseData.tags"
-                    :key="tag"
-                    variant="neutral"
-                >{{ tag }}</VTag>
-            </div>
-
-            <div class="flex flex-wrap gap-2 pt-1">
-                <VButton
-                    v-if="isActive && activeSessionId !== null"
-                    size="sm"
-                    @click="handleResume"
-                >
-                    Resume session
-                </VButton>
-                <VButton
-                    v-else
-                    size="sm"
-                    variant="secondary"
-                    :disabled="isStartPending"
-                    :loading="isStartPending"
-                    @click="handleStart"
-                >
-                    Start case
-                </VButton>
-            </div>
         </div>
-    </VCard>
+
+        <h3
+            class="mb-[0.8rem] font-serif text-[1.9rem] font-medium leading-[1.22] tracking-[-0.01em] text-text-primary line-clamp-2"
+        >
+            {{ caseData.title }}
+        </h3>
+
+        <p
+            class="mb-[1.2rem] flex-1 text-[1.25rem] leading-[1.5] text-text-secondary line-clamp-3"
+        >
+            {{ caseData.patientBrief }}
+        </p>
+
+        <div class="flex items-center justify-between gap-[0.8rem] border-t border-[color:var(--color-line)] pt-[1rem]">
+            <DifficultyPips :level="caseData.difficulty" />
+            <span class="flex items-center gap-[0.4rem] text-[1.2rem] font-medium text-brand">
+                <template v-if="isStartPending">
+                    <VSpinner size="sm" />
+                    Открываем...
+                </template>
+                <template v-else-if="isActive">
+                    Продолжить
+                    <MmArrow :size="12" />
+                </template>
+                <template v-else>
+                    Начать кейс
+                    <MmArrow :size="12" />
+                </template>
+            </span>
+        </div>
+    </article>
 </template>
+
+<style scoped>
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>

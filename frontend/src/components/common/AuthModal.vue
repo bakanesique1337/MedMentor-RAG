@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { VAlert, VButton, VInput, VModal } from '@/components/ui'
+import MmArrow from '@/components/common/MmArrow.vue'
 import { ROUTES } from '@/constants/routes'
 import { useAuthGateStore } from '@/stores/authGate'
 import { isApiError } from '@/types'
@@ -14,45 +14,27 @@ const emit = defineEmits<{
 const router = useRouter()
 const authGate = useAuthGateStore()
 
-// ---------------------------------------------------------------------------
-// Form state
-// ---------------------------------------------------------------------------
-
 const username = ref('')
 const password = ref('')
 const usernameError = ref('')
 const passwordError = ref('')
 const formError = ref('')
-
-// ---------------------------------------------------------------------------
-// Modal binding
-// ---------------------------------------------------------------------------
+const shake = ref(false)
 
 const isOpen = computed({
     get: () => authGate.isAuthModalOpen,
     set: (value: boolean) => {
-        if (!value) {
-            handleClose()
-        }
+        if (!value) handleClose()
     },
 })
 
-const hasRedirectContext = computed(() => authGate.redirectTarget !== null)
-
-// Reset form when modal opens; clear stale errors only when it closes
 watch(isOpen, (value) => {
-    if (value) {
-        return
+    if (!value) {
+        username.value = ''
+        password.value = ''
+        clearErrors()
     }
-
-    username.value = ''
-    password.value = ''
-    clearErrors()
 })
-
-// ---------------------------------------------------------------------------
-// Error helpers
-// ---------------------------------------------------------------------------
 
 function clearErrors(): void {
     usernameError.value = ''
@@ -60,7 +42,13 @@ function clearErrors(): void {
     formError.value = ''
 }
 
-/** Applies field-level errors from a 400 response. Returns true if any field error was set. */
+function triggerShake(): void {
+    shake.value = true
+    window.setTimeout(() => {
+        shake.value = false
+    }, 400)
+}
+
 function applyFieldErrors(fieldErrors: Record<string, string>): boolean {
     usernameError.value = fieldErrors.username ?? ''
     passwordError.value = fieldErrors.password ?? ''
@@ -69,141 +57,204 @@ function applyFieldErrors(fieldErrors: Record<string, string>): boolean {
 
 function mapApiError(err: unknown): void {
     if (!isApiError(err)) {
-        formError.value = 'Sign-in failed. Check your credentials and try again.'
+        formError.value = 'Не удалось войти. Проверьте логин и пароль.'
         return
     }
-
     if (err.status === 401) {
-        formError.value = 'Incorrect username or password. Please try again.'
+        formError.value = 'Неверный логин или пароль.'
         return
     }
-
     if (err.status === 400 && err.fieldErrors) {
         if (!applyFieldErrors(err.fieldErrors)) {
             formError.value = err.error
         }
         return
     }
-
     if (err.status === 0) {
-        formError.value = 'Network error. Check your connection and try again.'
+        formError.value = 'Ошибка сети. Проверьте соединение.'
         return
     }
-
     if (err.status >= 500) {
-        formError.value = 'Server error. Please try again in a moment.'
+        formError.value = 'Ошибка сервера. Попробуйте позже.'
         return
     }
-
-    formError.value = err.error || 'Sign-in failed. Check your credentials and try again.'
+    formError.value = err.error || 'Не удалось войти.'
 }
-
-// ---------------------------------------------------------------------------
-// Actions
-// ---------------------------------------------------------------------------
 
 function handleClose(): void {
     authGate.closeAuthModal()
     emit('close')
 }
 
+function handleBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) handleClose()
+}
+
 async function handleSubmit(): Promise<void> {
     clearErrors()
-
     const trimmedUsername = username.value.trim()
     const trimmedPassword = password.value.trim()
 
-    if (!trimmedUsername) {
-        usernameError.value = 'Username is required.'
-    }
-
-    if (!trimmedPassword) {
-        passwordError.value = 'Password is required.'
-    }
-
-    if (usernameError.value || passwordError.value) {
+    if (!trimmedUsername || !trimmedPassword) {
+        if (!trimmedUsername) usernameError.value = 'Введите логин.'
+        if (!trimmedPassword) passwordError.value = 'Введите пароль.'
+        triggerShake()
         return
     }
 
     try {
         await authGate.login({ username: trimmedUsername, password: trimmedPassword })
-
         const target = authGate.consumeRedirectTarget()
-        const isSafeTarget = typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')
-
-        await router.push(isSafeTarget ? target : { name: ROUTES.CASES })
+        const isSafe = typeof target === 'string' && target.startsWith('/') && !target.startsWith('//')
+        await router.push(isSafe ? target : { name: ROUTES.CASES })
     } catch (err: unknown) {
         mapApiError(err)
+        triggerShake()
     }
 }
 </script>
 
 <template>
-    <VModal
-        v-model="isOpen"
-        title="Sign in"
-        description="Sign in to access clinical cases and patient simulations."
-        fullscreen
-        @close="handleClose"
-    >
-        <form
-            class="space-y-4"
-            @keydown.enter.prevent="handleSubmit"
-            @submit.prevent="handleSubmit"
+    <Teleport to="body">
+        <div
+            v-if="isOpen"
+            class="fixed inset-0 z-[100] flex items-center justify-center px-[2rem] anim-fade-in"
+            style="background: rgba(10, 31, 31, 0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+            @click="handleBackdropClick"
         >
-            <VAlert
-                v-if="hasRedirectContext"
-                status="info"
-                title="Sign in required"
-                description="You need to sign in to access the page you requested."
-            />
-
-            <VAlert
-                v-if="formError"
-                status="error"
-                :description="formError"
-            />
-
-            <VInput
-                v-model="username"
-                label="Username"
-                placeholder="resident"
-                autocomplete="username"
-                :error="usernameError"
-                :invalid="Boolean(usernameError)"
-                required
-                @input="usernameError = ''"
-            />
-
-            <VInput
-                v-model="password"
-                type="password"
-                label="Password"
-                placeholder="Enter password"
-                autocomplete="current-password"
-                :error="passwordError"
-                :invalid="Boolean(passwordError)"
-                required
-                @input="passwordError = ''"
-            />
-
-            <div class="flex flex-wrap justify-end gap-2 pt-1">
-                <VButton
-                    variant="ghost"
+            <div
+                class="relative w-full max-w-[44rem] overflow-hidden rounded-[2rem] border border-[color:var(--color-line)] bg-white shadow-modal"
+                :class="shake ? 'anim-shake' : 'anim-pop-in'"
+                role="dialog"
+                aria-modal="true"
+            >
+                <button
                     type="button"
+                    class="absolute right-[1.6rem] top-[1.6rem] flex size-[3.2rem] items-center justify-center rounded-full border border-[color:var(--color-line-2)] text-text-secondary hover:bg-surface-base"
+                    aria-label="Закрыть"
                     @click="handleClose"
                 >
-                    Cancel
-                </VButton>
+                    <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 12 12"
+                        fill="none"
+                    ><path
+                        d="M3 3l6 6M9 3l-6 6"
+                        stroke="currentColor"
+                        stroke-width="1.4"
+                        stroke-linecap="round"
+                    /></svg>
+                </button>
 
-                <VButton
-                    type="submit"
-                    :loading="authGate.isLoginPending"
-                    :disabled="authGate.isLoginPending"
-                >
-                    Sign in
-                </VButton>
+                <div class="px-[3.6rem] pb-[3.2rem] pt-[3.6rem]">
+                    <div class="mb-[2rem] flex size-[4.4rem] items-center justify-center rounded-[1.2rem] bg-brand-faint">
+                        <svg
+                            width="22"
+                            height="22"
+                            viewBox="0 0 40 40"
+                            fill="none"
+                        >
+                            <path
+                                d="M9 27V13l6 10 6-10v14"
+                                stroke="var(--brand-primary)"
+                                stroke-width="2.4"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                            <circle
+                                cx="28"
+                                cy="16"
+                                r="3"
+                                fill="var(--brand-primary)"
+                            />
+                            <path
+                                d="M28 19v6M25 22h6"
+                                stroke="var(--brand-primary)"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                            />
+                        </svg>
+                    </div>
+
+                    <h2 class="mb-[0.8rem] font-serif text-[3rem] font-medium leading-[1.1] tracking-[-0.02em] text-text-primary">
+                        Вход в
+                        <em class="italic text-brand">MedMentor</em>
+                    </h2>
+                    <p class="mb-[2.4rem] text-[1.35rem] text-text-secondary">
+                        Продолжите свою тренировку с того места, где остановились.
+                    </p>
+
+                    <div
+                        v-if="formError"
+                        class="mb-[1.6rem] rounded-[0.8rem] border border-[color:rgb(138_46_32_/_0.3)] bg-[color:var(--color-rose-soft)] px-[1.4rem] py-[1rem] text-[1.3rem] text-[color:var(--color-rose-text)]"
+                    >
+                        {{ formError }}
+                    </div>
+
+                    <form
+                        class="flex flex-col gap-[1.4rem]"
+                        @submit.prevent="handleSubmit"
+                    >
+                        <label class="block">
+                            <span class="mb-[0.6rem] block text-eyebrow-sm text-text-secondary">Логин</span>
+                            <input
+                                v-model="username"
+                                type="text"
+                                autocomplete="username"
+                                placeholder="a.kovaleva"
+                                class="h-[4.4rem] w-full rounded-[0.9rem] border bg-surface-base px-[1.4rem] text-[1.4rem] text-text-primary transition placeholder:text-text-tertiary focus:border-brand focus:bg-white focus:outline-none"
+                                :class="usernameError ? 'border-[color:var(--color-danger-bright)]' : 'border-[color:var(--color-line-2)]'"
+                                @input="usernameError = ''"
+                            />
+                            <p
+                                v-if="usernameError"
+                                class="mt-[0.4rem] text-[1.15rem] text-[color:var(--color-danger-bright)]"
+                            >
+                                {{ usernameError }}
+                            </p>
+                        </label>
+
+                        <label class="block">
+                            <div class="mb-[0.6rem] flex items-baseline justify-between">
+                                <span class="text-eyebrow-sm text-text-secondary">Пароль</span>
+                                <a
+                                    href="#"
+                                    class="text-[1.15rem] text-brand hover:underline"
+                                    @click.prevent
+                                >Забыли?</a>
+                            </div>
+                            <input
+                                v-model="password"
+                                type="password"
+                                autocomplete="current-password"
+                                placeholder="••••••••••"
+                                class="h-[4.4rem] w-full rounded-[0.9rem] border bg-surface-base px-[1.4rem] text-[1.4rem] text-text-primary transition placeholder:text-text-tertiary focus:border-brand focus:bg-white focus:outline-none"
+                                :class="passwordError ? 'border-[color:var(--color-danger-bright)]' : 'border-[color:var(--color-line-2)]'"
+                                @input="passwordError = ''"
+                            />
+                            <p
+                                v-if="passwordError"
+                                class="mt-[0.4rem] text-[1.15rem] text-[color:var(--color-danger-bright)]"
+                            >
+                                {{ passwordError }}
+                            </p>
+                        </label>
+
+                        <button
+                            type="submit"
+                            :disabled="authGate.isLoginPending"
+                            class="mt-[0.4rem] flex h-[4.6rem] w-full items-center justify-center gap-[0.8rem] rounded-[1rem] bg-brand text-[1.45rem] font-medium text-white shadow-primary transition hover:bg-brand-deep disabled:opacity-70"
+                        >
+                            <template v-if="authGate.isLoginPending">Вход…</template>
+                            <template v-else>
+                                Войти
+                                <MmArrow :size="14" />
+                            </template>
+                        </button>
+                    </form>
+                </div>
             </div>
-        </form>
-    </VModal>
+        </div>
+    </Teleport>
 </template>

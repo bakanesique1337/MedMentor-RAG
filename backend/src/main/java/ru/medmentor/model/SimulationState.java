@@ -7,5 +7,6 @@ public enum SimulationState {
     IN_PROGRESS,
     DIAGNOSIS_SELECT,
     SCORING,
-    COMPLETED
+    COMPLETED,
+    ABANDONED
 }
