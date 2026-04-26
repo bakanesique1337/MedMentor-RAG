@@ -13,6 +13,20 @@
   "patientAge": 58,
   "patientSex": "male",
   "patientBrief": "Chest pressure during walking uphill that improves with rest.",
+  "passport": {
+    "heightCm": 178,
+    "weightKg": 88,
+    "allergies": "не выявлено",
+    "chronicConditions": "артериальная гипертензия",
+    "smoking": "25 лет, ~1 пачка/день"
+  },
+  "vitals": {
+    "heartRate": 78,
+    "bloodPressure": "148/92",
+    "respiratoryRate": 16,
+    "spo2": 97,
+    "temperatureC": 36.6
+  },
   "openingComplaint": "I keep getting a tight feeling in my chest when I walk fast or climb stairs.",
   "authorNote": "This is stable angina. Sound concerned but calm. Mention relief with rest when asked about timing or triggers.",
   "facts": {

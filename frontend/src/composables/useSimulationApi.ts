@@ -87,20 +87,53 @@ export function useSimulationApi() {
     }
 
     /**
-     * Submits a diagnosis selection and returns the updated session.
+     * Submits a diagnosis (free-text) along with optional rationale and confidence.
      * May throw ApiError with status 409 if the session state does not allow diagnosis.
      */
     async function diagnose(
         sessionId: number | string,
-        diagnosis: string,
+        payload: { diagnosis: string; rationale: string | null; confidence: number | null },
     ): Promise<SimulationSession> {
         const id = toSessionId(sessionId)
 
-        return apiPost<SimulationSession, { diagnosis: string }>(
+        return apiPost<SimulationSession, {
+            diagnosis: string;
+            rationale: string | null;
+            confidence: number | null;
+        }>(
             `/api/simulations/${id}/diagnose`,
-            { diagnosis },
+            {
+                diagnosis: payload.diagnosis,
+                rationale: payload.rationale,
+                confidence: payload.confidence,
+            },
         )
     }
 
-    return { active, diagnose, getSession, sendMessage, start }
+    /**
+     * Reveals patient passport and vitals for the active session.
+     * Idempotent: re-calling after reveal returns the same state.
+     */
+    async function revealExam(sessionId: number | string): Promise<SimulationSession> {
+        const id = toSessionId(sessionId)
+        return apiPost<SimulationSession, Record<string, never>>(
+            `/api/simulations/${id}/actions/exam`,
+            {},
+        )
+    }
+
+    /**
+     * Abandons an in-progress simulation. The session is marked ABANDONED;
+     * no diagnosis or score is produced. Allowed states are anything other
+     * than SCORING / COMPLETED / ABANDONED.
+     */
+    async function abandon(sessionId: number | string): Promise<SimulationCommandResponse> {
+        const id = toSessionId(sessionId)
+        return apiPost<SimulationCommandResponse, Record<string, never>>(
+            `/api/simulations/${id}/abandon`,
+            {},
+        )
+    }
+
+    return { abandon, active, diagnose, getSession, revealExam, sendMessage, start }
 }

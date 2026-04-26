@@ -1,5 +1,33 @@
 Review the completed interview.
-Return JSON only.
-Include `score.politeness`, `score.questioningStructure`, `score.thoroughness`, `score.empathy`, and `score.correctDiagnosis`.
-Store every score as a decimal from 0.0 to 1.0.
-Include one short `summary` string.
+Return JSON only, with the exact structure described below. No prose outside JSON.
+
+Top-level fields:
+ - `score` (object) — five numeric scores from 0.0 to 1.0:
+     `politeness`, `questioningStructure`, `thoroughness`, `empathy`, `correctDiagnosis`.
+ - `summary` (string) — one short paragraph (2-4 sentences). Reflect calibration of the doctor's
+   self-reported confidence: praise well-calibrated certainty, flag overconfidence on a wrong
+   diagnosis or excessive hedging on a correct one.
+ - `criterionNotes` (object) — five short notes (one sentence each, in Russian, max ~140 chars),
+   one for every score field. Keys: `politeness`, `questioningStructure`, `thoroughness`,
+   `empathy`, `correctDiagnosis`. Each note must explain WHY the score was given, referencing
+   what the doctor did or missed.
+ - `keyTurns` (array) — 3 to 6 items capturing pivotal moments in the dialogue. Each item:
+     `turn` (integer — copy the N from the matching `doctor turn N:` line in the conversation;
+        do NOT default to 1 — every keyTurns item must reference a different doctor turn unless
+        you explicitly want to flag two distinct events at the same turn),
+     `kind` (`good` | `warn` — `good` for solid moves, `warn` for misses or partial answers),
+     `text` (one sentence in Russian explaining what happened),
+     `tag` (short uppercase Russian label, max 12 chars: e.g. ВЕРНО, ПРОПУСК, ЧАСТИЧНО, СПОРНО).
+   Order items by `turn` ascending.
+ - `missedFindings` (array of strings) — 2 to 5 short Russian items naming things the doctor
+   did not check or ask but should have. Each item is one sentence.
+
+Diagnosis grading:
+ - The doctor submits a free-text diagnosis with optional rationale and a self-reported
+   confidence (0..100). Use these inputs to inform `score.correctDiagnosis`:
+   - exact or clinically equivalent match to the case's correct diagnosis -> close to 1.0;
+   - incorrect or unrelated diagnosis -> close to 0.0;
+   - calibrate also against the rationale: well-reasoned answers may earn partial credit even
+     when phrased differently.
+
+All free-text fields must be in Russian. Numbers must be JSON numbers (not strings).

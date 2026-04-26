@@ -3,29 +3,41 @@ export type SimulationQuickPromptKey =
     | 'lab-diagnostics'
     | 'instrumental-diagnostics'
 
+/**
+ * Quick-prompt action types. `exam` quick prompts also trigger the
+ * dedicated reveal-exam endpoint in addition to sending the LLM message,
+ * so the sidebar passport and vitals open immediately.
+ */
+export type SimulationQuickPromptAction = 'exam' | null
+
 export interface SimulationQuickPrompt {
     key: SimulationQuickPromptKey
     label: string
     content: string
+    action: SimulationQuickPromptAction
 }
 
 export const SIMULATION_QUICK_PROMPTS: readonly SimulationQuickPrompt[] = [
     {
         key: 'physical-exam',
-        label: 'Physical exam',
-        content:
-            'Please provide objective physical examination findings for this patient at the current stage. Include general appearance, vital signs, and key system-specific findings relevant to this case. Respond only with findings that are available in the case data.',
+        label: 'Провести осмотр',
+        content: 'Проведите физикальный осмотр пациента: оцените общее состояние, '
+            + 'снимите витальные показатели (АД, ЧСС, ЧДД, SpO₂, температуру) и опишите '
+            + 'ключевые находки по системам. Используйте только данные, доступные в кейсе.',
+        action: 'exam',
     },
     {
         key: 'lab-diagnostics',
-        label: 'Lab diagnostics',
-        content:
-            'Please provide available laboratory test results for this patient at the current stage. Include test name, value, units, and reference interpretation if present in case data. Respond only with available data and do not invent missing results.',
+        label: 'Лабораторные данные',
+        content: 'Назначьте лабораторные исследования и запросите доступные результаты для этого пациента. '
+            + 'Укажите название анализа, значение, единицы измерения и интерпретацию, если они есть в данных кейса.',
+        action: null,
     },
     {
         key: 'instrumental-diagnostics',
-        label: 'Instrumental diagnostics',
-        content:
-            'Please provide available instrumental and imaging study results for this patient at the current stage. Include modality, key findings, and formal impression if present in case data. Respond only with available data and do not add assumptions.',
+        label: 'Инструментальная диагностика',
+        content: 'Запросите инструментальные и визуализирующие исследования для этого пациента. '
+            + 'Укажите модальность, ключевые находки и формальное заключение, если они есть в данных кейса.',
+        action: null,
     },
 ] as const

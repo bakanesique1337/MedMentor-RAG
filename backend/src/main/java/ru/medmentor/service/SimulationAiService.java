@@ -19,6 +19,8 @@ public interface SimulationAiService {
     ScoreReviewPayload generateScoreReview(
             MedicalCase medicalCase,
             List<ConversationMessage> conversationHistory,
-            String selectedDiagnosis
+            String selectedDiagnosis,
+            String selectedDiagnosisRationale,
+            Integer selectedDiagnosisConfidence
     );
 }

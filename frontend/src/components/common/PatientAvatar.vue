@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import { categoryPalette } from '@/constants/caseCategories'
+
 interface Props {
     name: string
     category?: string
@@ -8,18 +10,9 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    category: 'Кардиология',
+    category: '',
     size: 44,
 })
-
-const PALETTES: Record<string, [string, string]> = {
-    'Кардиология':       ['#f0b5a8', '#c4584a'],
-    'Пульмонология':     ['#cfe2ea', '#5a8ba3'],
-    'Неврология':        ['#d6ccea', '#6e5d9e'],
-    'Эндокринология':    ['#ecd5a0', '#b07f2a'],
-    'Гастроэнтерология': ['#e8c39a', '#a8713b'],
-    'Нефрология':        ['#bfd9d7', '#3d7f83'],
-}
 
 function adjust(hex: string, delta: number): string {
     const n = parseInt(hex.slice(1), 16)
@@ -29,13 +22,11 @@ function adjust(hex: string, delta: number): string {
     return `rgb(${r}, ${g}, ${b})`
 }
 
-const FALLBACK_PAIR: [string, string] = ['#f0b5a8', '#c4584a']
-
 const gradient = computed(() => {
-    const pair = PALETTES[props.category] ?? FALLBACK_PAIR
+    const pair = categoryPalette(props.category)
     const hash = Array.from(props.name).reduce((a, c) => a + c.charCodeAt(0), 0)
     const shift = (hash % 5) - 2
-    return `linear-gradient(135deg, ${adjust(pair[0], shift)} 0%, ${adjust(pair[1], shift)} 100%)`
+    return `linear-gradient(135deg, ${adjust(pair.from, shift)} 0%, ${adjust(pair.to, shift)} 100%)`
 })
 
 const initials = computed(() =>

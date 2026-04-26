@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+const COPY = {
+    wordmark: 'MedMentor',
+    accent: 'RAG',
+} as const
+
 type BrandVariant = 'light' | 'dark' | 'compact'
 
 interface Props {
@@ -85,11 +90,11 @@ const outlineStroke = computed(() => {
             class="font-serif text-[1.8rem] leading-none font-medium tracking-[-0.02em]"
             :style="{ color: wordColor }"
         >
-            MedMentor
+            {{ COPY.wordmark }}
             <span
                 class="italic"
                 :style="{ color: accentColor }"
-            >RAG</span>
+            >{{ COPY.accent }}</span>
         </div>
     </div>
 </template>

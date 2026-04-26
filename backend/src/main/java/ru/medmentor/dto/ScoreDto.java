@@ -15,6 +15,8 @@ public record ScoreDto(
         Double empathy,
         @Schema(example = "1.00")
         Double diagnosisCorrect,
+        @Schema(description = "Composite of the five criteria on a 0-1 scale.", example = "0.83")
+        Double totalScore,
         @Schema(example = "2026-03-30T14:25:00")
         LocalDateTime createdAt
 ) {

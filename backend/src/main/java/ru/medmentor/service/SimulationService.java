@@ -22,7 +22,17 @@ public interface SimulationService {
 
     SimulationCommandResponseDto sendMessage(String username, Long sessionId, String content);
 
-    SimulationSessionDto submitDiagnosis(String username, Long sessionId, String diagnosis);
+    SimulationCommandResponseDto abandonSession(String username, Long sessionId);
+
+    SimulationSessionDto revealExam(String username, Long sessionId);
+
+    SimulationSessionDto submitDiagnosis(
+            String username,
+            Long sessionId,
+            String diagnosis,
+            String rationale,
+            Integer confidence
+    );
 
     List<HistorySessionDto> getHistory(String username);
 

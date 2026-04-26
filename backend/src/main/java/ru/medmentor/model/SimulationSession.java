@@ -48,6 +48,12 @@ public class SimulationSession {
     @Column(name = "selected_diagnosis")
     private String selectedDiagnosis;
 
+    @Column(name = "selected_diagnosis_rationale", columnDefinition = "TEXT")
+    private String selectedDiagnosisRationale;
+
+    @Column(name = "selected_diagnosis_confidence")
+    private Integer selectedDiagnosisConfidence;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private SimulationState state;
@@ -60,6 +66,10 @@ public class SimulationSession {
     @Column(name = "shuffled_diagnosis_options", nullable = false, columnDefinition = "jsonb")
     @Builder.Default
     private List<String> shuffledDiagnosisOptions = new ArrayList<>();
+
+    @Column(name = "exam_revealed", nullable = false, columnDefinition = "boolean NOT NULL DEFAULT false")
+    @Builder.Default
+    private boolean examRevealed = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

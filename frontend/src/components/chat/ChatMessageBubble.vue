@@ -3,6 +3,12 @@ import { computed } from 'vue'
 
 import type { MessageRole } from '@/types'
 
+const COPY = {
+    doctorAvatar: 'Вы',
+    doctorRole: 'Вы — Студент',
+    patientRole: 'Пациент',
+} as const
+
 interface Props {
     role: MessageRole
     content: string
@@ -42,7 +48,7 @@ const isSystem = computed(() => props.role === 'SYSTEM')
                 ? 'background: linear-gradient(135deg, var(--color-teal-deep), #062e30); box-shadow: 0 2px 8px rgb(13 115 119 / 0.25);'
                 : 'background: linear-gradient(135deg, #3a4a48, #1e2e2c); box-shadow: 0 1px 3px rgb(10 31 31 / 0.15);'"
         >
-            {{ isDoctor ? 'Вы' : patientInitials }}
+            {{ isDoctor ? COPY.doctorAvatar : patientInitials }}
         </div>
 
         <div
@@ -50,7 +56,7 @@ const isSystem = computed(() => props.role === 'SYSTEM')
             :class="isDoctor ? 'items-end' : 'items-start'"
         >
             <p class="mb-[0.4rem] text-eyebrow-sm text-text-secondary">
-                {{ isDoctor ? 'Вы — Студент' : 'Пациент' }}
+                {{ isDoctor ? COPY.doctorRole : COPY.patientRole }}
             </p>
             <div
                 class="whitespace-pre-wrap break-words px-[1.4rem] py-[1.1rem] text-[1.4rem] leading-[1.5]"

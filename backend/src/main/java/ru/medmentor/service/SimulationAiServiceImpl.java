@@ -10,6 +10,7 @@ import ru.medmentor.model.MedicalCase;
 import ru.medmentor.model.MedicalCaseFacts;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Service
@@ -64,11 +65,19 @@ public class SimulationAiServiceImpl implements SimulationAiService {
     public ScoreReviewPayload generateScoreReview(
             MedicalCase medicalCase,
             List<ConversationMessage> conversationHistory,
-            String selectedDiagnosis
+            String selectedDiagnosis,
+            String selectedDiagnosisRationale,
+            Integer selectedDiagnosisConfidence
     ) {
         final String ragContext = ragSearchService.buildPromptContext(
                 buildScoreRagQuery(medicalCase, conversationHistory, selectedDiagnosis)
         );
+        final String rationaleSection = selectedDiagnosisRationale == null || selectedDiagnosisRationale.isBlank()
+                ? "(not provided)"
+                : selectedDiagnosisRationale.trim();
+        final String confidenceSection = selectedDiagnosisConfidence == null
+                ? "(not provided)"
+                : selectedDiagnosisConfidence + "%";
         final String prompt = """
                 %s
 
@@ -81,17 +90,54 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 Selected diagnosis:
                 %s
 
-                Conversation:
+                Doctor's rationale:
+                %s
+
+                Doctor's self-reported confidence:
+                %s
+
+                Conversation (each doctor message is labelled with its 1-based `doctor turn N`
+                index; reference these N values verbatim in the `turn` field of `keyTurns`):
                 %s
                 """.formatted(
                 promptTemplateService.getScoreReviewPrompt(),
                 formatCase(medicalCase),
                 ragContext.isBlank() ? "(none)" : ragContext,
                 selectedDiagnosis,
-                formatConversation(conversationHistory)
+                rationaleSection,
+                confidenceSection,
+                formatConversationWithTurnIndex(conversationHistory)
         );
         final String rawResponse = callText(prompt);
         return parseScorePayload(rawResponse);
+    }
+
+    /**
+     * Formats the conversation labelling each doctor message with its 1-based index. The score
+     * review prompt asks the model to cite the same indices in `keyTurns.turn`, so explicit
+     * numbering removes the need for the model to count messages itself.
+     */
+    private String formatConversationWithTurnIndex(List<ConversationMessage> conversationHistory) {
+        if (conversationHistory.isEmpty()) {
+            return "(no conversation yet)";
+        }
+        final StringBuilder builder = new StringBuilder();
+        int doctorTurn = 0;
+        for (ConversationMessage message : conversationHistory) {
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            switch (message.getRole()) {
+                case DOCTOR -> {
+                    doctorTurn += 1;
+                    builder.append(String.format("doctor turn %d: %s", doctorTurn, message.getContent()));
+                }
+                case PATIENT -> builder.append("patient: ").append(message.getContent());
+                default -> builder.append(message.getRole().name().toLowerCase(Locale.ROOT))
+                        .append(": ").append(message.getContent());
+            }
+        }
+        return builder.toString();
     }
 
     private String callText(String prompt) {

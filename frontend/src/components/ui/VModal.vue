@@ -89,6 +89,8 @@ function focusFirstElement(): void {
     panelRef.value.focus()
 }
 
+const CLOSE_ARIA_LABEL = 'Close'
+
 const ACCENT_BAR: Record<ModalAccent, string> = {
     none: '',
     brand: 'bg-gradient-to-r from-brand to-brand-bright',
@@ -103,7 +105,7 @@ const ACCENT_BAR: Record<ModalAccent, string> = {
             v-if="isOpen"
             ref="containerRef"
             class="fixed inset-0 z-[100] flex items-center justify-center px-[2rem] anim-fade-in"
-            style="background: rgba(10, 31, 31, 0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+            style="background: rgb(10 31 31 / 50%); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);"
         >
             <div
                 ref="panelRef"
@@ -128,7 +130,7 @@ const ACCENT_BAR: Record<ModalAccent, string> = {
                     type="button"
                     class="absolute right-[1.6rem] top-[1.6rem] z-10 flex size-[3.2rem] items-center justify-center rounded-full border border-[color:var(--color-line-2)] text-text-secondary hover:bg-surface-base"
                     :class="accent !== 'none' ? 'top-[2rem]' : ''"
-                    aria-label="Close"
+                    :aria-label="CLOSE_ARIA_LABEL"
                     @click="isOpen = false"
                 >
                     <svg

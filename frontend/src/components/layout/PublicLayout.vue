@@ -3,9 +3,14 @@ import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import AuthModal from '@/components/common/AuthModal.vue'
+import PageTransition from '@/components/common/PageTransition.vue'
 import TheFooter from '@/components/layout/TheFooter/TheFooter.vue'
 import TheHeader from '@/components/layout/TheHeader/TheHeader.vue'
 import { useAuthGateStore } from '@/stores/authGate'
+
+const COPY = {
+    authErrorTitle: 'Проверка сессии не удалась',
+} as const
 
 const AUTH_ERROR_COPY: Record<string, string> = {
     network: 'Не удалось связаться с сервером при проверке сессии. Проверьте соединение и попробуйте снова.',
@@ -64,13 +69,13 @@ async function handleAuthModalClose(): Promise<void> {
             class="mx-auto w-full max-w-[124rem] px-[3.2rem] pt-[1.2rem]"
         >
             <div class="rounded-[1rem] border border-[color:rgb(138_46_32_/_0.3)] bg-[color:var(--color-rose-soft)] px-[1.6rem] py-[1.2rem] text-[1.3rem] text-[color:var(--color-rose-text)]">
-                <p class="font-semibold">Проверка сессии не удалась</p>
+                <p class="font-semibold">{{ COPY.authErrorTitle }}</p>
                 <p class="mt-[0.4rem]">{{ AUTH_ERROR_COPY[authErrorReason] }}</p>
             </div>
         </div>
 
-        <main class="flex-1">
-            <RouterView />
+        <main class="relative flex-1">
+            <PageTransition />
         </main>
 
         <TheFooter variant="public" />

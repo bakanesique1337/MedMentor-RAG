@@ -6,6 +6,7 @@ public record SimulationStatsOverviewDto(
         Double averageQuestioningStructure,
         Double averageThoroughness,
         Double averageEmpathy,
-        Double averageDiagnosisCorrect
+        Double averageDiagnosisCorrect,
+        Double averageTotalScore
 ) {
 }

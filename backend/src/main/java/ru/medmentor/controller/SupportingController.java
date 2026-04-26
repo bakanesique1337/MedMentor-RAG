@@ -47,7 +47,7 @@ public class SupportingController {
             Authentication authentication,
             @Valid @RequestBody UpdateUserSettingsRequestDto request
     ) {
-        return userAccountService.updateSettings(authentication.getName(), request.displayName(), request.settings());
+        return userAccountService.updateSettings(authentication.getName(), request);
     }
 
     @GetMapping("/history")

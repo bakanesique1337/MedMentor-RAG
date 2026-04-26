@@ -50,6 +50,9 @@ public class UserScore {
     @Column(name = "diagnosis_correct", nullable = false)
     private Double diagnosisCorrect;
 
+    @Column(name = "total_score", nullable = false, columnDefinition = "DOUBLE PRECISION NOT NULL DEFAULT 0.0")
+    private Double totalScore;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -68,7 +68,9 @@ const panelPos = ref<PanelPos>({ top: 0, left: 0, width: 0 })
 const hasError = computed(() => props.invalid || Boolean(props.error))
 const selected = computed(() => props.options.find((o) => o.value === model.value) ?? null)
 const showPlaceholder = computed(() => !selected.value && Boolean(props.placeholder))
-const triggerLabel = computed(() => selected.value?.label || props.placeholder || 'Выбрать')
+const DEFAULT_PLACEHOLDER = 'Выбрать'
+
+const triggerLabel = computed(() => selected.value?.label || props.placeholder || DEFAULT_PLACEHOLDER)
 
 const triggerClass = computed(() =>
     cn(
@@ -190,8 +192,8 @@ onKeyStroke('Escape', (event) => {
                 <Teleport to="body">
                     <div
                         v-if="isOpen"
-                        ref="panelRef"
                         :id="`select-listbox-${selectId}`"
+                        ref="panelRef"
                         role="listbox"
                         class="fixed z-[90] overflow-hidden rounded-[1rem] border border-[color:var(--color-line-2)] bg-white p-[0.6rem] shadow-[0_20px_40px_-20px_rgb(10_31_31_/_0.3)]"
                         :style="{

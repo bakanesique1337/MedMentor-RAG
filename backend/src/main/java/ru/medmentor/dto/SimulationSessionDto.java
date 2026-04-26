@@ -14,8 +14,16 @@ public record SimulationSessionDto(
         String caseId,
         @Schema(example = "Classic influenza presentation")
         String caseTitle,
+        @Schema(example = "Cardiology")
+        String caseCategory,
+        @Schema(example = "medium")
+        String caseDifficulty,
         @Schema(example = "Anna Petrova")
         String patientName,
+        @Schema(example = "26")
+        int patientAge,
+        @Schema(example = "female")
+        String patientSex,
         @Schema(example = "IN_PROGRESS")
         SimulationState state,
         @Schema(example = "OPENING_READY")
@@ -24,8 +32,20 @@ public record SimulationSessionDto(
         List<String> diagnosisOptions,
         @Schema(example = "Influenza")
         String selectedDiagnosis,
+        @Schema(example = "Typical influenza presentation with fever and myalgia.")
+        String selectedDiagnosisRationale,
+        @Schema(example = "70", description = "Self-reported diagnosis confidence 0..100; null until submitted")
+        Integer selectedDiagnosisConfidence,
+        @Schema(example = "Influenza", description = "Reference diagnosis from the case; only revealed once the session is COMPLETED or ABANDONED")
+        String correctDiagnosis,
         List<ConversationMessageDto> messages,
         StreamingStatusDto streamingStatus,
+        @Schema(description = "Whether the user has triggered the physical exam reveal")
+        boolean examRevealed,
+        @Schema(description = "Patient passport revealed after the physical exam; null until examRevealed=true")
+        PatientPassportDto passport,
+        @Schema(description = "Vital signs revealed after the physical exam; null until examRevealed=true")
+        PatientVitalsDto vitals,
         ScoreDto score,
         ResultDto result,
         @Schema(example = "2026-03-30T14:05:00")

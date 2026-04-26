@@ -1,4 +1,11 @@
 <script setup lang="ts">
+const COPY = {
+    eyebrow: 'Процесс',
+    titleLead: 'Четыре шага',
+    titleAccent: 'от жалобы до диагноза',
+    subtitle: 'Полный клинический цикл в одной сессии.',
+} as const
+
 interface Step {
     n: string
     title: string
@@ -20,25 +27,25 @@ const STEPS: readonly Step[] = [
     >
         <div
             class="pointer-events-none absolute -right-[12rem] -top-[12rem] h-[40rem] w-[40rem] rounded-full"
-            style="background: radial-gradient(circle, rgb(13 115 119 / 0.25), transparent 70%);"
+            style="background: radial-gradient(circle, rgb(13 115 119 / 25%), transparent 70%);"
             aria-hidden="true"
         />
         <div class="relative mx-auto w-full max-w-[124rem] px-[3.2rem]">
             <div class="mb-[4.8rem]">
-                <p class="mb-[2rem] text-eyebrow text-[color:var(--color-mint)]">Процесс</p>
+                <p class="mb-[2rem] text-eyebrow text-[color:var(--color-mint)]">{{ COPY.eyebrow }}</p>
                 <h2 class="font-serif text-[5.6rem] font-medium leading-[1.03] tracking-[-0.03em] text-white">
-                    Четыре шага
-                    <em class="italic text-[color:var(--color-mint)]">от&nbsp;жалобы до&nbsp;диагноза</em>
+                    {{ COPY.titleLead }}
+                    <em class="italic text-[color:var(--color-mint)]">{{ COPY.titleAccent }}</em>
                 </h2>
                 <p class="mt-[1.8rem] max-w-[52rem] text-[1.65rem] leading-[1.55] text-[color:rgb(234_244_243_/_0.65)]">
-                    Полный клинический цикл в одной сессии.
+                    {{ COPY.subtitle }}
                 </p>
             </div>
 
             <div class="relative mt-[4.8rem] grid gap-[3.2rem] md:grid-cols-2 lg:grid-cols-4">
                 <div
                     class="pointer-events-none absolute hidden h-[0.1rem] bg-[color:rgb(159_198_194_/_0.25)] lg:block"
-                    style="top: 3rem; left: calc((100% - 9.6rem) / 8); right: calc((100% - 9.6rem) / 8);"
+                    style="top: 3rem; right: calc((100% - 9.6rem) / 8); left: calc((100% - 9.6rem) / 8);"
                     aria-hidden="true"
                 />
                 <div

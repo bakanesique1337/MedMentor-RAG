@@ -16,6 +16,8 @@
     "patientAge",
     "patientSex",
     "patientBrief",
+    "passport",
+    "vitals",
     "openingComplaint",
     "authorNote",
     "facts",
@@ -76,6 +78,90 @@
       "type": "string",
       "minLength": 1,
       "description": "Short frontend-safe patient summary shown on the case card."
+    },
+    "passport": {
+      "type": "object",
+      "description": "Structured patient passport revealed during a physical exam.",
+      "additionalProperties": false,
+      "required": [
+        "heightCm",
+        "weightKg",
+        "allergies",
+        "chronicConditions",
+        "smoking"
+      ],
+      "properties": {
+        "heightCm": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 250,
+          "description": "Patient height in centimetres."
+        },
+        "weightKg": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 300,
+          "description": "Patient weight in kilograms."
+        },
+        "allergies": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Allergies summary text shown to the user (e.g. 'не выявлено')."
+        },
+        "chronicConditions": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Chronic conditions summary text (e.g. 'АГ, СД 2 типа')."
+        },
+        "smoking": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Smoking status summary text (e.g. '20 лет, 1 пачка/день' or 'не курит')."
+        }
+      }
+    },
+    "vitals": {
+      "type": "object",
+      "description": "Vital signs revealed during a physical exam. Hidden until the user requests an exam.",
+      "additionalProperties": false,
+      "required": [
+        "heartRate",
+        "bloodPressure",
+        "respiratoryRate",
+        "spo2",
+        "temperatureC"
+      ],
+      "properties": {
+        "heartRate": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 250,
+          "description": "Heart rate in beats per minute."
+        },
+        "bloodPressure": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Blood pressure as 'systolic/diastolic' in mmHg (e.g. '158/96')."
+        },
+        "respiratoryRate": {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 80,
+          "description": "Respiratory rate in breaths per minute."
+        },
+        "spo2": {
+          "type": "integer",
+          "minimum": 50,
+          "maximum": 100,
+          "description": "Peripheral oxygen saturation in percent."
+        },
+        "temperatureC": {
+          "type": "number",
+          "minimum": 30,
+          "maximum": 45,
+          "description": "Body temperature in degrees Celsius."
+        }
+      }
     },
     "openingComplaint": {
       "type": "string",

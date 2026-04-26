@@ -7,6 +7,20 @@ import { ROUTES } from '@/constants/routes'
 import { useAuthGateStore } from '@/stores/authGate'
 import { isApiError } from '@/types'
 
+const COPY = {
+    closeAriaLabel: 'Закрыть',
+    titleLead: 'Вход в',
+    titleAccent: 'MedMentor',
+    description: 'Продолжите свою тренировку с того места, где остановились.',
+    usernameLabel: 'Логин',
+    usernamePlaceholder: 'a.kovaleva',
+    passwordLabel: 'Пароль',
+    forgotLink: 'Забыли?',
+    passwordPlaceholder: '••••••••••',
+    submit: 'Войти',
+    submitPending: 'Вход...',
+} as const
+
 const emit = defineEmits<{
     (event: 'close'): void
 }>()
@@ -119,7 +133,7 @@ async function handleSubmit(): Promise<void> {
         <div
             v-if="isOpen"
             class="fixed inset-0 z-[100] flex items-center justify-center px-[2rem] anim-fade-in"
-            style="background: rgba(10, 31, 31, 0.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);"
+            style="background: rgb(10 31 31 / 50%); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);"
             @click="handleBackdropClick"
         >
             <div
@@ -131,7 +145,7 @@ async function handleSubmit(): Promise<void> {
                 <button
                     type="button"
                     class="absolute right-[1.6rem] top-[1.6rem] flex size-[3.2rem] items-center justify-center rounded-full border border-[color:var(--color-line-2)] text-text-secondary hover:bg-surface-base"
-                    aria-label="Закрыть"
+                    :aria-label="COPY.closeAriaLabel"
                     @click="handleClose"
                 >
                     <svg
@@ -178,11 +192,11 @@ async function handleSubmit(): Promise<void> {
                     </div>
 
                     <h2 class="mb-[0.8rem] font-serif text-[3rem] font-medium leading-[1.1] tracking-[-0.02em] text-text-primary">
-                        Вход в
-                        <em class="italic text-brand">MedMentor</em>
+                        {{ COPY.titleLead }}
+                        <em class="italic text-brand">{{ COPY.titleAccent }}</em>
                     </h2>
                     <p class="mb-[2.4rem] text-[1.35rem] text-text-secondary">
-                        Продолжите свою тренировку с того места, где остановились.
+                        {{ COPY.description }}
                     </p>
 
                     <div
@@ -197,12 +211,12 @@ async function handleSubmit(): Promise<void> {
                         @submit.prevent="handleSubmit"
                     >
                         <label class="block">
-                            <span class="mb-[0.6rem] block text-eyebrow-sm text-text-secondary">Логин</span>
+                            <span class="mb-[0.6rem] block text-eyebrow-sm text-text-secondary">{{ COPY.usernameLabel }}</span>
                             <input
                                 v-model="username"
                                 type="text"
                                 autocomplete="username"
-                                placeholder="a.kovaleva"
+                                :placeholder="COPY.usernamePlaceholder"
                                 class="h-[4.4rem] w-full rounded-[0.9rem] border bg-surface-base px-[1.4rem] text-[1.4rem] text-text-primary transition placeholder:text-text-tertiary focus:border-brand focus:bg-white focus:outline-none"
                                 :class="usernameError ? 'border-[color:var(--color-danger-bright)]' : 'border-[color:var(--color-line-2)]'"
                                 @input="usernameError = ''"
@@ -217,18 +231,18 @@ async function handleSubmit(): Promise<void> {
 
                         <label class="block">
                             <div class="mb-[0.6rem] flex items-baseline justify-between">
-                                <span class="text-eyebrow-sm text-text-secondary">Пароль</span>
+                                <span class="text-eyebrow-sm text-text-secondary">{{ COPY.passwordLabel }}</span>
                                 <a
                                     href="#"
                                     class="text-[1.15rem] text-brand hover:underline"
                                     @click.prevent
-                                >Забыли?</a>
+                                >{{ COPY.forgotLink }}</a>
                             </div>
                             <input
                                 v-model="password"
                                 type="password"
                                 autocomplete="current-password"
-                                placeholder="••••••••••"
+                                :placeholder="COPY.passwordPlaceholder"
                                 class="h-[4.4rem] w-full rounded-[0.9rem] border bg-surface-base px-[1.4rem] text-[1.4rem] text-text-primary transition placeholder:text-text-tertiary focus:border-brand focus:bg-white focus:outline-none"
                                 :class="passwordError ? 'border-[color:var(--color-danger-bright)]' : 'border-[color:var(--color-line-2)]'"
                                 @input="passwordError = ''"
@@ -246,9 +260,9 @@ async function handleSubmit(): Promise<void> {
                             :disabled="authGate.isLoginPending"
                             class="mt-[0.4rem] flex h-[4.6rem] w-full items-center justify-center gap-[0.8rem] rounded-[1rem] bg-brand text-[1.45rem] font-medium text-white shadow-primary transition hover:bg-brand-deep disabled:opacity-70"
                         >
-                            <template v-if="authGate.isLoginPending">Вход…</template>
+                            <template v-if="authGate.isLoginPending">{{ COPY.submitPending }}</template>
                             <template v-else>
-                                Войти
+                                {{ COPY.submit }}
                                 <MmArrow :size="14" />
                             </template>
                         </button>

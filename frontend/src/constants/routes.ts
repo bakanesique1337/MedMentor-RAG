@@ -3,6 +3,7 @@ export const ROUTES = {
     CASES: 'cases',
     PROFILE: 'profile',
     CHAT: 'chat',
+    RESULT: 'result',
     NOT_FOUND: 'not-found',
 } as const
 

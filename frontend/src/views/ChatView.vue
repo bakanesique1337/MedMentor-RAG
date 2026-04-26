@@ -6,20 +6,33 @@ import ChatInputBar from '@/components/chat/ChatInputBar.vue'
 import ChatSidebar from '@/components/chat/ChatSidebar.vue'
 import ChatTimeline from '@/components/chat/ChatTimeline.vue'
 import ChatTopBar from '@/components/chat/ChatTopBar.vue'
+import DiagnosisConfirmModal from '@/components/chat/DiagnosisConfirmModal.vue'
 import DiagnosisPanel from '@/components/chat/DiagnosisPanel.vue'
-import SessionScoreCard from '@/components/chat/SessionScoreCard.vue'
+import FinishCaseModal from '@/components/chat/FinishCaseModal.vue'
 import { VAlert, VButton, VSpinner } from '@/components/ui'
 import { ROUTES } from '@/constants/routes'
 import { SIMULATION_QUICK_PROMPTS } from '@/constants/simulationQuickPrompts'
 import { useSimulationApi } from '@/composables/useSimulationApi'
 import { useSimulationSocket } from '@/composables/useSimulationSocket'
+import { useSidebarStore } from '@/stores/sidebar'
 import type { SimulationSession, StreamChunk } from '@/types'
 import { isApiError } from '@/types'
+
+const COPY = {
+    sessionUnavailableTitle: 'Сессия недоступна',
+    backToCasesButton: 'К списку кейсов',
+    openingPendingMessage: 'Пациент готовит вступление...',
+    openingFailedTitle: 'Опенинг не удался',
+    openingFailedDescription: 'Вступление пациента не удалось сгенерировать.',
+    retryButton: 'Повторить',
+    scoringMessage: 'Модель оценивает вашу сессию...',
+} as const
 
 const route = useRoute()
 const router = useRouter()
 const simulationApi = useSimulationApi()
 const socket = useSimulationSocket()
+const sidebarStore = useSidebarStore()
 
 const sessionId = ref(0)
 const session = ref<SimulationSession | null>(null)
@@ -34,7 +47,12 @@ const streamErrorMessage = ref<string | null>(null)
 
 const isSendPending = ref(false)
 const isDiagnosisPending = ref(false)
+const isAbandonPending = ref(false)
+const isExamPending = ref(false)
 const conflictMessage = ref<string | null>(null)
+
+const isFinishModalOpen = ref(false)
+const isDiagnosisModalOpen = ref(false)
 
 const isOpeningPending = computed(() =>
     session.value?.openingStatus === 'OPENING_PENDING'
@@ -43,7 +61,6 @@ const isOpeningPending = computed(() =>
 const isOpeningFailed = computed(() => session.value?.openingStatus === 'OPENING_FAILED')
 const isDiagnosisPhase = computed(() => session.value?.state === 'DIAGNOSIS_SELECT')
 const isScoringPhase = computed(() => session.value?.state === 'SCORING')
-const isCompleted = computed(() => session.value?.state === 'COMPLETED')
 
 const canSendMessage = computed(() =>
     session.value !== null
@@ -52,6 +69,20 @@ const canSendMessage = computed(() =>
     && session.value.state === 'IN_PROGRESS'
     && activeStreamKind.value === null
     && !isSendPending.value,
+)
+
+const canFinishCase = computed(() =>
+    session.value !== null
+    && session.value.state !== 'COMPLETED'
+    && session.value.state !== 'ABANDONED'
+    && session.value.state !== 'SCORING',
+)
+
+const canDiagnose = computed(() =>
+    session.value !== null
+    && session.value.openingStatus === 'OPENING_READY'
+    && session.value.state === 'IN_PROGRESS'
+    && activeStreamKind.value === null,
 )
 
 watch(socket.status, (newStatus) => {
@@ -87,13 +118,19 @@ async function fetchSession(options?: { retryOpening?: boolean }): Promise<void>
         const data = await simulationApi.getSession(sessionId.value, options)
         session.value = data
 
+        if (data.state === 'COMPLETED' || data.state === 'ABANDONED') {
+            await router.replace({
+                name: ROUTES.RESULT,
+                params: { sessionId: String(sessionId.value) },
+            }).catch(() => undefined)
+            return
+        }
+
         const streamKind = resolveStreamKind(data)
         activeStreamKind.value = streamKind
         streamErrorMessage.value = null
 
-        if (data.state !== 'COMPLETED') {
-            socket.connect(sessionId.value)
-        }
+        socket.connect(sessionId.value)
     } catch {
         pageError.value = 'Сессия не найдена или не может быть загружена. Вернитесь к списку кейсов.'
     } finally {
@@ -171,26 +208,53 @@ async function handleSend(content: string): Promise<void> {
 /**
  * Submits the selected diagnosis.
  */
-async function handleDiagnose(diagnosis: string): Promise<void> {
+async function handleDiagnose(payload: {
+    diagnosis: string
+    rationale: string | null
+    confidence: number | null
+}): Promise<void> {
     if (isDiagnosisPending.value) return
 
     isDiagnosisPending.value = true
     conflictMessage.value = null
 
     try {
-        const updated = await simulationApi.diagnose(sessionId.value, diagnosis)
+        const updated = await simulationApi.diagnose(sessionId.value, payload)
         session.value = updated
         isDiagnosisPending.value = false
+        isDiagnosisModalOpen.value = false
+        if (updated.state === 'COMPLETED' || updated.state === 'ABANDONED') {
+            socket.disconnect()
+            await router.push({
+                name: ROUTES.RESULT,
+                params: { sessionId: String(sessionId.value) },
+            })
+        }
     } catch (err: unknown) {
         if (isApiError(err) && err.status === 409) {
             conflictMessage.value = 'Диагноз нельзя отправить на этом этапе. Перезагружаем состояние…'
             await fetchSession()
             isDiagnosisPending.value = false
+            isDiagnosisModalOpen.value = false
             return
         }
         pageError.value = 'Не удалось отправить диагноз. Попробуйте снова.'
         isDiagnosisPending.value = false
     }
+}
+
+/**
+ * Opens the diagnosis confirmation modal.
+ */
+function handleOpenDiagnose(): void {
+    isDiagnosisModalOpen.value = true
+}
+
+/**
+ * Opens the finish-case confirmation modal.
+ */
+function handleOpenFinish(): void {
+    isFinishModalOpen.value = true
 }
 
 /**
@@ -211,6 +275,49 @@ function handleBack(): void {
     router.push({ name: ROUTES.CASES }).catch(() => undefined)
 }
 
+/**
+ * Abandons the current simulation and returns to the cases list.
+ */
+async function handleAbandon(): Promise<void> {
+    if (isAbandonPending.value) return
+    isAbandonPending.value = true
+    try {
+        await simulationApi.abandon(sessionId.value)
+        socket.disconnect()
+        sidebarStore.clearActiveSession()
+        isFinishModalOpen.value = false
+        await router.push({ name: ROUTES.CASES })
+    } catch (err: unknown) {
+        if (isApiError(err)) {
+            const detail = err.error ? ` (${err.status}: ${err.error})` : ` (${err.status})`
+            pageError.value = `Не удалось завершить кейс${detail}.`
+        } else {
+            pageError.value = 'Не удалось завершить кейс. Сервер недоступен.'
+        }
+        isFinishModalOpen.value = false
+    } finally {
+        isAbandonPending.value = false
+    }
+}
+
+/**
+ * Reveals patient passport and vitals via the dedicated exam endpoint.
+ * The keyword classifier in sendMessage covers free-text requests; this is
+ * the explicit-button path.
+ */
+async function handleRequestExam(): Promise<void> {
+    if (isExamPending.value || session.value === null || session.value.examRevealed) return
+    isExamPending.value = true
+    try {
+        const updated = await simulationApi.revealExam(sessionId.value)
+        session.value = updated
+    } catch {
+        pageError.value = 'Не удалось получить данные осмотра. Попробуйте снова.'
+    } finally {
+        isExamPending.value = false
+    }
+}
+
 let unsubscribeChunk: (() => void) | null = null
 
 onMounted(async () => {
@@ -227,7 +334,10 @@ onMounted(async () => {
     }
 
     sessionId.value = id
-    await fetchSession()
+    await Promise.all([
+        fetchSession(),
+        sidebarStore.fetchCasesCount(),
+    ])
 })
 
 onUnmounted(() => {
@@ -251,7 +361,7 @@ onUnmounted(() => {
         >
             <VAlert
                 status="error"
-                title="Сессия недоступна"
+                :title="COPY.sessionUnavailableTitle"
                 :description="pageError"
             />
             <div>
@@ -259,7 +369,7 @@ onUnmounted(() => {
                     variant="secondary"
                     @click="handleBack"
                 >
-                    К списку кейсов
+                    {{ COPY.backToCasesButton }}
                 </VButton>
             </div>
         </div>
@@ -268,14 +378,23 @@ onUnmounted(() => {
             <ChatSidebar
                 :session="session"
                 :session-id="sessionId"
+                :cases-count="sidebarStore.casesCount"
+                :is-abandon-pending="isAbandonPending"
                 class="hidden lg:flex"
+                @abandon="handleAbandon"
+                @request-exam="handleRequestExam"
             />
 
             <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <ChatTopBar
                     :session="session"
                     :session-id="sessionId"
+                    :can-finish="canFinishCase"
+                    :can-diagnose="canDiagnose"
+                    :is-abandon-pending="isAbandonPending"
                     @back="handleBack"
+                    @finish="handleOpenFinish"
+                    @diagnose="handleOpenDiagnose"
                 />
 
                 <div
@@ -304,7 +423,7 @@ onUnmounted(() => {
                 >
                     <VSpinner size="lg" />
                     <p class="text-[1.4rem] text-text-secondary">
-                        Пациент готовит вступление…
+                        {{ COPY.openingPendingMessage }}
                     </p>
                     <div
                         v-if="streamingContent"
@@ -320,16 +439,16 @@ onUnmounted(() => {
                 >
                     <VAlert
                         status="error"
-                        title="Опенинг не удался"
-                        description="Вступление пациента не удалось сгенерировать."
+                        :title="COPY.openingFailedTitle"
+                        :description="COPY.openingFailedDescription"
                     />
                     <div class="flex gap-[1.2rem]">
-                        <VButton @click="handleRetryOpening">Повторить</VButton>
+                        <VButton @click="handleRetryOpening">{{ COPY.retryButton }}</VButton>
                         <VButton
                             variant="ghost"
                             @click="handleBack"
                         >
-                            К списку кейсов
+                            {{ COPY.backToCasesButton }}
                         </VButton>
                     </div>
                 </div>
@@ -339,36 +458,7 @@ onUnmounted(() => {
                     class="flex flex-1 flex-col items-center justify-center gap-[1.2rem]"
                 >
                     <VSpinner size="lg" />
-                    <p class="text-[1.4rem] text-text-secondary">Модель оценивает вашу сессию…</p>
-                </div>
-
-                <div
-                    v-else-if="isCompleted"
-                    class="flex flex-1 flex-col overflow-y-auto"
-                >
-                    <ChatTimeline
-                        :messages="session.messages"
-                        :patient-name="session.patientName"
-                        streaming-content=""
-                        :is-streaming-active="false"
-                    />
-                    <div class="shrink-0 border-t border-[color:var(--color-line)] bg-surface-base px-[2.4rem] py-[2.4rem]">
-                        <div class="mx-auto w-full max-w-[84rem]">
-                            <SessionScoreCard
-                                :score="session.score"
-                                :result="session.result"
-                                :case-title="session.caseTitle"
-                            />
-                            <div class="mt-[1.6rem]">
-                                <VButton
-                                    variant="secondary"
-                                    @click="handleBack"
-                                >
-                                    К списку кейсов
-                                </VButton>
-                            </div>
-                        </div>
-                    </div>
+                    <p class="text-[1.4rem] text-text-secondary">{{ COPY.scoringMessage }}</p>
                 </div>
 
                 <template v-else>
@@ -378,6 +468,9 @@ onUnmounted(() => {
                         :streaming-content="streamingContent"
                         :is-streaming-active="activeStreamKind !== null"
                         :patient-name="session.patientName"
+                        :exam-revealed="session.examRevealed"
+                        :passport="session.passport"
+                        :vitals="session.vitals"
                     />
 
                     <DiagnosisPanel
@@ -394,9 +487,25 @@ onUnmounted(() => {
                         :is-send-pending="isSendPending"
                         :quick-prompts="SIMULATION_QUICK_PROMPTS"
                         @send="handleSend"
+                        @request-exam="handleRequestExam"
                     />
                 </template>
             </div>
+
+            <FinishCaseModal
+                v-model="isFinishModalOpen"
+                :session-id="sessionId"
+                :is-pending="isAbandonPending"
+                @confirm="handleAbandon"
+            />
+
+            <DiagnosisConfirmModal
+                v-model="isDiagnosisModalOpen"
+                :session-id="sessionId"
+                :is-pending="isDiagnosisPending"
+                :conflict-message="conflictMessage"
+                @diagnose="handleDiagnose"
+            />
         </template>
     </div>
 </template>

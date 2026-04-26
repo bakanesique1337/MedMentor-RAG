@@ -34,8 +34,11 @@ const TONE_CLASSES: Record<NonNullable<Props['tone']>, string> = {
     mint: 'bg-[color:var(--color-mint)] text-[color:var(--color-ink)]',
 }
 
-const fallbackLabel = computed(() => (props.name ? getInitials(props.name) : '?'))
-const resolvedAlt = computed(() => props.alt || props.name || 'Avatar')
+const FALLBACK_LABEL = '?'
+const DEFAULT_ALT = 'Avatar'
+
+const fallbackLabel = computed(() => (props.name ? getInitials(props.name) : FALLBACK_LABEL))
+const resolvedAlt = computed(() => props.alt || props.name || DEFAULT_ALT)
 </script>
 
 <template>

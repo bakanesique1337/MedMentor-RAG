@@ -13,6 +13,20 @@
   "patientAge": 42,
   "patientSex": "female",
   "patientBrief": "Episodes of right upper abdominal pain after eating greasy food.",
+  "passport": {
+    "heightCm": 168,
+    "weightKg": 82,
+    "allergies": "не выявлено",
+    "chronicConditions": "ЖКБ",
+    "smoking": "не курит"
+  },
+  "vitals": {
+    "heartRate": 76,
+    "bloodPressure": "122/78",
+    "respiratoryRate": 16,
+    "spo2": 98,
+    "temperatureC": 36.6
+  },
   "openingComplaint": "I keep getting this pain under my right ribs after heavy meals.",
   "authorNote": "This is biliary colic. Be uncomfortable during episodes but currently stable. Mention greasy food trigger when asked.",
   "facts": {

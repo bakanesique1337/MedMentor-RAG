@@ -1,9 +1,24 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import DifficultyPips from '@/components/common/DifficultyPips.vue'
 import MmArrow from '@/components/common/MmArrow.vue'
 import PatientAvatar from '@/components/common/PatientAvatar.vue'
 import VSpinner from '@/components/ui/VSpinner.vue'
+import { categoryDisplayLabel } from '@/constants/caseCategories'
 import type { CaseCard } from '@/types'
+
+const COPY = {
+    yearsSuffix: 'л.',
+    starting: 'Открываем...',
+    resumeAction: 'Продолжить',
+    startAction: 'Начать кейс',
+} as const
+
+const SEX_LABEL = {
+    female: 'жен.',
+    male: 'муж.',
+} as const
 
 interface Props {
     caseData: CaseCard
@@ -18,6 +33,13 @@ const emit = defineEmits<{
 }>()
 
 const props = defineProps<Props>()
+
+const categoryLabel = computed(() => categoryDisplayLabel(props.caseData.category))
+
+const sexLabel = computed<string>(() => {
+    const sex = String(props.caseData.patientSex).toLowerCase()
+    return sex === 'female' ? SEX_LABEL.female : SEX_LABEL.male
+})
 
 /**
  * Emits start event with this case's ID.
@@ -44,14 +66,14 @@ function handleStart(): void {
             />
             <div class="flex min-w-0 flex-1 flex-col gap-[0.4rem]">
                 <div class="truncate text-eyebrow-sm text-brand">
-                    {{ caseData.category }}
+                    {{ categoryLabel }}
                 </div>
                 <div class="truncate text-[1.15rem] text-text-tertiary">
                     <span class="font-medium text-text-secondary">{{ caseData.patientName }}</span>
                     <span class="mx-[0.6rem]">&middot;</span>
-                    <span>{{ caseData.patientAge }}&nbsp;л.</span>
+                    <span>{{ caseData.patientAge }}&nbsp;{{ COPY.yearsSuffix }}</span>
                     <span class="mx-[0.6rem]">&middot;</span>
-                    <span>{{ caseData.patientSex === 'FEMALE' || caseData.patientSex === 'female' ? 'жен.' : 'муж.' }}</span>
+                    <span>{{ sexLabel }}</span>
                 </div>
             </div>
         </div>
@@ -73,14 +95,14 @@ function handleStart(): void {
             <span class="flex items-center gap-[0.4rem] text-[1.2rem] font-medium text-brand">
                 <template v-if="isStartPending">
                     <VSpinner size="sm" />
-                    Открываем...
+                    {{ COPY.starting }}
                 </template>
                 <template v-else-if="isActive">
-                    Продолжить
+                    {{ COPY.resumeAction }}
                     <MmArrow :size="12" />
                 </template>
                 <template v-else>
-                    Начать кейс
+                    {{ COPY.startAction }}
                     <MmArrow :size="12" />
                 </template>
             </span>
@@ -90,16 +112,16 @@ function handleStart(): void {
 
 <style scoped>
 .line-clamp-2 {
+    overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
-    overflow: hidden;
 }
 
 .line-clamp-3 {
+    overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
-    overflow: hidden;
 }
 </style>

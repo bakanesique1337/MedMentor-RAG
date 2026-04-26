@@ -11,6 +11,7 @@ export type SimulationState =
     | 'DIAGNOSIS_SELECT'
     | 'SCORING'
     | 'COMPLETED'
+    | 'ABANDONED'
 
 export type OpeningStatus =
     | 'OPENING_PENDING'
@@ -56,11 +57,30 @@ export interface Score {
     thoroughness: number | null;
     empathy: number | null;
     diagnosisCorrect: number | null;
+    totalScore: number | null;
     createdAt: string;
+}
+
+export interface CriterionNotes {
+    politeness: string | null;
+    questioningStructure: string | null;
+    thoroughness: string | null;
+    empathy: string | null;
+    correctDiagnosis: string | null;
+}
+
+export interface KeyTurn {
+    turn: number;
+    kind: 'good' | 'warn';
+    text: string;
+    tag: string;
 }
 
 export interface Result {
     summary: string;
+    criterionNotes: CriterionNotes | null;
+    keyTurns: KeyTurn[];
+    missedFindings: string[];
     createdAt: string;
 }
 
@@ -77,17 +97,43 @@ export interface StreamChunk {
     timestamp: number;
 }
 
+export interface PatientPassport {
+    heightCm: number;
+    weightKg: number;
+    allergies: string;
+    chronicConditions: string;
+    smoking: string;
+}
+
+export interface PatientVitals {
+    heartRate: number;
+    bloodPressure: string;
+    respiratoryRate: number;
+    spo2: number;
+    temperatureC: number;
+}
+
 export interface SimulationSession {
     id: number;
     caseId: string;
     caseTitle: string;
+    caseCategory: string;
+    caseDifficulty: string;
     patientName: string;
+    patientAge: number;
+    patientSex: string;
     state: SimulationState;
     openingStatus: OpeningStatus;
     diagnosisOptions: string[];
     selectedDiagnosis: string | null;
+    selectedDiagnosisRationale: string | null;
+    selectedDiagnosisConfidence: number | null;
+    correctDiagnosis: string | null;
     messages: ConversationMessage[];
     streamingStatus: StreamingStatus;
+    examRevealed: boolean;
+    passport: PatientPassport | null;
+    vitals: PatientVitals | null;
     score: Score | null;
     result: Result | null;
     createdAt: string;
@@ -109,14 +155,34 @@ export interface ActiveSimulation {
     updatedAt: string;
 }
 
+export type ProfileRole = 'Студент' | 'Ординатор' | 'Врач' | 'Преподаватель';
+
+export type AvatarVariant = 'teal' | 'sand' | 'rose' | 'violet' | 'mint' | 'sky';
+
 export interface UserSettings {
     username: string;
     displayName: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    role: ProfileRole | null;
+    course: string | null;
+    faculty: string | null;
+    university: string | null;
+    avatarVariant: AvatarVariant | null;
     settings: Record<string, unknown>;
 }
 
 export interface UpdateUserSettingsRequest {
     displayName: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    role: ProfileRole | null;
+    course: string | null;
+    faculty: string | null;
+    university: string | null;
+    avatarVariant: AvatarVariant | null;
     settings: Record<string, unknown>;
 }
 
@@ -127,12 +193,14 @@ export interface SimulationStatsOverview {
     averageThoroughness: number | null;
     averageEmpathy: number | null;
     averageDiagnosisCorrect: number | null;
+    averageTotalScore: number | null;
 }
 
 export interface HistorySession {
     id: number;
     caseId: string;
     caseTitle: string;
+    caseCategory: string;
     patientName: string;
     state: SimulationState;
     score: Score | null;
@@ -155,6 +223,7 @@ const SIMULATION_STATES = new Set<string>([
     'DIAGNOSIS_SELECT',
     'SCORING',
     'COMPLETED',
+    'ABANDONED',
 ])
 
 const OPENING_STATUSES = new Set<string>([

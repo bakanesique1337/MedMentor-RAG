@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageTransition from '@/components/common/PageTransition.vue'
 import TheHeader from '@/components/layout/TheHeader/TheHeader.vue'
 </script>
 
@@ -9,8 +10,8 @@ import TheHeader from '@/components/layout/TheHeader/TheHeader.vue'
     >
         <TheHeader variant="error" />
 
-        <main class="flex-1">
-            <RouterView />
+        <main class="relative flex flex-1 flex-col">
+            <PageTransition />
         </main>
     </div>
 </template>

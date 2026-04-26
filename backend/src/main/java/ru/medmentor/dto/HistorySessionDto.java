@@ -8,6 +8,7 @@ public record HistorySessionDto(
         Long id,
         String caseId,
         String caseTitle,
+        String caseCategory,
         String patientName,
         SimulationState state,
         ScoreDto score,

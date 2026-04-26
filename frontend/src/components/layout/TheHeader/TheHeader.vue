@@ -7,6 +7,14 @@ import MmArrow from '@/components/common/MmArrow.vue'
 import { ROUTES } from '@/constants/routes'
 import { useAuthGateStore } from '@/stores/authGate'
 
+const COPY = {
+    homeAriaLabel: 'MedMentor home',
+    navAriaLabel: 'Main',
+    ctaAuthenticated: 'Начать кейс',
+    ctaUnauthenticated: 'Войти',
+    backHome: 'На главную',
+} as const
+
 export type HeaderVariant = 'public' | 'app' | 'error'
 
 interface Props {
@@ -68,7 +76,7 @@ const NAV_ITEMS = [
         <div class="mx-auto flex w-full max-w-[124rem] items-center gap-[2.4rem] px-[3.2rem] py-[1.8rem]">
             <RouterLink
                 :to="{ name: ROUTES.HOME }"
-                aria-label="MedMentor home"
+                :aria-label="COPY.homeAriaLabel"
             >
                 <BrandLogo :size="28" />
             </RouterLink>
@@ -76,7 +84,7 @@ const NAV_ITEMS = [
             <nav
                 v-if="variant === 'public'"
                 class="ml-[2.8rem] hidden items-center gap-[2.8rem] md:flex"
-                aria-label="Main"
+                :aria-label="COPY.navAriaLabel"
             >
                 <a
                     v-for="item in NAV_ITEMS"
@@ -99,7 +107,7 @@ const NAV_ITEMS = [
                     class="inline-flex h-[4rem] shrink-0 items-center gap-[0.8rem] whitespace-nowrap rounded-full bg-brand px-[2.2rem] text-[1.35rem] font-medium text-white shadow-primary transition hover:bg-brand-deep"
                     @click="handlePublicCta"
                 >
-                    {{ authGate.isAuthenticated ? 'Начать кейс' : 'Войти' }}
+                    {{ authGate.isAuthenticated ? COPY.ctaAuthenticated : COPY.ctaUnauthenticated }}
                     <MmArrow :size="12" />
                 </button>
             </div>
@@ -113,7 +121,7 @@ const NAV_ITEMS = [
                     class="inline-flex h-[3.6rem] items-center gap-[0.8rem] rounded-full border border-[color:var(--color-line-2)] bg-white px-[1.8rem] text-[1.3rem] font-medium text-text-primary transition hover:bg-surface-base"
                     @click="handleBackHome"
                 >
-                    На главную
+                    {{ COPY.backHome }}
                 </button>
             </div>
         </div>

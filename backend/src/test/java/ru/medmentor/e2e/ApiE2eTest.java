@@ -21,6 +21,7 @@ import ru.medmentor.dto.ActiveSimulationDto;
 import ru.medmentor.dto.CaseCardDto;
 import ru.medmentor.dto.SimulationCommandResponseDto;
 import ru.medmentor.dto.SimulationStatsOverviewDto;
+import ru.medmentor.dto.UpdateUserSettingsRequestDto;
 import ru.medmentor.dto.UserSettingsDto;
 import ru.medmentor.model.OpeningStatus;
 import ru.medmentor.model.SimulationState;
@@ -32,6 +33,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -74,10 +76,18 @@ class ApiE2eTest {
                 UserAccount.builder().id(1L).username("doctor").displayName("Local Doctor").build()
         );
         when(userAccountService.getSettings("doctor")).thenReturn(
-                new UserSettingsDto("doctor", "Local Doctor", Map.of("theme", "light"))
+                new UserSettingsDto(
+                        "doctor", "Local Doctor",
+                        null, null, null, null, null, null, null, null,
+                        Map.of("theme", "light")
+                )
         );
-        when(userAccountService.updateSettings(eq("doctor"), eq("Dr. House"), eq(Map.of("theme", "dark"))))
-                .thenReturn(new UserSettingsDto("doctor", "Dr. House", Map.of("theme", "dark")));
+        when(userAccountService.updateSettings(eq("doctor"), any(UpdateUserSettingsRequestDto.class)))
+                .thenReturn(new UserSettingsDto(
+                        "doctor", "Dr. House",
+                        null, null, null, null, null, null, null, null,
+                        Map.of("theme", "dark")
+                ));
     }
 
     @Test

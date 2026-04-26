@@ -1,4 +1,27 @@
 <script setup lang="ts">
+const COPY = {
+    sectionEyebrow: 'Возможности',
+    sectionTitleLead: 'Тренажёр, приближенный',
+    sectionTitleAccent: 'к клинике',
+    sectionSubtitle: 'Не заучивание тестов, а тренировка решений под давлением.',
+    chatStep: '01 / 03',
+    chatTitle: 'Живой диалог с пациентом',
+    chatDescription: 'Собирайте анамнез как в реальной клинике. Модель симулирует речь, эмоции и реакцию на ваши вопросы — от уклончивых ответов тревожного больного до ясной картины острого состояния.',
+    ragStep: '02 / 03',
+    ragTitle: 'RAG по клиническим гайдлайнам',
+    ragDescription: 'Каждый ход модели подкреплён цитатами из актуальных российских рекомендаций: Минздрав РФ, РКО, РОАСЛ. Вы видите источник решения и можете его оспорить.',
+    reviewStep: '03 / 03',
+    reviewTitle: 'Разбор диагностики после кейса',
+    reviewDescription: 'Модель сравнивает ваш диагноз с эталоном и раскладывает итоговую оценку по критериям: полнота анамнеза, логика рассуждения, коммуникация, точность формулировки.',
+    reviewPanelLabel: 'Разбор вашей диагностики',
+    reviewScoreValue: '83',
+    reviewScoreOutOf: '/ 100',
+    reviewYourAnswerLabel: 'Ваш ответ',
+    reviewReferenceLabel: 'Эталон',
+    reviewDiagnosis: 'ОКС без подъёма ST',
+    reviewQuote: '«Уверенная диагностическая логика. Зона роста — стратификация риска по шкале GRACE.»',
+} as const
+
 interface ChatMessage {
     who: 'student' | 'patient'
     text: string
@@ -55,13 +78,13 @@ const CRITERIA: readonly Criterion[] = [
     >
         <div class="mx-auto w-full max-w-[124rem] px-[3.2rem]">
             <div class="mb-[4.8rem]">
-                <p class="mb-[2rem] text-eyebrow text-brand">Возможности</p>
+                <p class="mb-[2rem] text-eyebrow text-brand">{{ COPY.sectionEyebrow }}</p>
                 <h2 class="font-serif text-[5.6rem] font-medium leading-[1.03] tracking-[-0.03em] text-text-primary">
-                    Тренажёр, приближенный
-                    <em class="italic text-brand">к&nbsp;клинике</em>
+                    {{ COPY.sectionTitleLead }}
+                    <em class="italic text-brand">{{ COPY.sectionTitleAccent }}</em>
                 </h2>
                 <p class="mt-[1.8rem] max-w-[52rem] text-[1.65rem] leading-[1.55] text-text-secondary">
-                    Не заучивание тестов, а тренировка решений под давлением.
+                    {{ COPY.sectionSubtitle }}
                 </p>
             </div>
 
@@ -71,12 +94,12 @@ const CRITERIA: readonly Criterion[] = [
                     class="grid gap-[4.8rem] rounded-[2rem] border border-[color:var(--color-line)] bg-white p-[4rem] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"
                 >
                     <div>
-                        <div class="mb-[1.4rem] text-eyebrow text-brand">01 / 03</div>
+                        <div class="mb-[1.4rem] text-eyebrow text-brand">{{ COPY.chatStep }}</div>
                         <h3 class="mb-[1.6rem] font-serif text-[4rem] font-medium leading-[1.08] tracking-[-0.025em] text-text-primary">
-                            Живой диалог с пациентом
+                            {{ COPY.chatTitle }}
                         </h3>
                         <p class="max-w-[48rem] text-[1.55rem] leading-[1.6] text-text-secondary">
-                            Собирайте анамнез как в реальной клинике. Модель симулирует речь, эмоции и реакцию на ваши вопросы — от уклончивых ответов тревожного больного до ясной картины острого состояния.
+                            {{ COPY.chatDescription }}
                         </p>
                     </div>
                     <div class="flex flex-col gap-[1rem] rounded-[1.4rem] border border-[color:rgb(13_115_119_/_0.15)] bg-[color:var(--color-cream-warm)] p-[2rem]">
@@ -137,12 +160,12 @@ const CRITERIA: readonly Criterion[] = [
                         </div>
                     </div>
                     <div class="lg:order-1">
-                        <div class="mb-[1.4rem] text-eyebrow text-brand">02 / 03</div>
+                        <div class="mb-[1.4rem] text-eyebrow text-brand">{{ COPY.ragStep }}</div>
                         <h3 class="mb-[1.6rem] font-serif text-[4rem] font-medium leading-[1.08] tracking-[-0.025em] text-text-primary">
-                            RAG по клиническим гайдлайнам
+                            {{ COPY.ragTitle }}
                         </h3>
                         <p class="max-w-[48rem] text-[1.55rem] leading-[1.6] text-text-secondary">
-                            Каждый ход модели подкреплён цитатами из актуальных российских рекомендаций: Минздрав РФ, РКО, РОАСЛ. Вы видите источник решения и&nbsp;можете его оспорить.
+                            {{ COPY.ragDescription }}
                         </p>
                     </div>
                 </article>
@@ -152,34 +175,34 @@ const CRITERIA: readonly Criterion[] = [
                     class="grid gap-[4.8rem] rounded-[2rem] border border-[color:var(--color-line)] bg-white p-[4rem] lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"
                 >
                     <div>
-                        <div class="mb-[1.4rem] text-eyebrow text-brand">03 / 03</div>
+                        <div class="mb-[1.4rem] text-eyebrow text-brand">{{ COPY.reviewStep }}</div>
                         <h3 class="mb-[1.6rem] font-serif text-[4rem] font-medium leading-[1.08] tracking-[-0.025em] text-text-primary">
-                            Разбор диагностики после кейса
+                            {{ COPY.reviewTitle }}
                         </h3>
                         <p class="max-w-[48rem] text-[1.55rem] leading-[1.6] text-text-secondary">
-                            Модель сравнивает ваш диагноз с эталоном и раскладывает итоговую оценку по критериям: полнота анамнеза, логика рассуждения, коммуникация, точность формулировки.
+                            {{ COPY.reviewDescription }}
                         </p>
                     </div>
                     <div class="rounded-[1.4rem] border border-[color:var(--color-line)] bg-white p-[1.8rem]">
                         <div class="flex items-center justify-between border-b border-[color:var(--color-line)] pb-[1.4rem]">
-                            <p class="text-eyebrow text-text-tertiary">Разбор вашей диагностики</p>
+                            <p class="text-eyebrow text-text-tertiary">{{ COPY.reviewPanelLabel }}</p>
                             <div class="flex items-baseline gap-[0.3rem]">
-                                <span class="font-serif text-[3rem] font-medium leading-none text-brand">83</span>
-                                <span class="text-[1.1rem] text-text-tertiary">/ 100</span>
+                                <span class="font-serif text-[3rem] font-medium leading-none text-brand">{{ COPY.reviewScoreValue }}</span>
+                                <span class="text-[1.1rem] text-text-tertiary">{{ COPY.reviewScoreOutOf }}</span>
                             </div>
                         </div>
 
                         <div class="my-[1.4rem] grid grid-cols-2 gap-[0.8rem]">
                             <div class="rounded-[0.8rem] border border-[color:var(--color-line)] bg-surface-base px-[1.2rem] py-[1rem]">
-                                <p class="mb-[0.5rem] text-eyebrow-sm text-text-tertiary">Ваш ответ</p>
+                                <p class="mb-[0.5rem] text-eyebrow-sm text-text-tertiary">{{ COPY.reviewYourAnswerLabel }}</p>
                                 <p class="text-[1.2rem] font-medium leading-[1.35] text-text-primary">
-                                    ОКС без подъёма ST
+                                    {{ COPY.reviewDiagnosis }}
                                 </p>
                             </div>
                             <div class="rounded-[0.8rem] border border-[color:rgb(13_115_119_/_0.2)] bg-brand-faint px-[1.2rem] py-[1rem]">
-                                <p class="mb-[0.5rem] text-eyebrow-sm text-brand">Эталон</p>
+                                <p class="mb-[0.5rem] text-eyebrow-sm text-brand">{{ COPY.reviewReferenceLabel }}</p>
                                 <p class="text-[1.2rem] font-medium leading-[1.35] text-text-primary">
-                                    ОКС без подъёма ST
+                                    {{ COPY.reviewDiagnosis }}
                                 </p>
                             </div>
                         </div>
@@ -211,7 +234,7 @@ const CRITERIA: readonly Criterion[] = [
                             style="background: linear-gradient(135deg, #e8f2f1 0%, #d5e9e8 100%);"
                         >
                             <p class="font-serif text-[1.25rem] italic leading-[1.45] text-text-primary">
-                                «Уверенная диагностическая логика. Зона роста — стратификация риска по&nbsp;шкале GRACE.»
+                                {{ COPY.reviewQuote }}
                             </p>
                         </div>
                     </div>

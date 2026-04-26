@@ -13,6 +13,20 @@
   "patientAge": 26,
   "patientSex": "female",
   "patientBrief": "Fever, body aches, and dry cough since yesterday.",
+  "passport": {
+    "heightCm": 170,
+    "weightKg": 62,
+    "allergies": "не выявлено",
+    "chronicConditions": "не выявлено",
+    "smoking": "не курит"
+  },
+  "vitals": {
+    "heartRate": 96,
+    "bloodPressure": "118/74",
+    "respiratoryRate": 18,
+    "spo2": 97,
+    "temperatureC": 38.7
+  },
   "openingComplaint": "I've had fever, body aches, and a cough since yesterday.",
   "authorNote": "This is a straightforward flu case. Sound tired, mildly uncomfortable, and answer simply. Reveal exposure to sick coworkers only if asked about contacts.",
   "facts": {

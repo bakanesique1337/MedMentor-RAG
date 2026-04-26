@@ -46,13 +46,35 @@ public class SimulationController {
         return simulationService.sendMessage(authentication.getName(), sessionId, request.content());
     }
 
+    @PostMapping("/{sessionId}/actions/exam")
+    public SimulationSessionDto revealExam(
+            Authentication authentication,
+            @PathVariable Long sessionId
+    ) {
+        return simulationService.revealExam(authentication.getName(), sessionId);
+    }
+
+    @PostMapping("/{sessionId}/abandon")
+    public SimulationCommandResponseDto abandon(
+            Authentication authentication,
+            @PathVariable Long sessionId
+    ) {
+        return simulationService.abandonSession(authentication.getName(), sessionId);
+    }
+
     @PostMapping("/{sessionId}/diagnose")
     public SimulationSessionDto diagnose(
             Authentication authentication,
             @PathVariable Long sessionId,
             @Valid @RequestBody SimulationDiagnosisRequestDto request
     ) {
-        return simulationService.submitDiagnosis(authentication.getName(), sessionId, request.diagnosis());
+        return simulationService.submitDiagnosis(
+                authentication.getName(),
+                sessionId,
+                request.diagnosis(),
+                request.rationale(),
+                request.confidence()
+        );
     }
 
     @GetMapping("/{sessionId}")

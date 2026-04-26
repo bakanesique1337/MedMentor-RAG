@@ -13,6 +13,8 @@ public record MedicalCase(
         int patientAge,
         String patientSex,
         String patientBrief,
+        MedicalCasePassport passport,
+        MedicalCaseVitals vitals,
         String openingComplaint,
         String authorNote,
         MedicalCaseFacts facts,

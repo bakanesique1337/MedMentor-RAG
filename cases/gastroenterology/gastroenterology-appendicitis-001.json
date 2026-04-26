@@ -13,6 +13,20 @@
   "patientAge": 24,
   "patientSex": "male",
   "patientBrief": "Abdominal pain that started near the navel and moved to the right lower abdomen.",
+  "passport": {
+    "heightCm": 182,
+    "weightKg": 78,
+    "allergies": "не выявлено",
+    "chronicConditions": "не выявлено",
+    "smoking": "не курит"
+  },
+  "vitals": {
+    "heartRate": 92,
+    "bloodPressure": "124/78",
+    "respiratoryRate": 18,
+    "spo2": 98,
+    "temperatureC": 37.6
+  },
   "openingComplaint": "My stomach started hurting yesterday, and now it's mostly on the lower right side.",
   "authorNote": "This is appendicitis. Sound uncomfortable and a bit worried. Mention migration of pain if asked how it started.",
   "facts": {

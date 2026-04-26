@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+const COPY = {
+    eyebrow: 'Частые вопросы',
+    titleLead: 'Что обычно',
+    titleAccent: 'спрашивают',
+} as const
+
 interface FaqItem {
     q: string
     a: string
@@ -47,10 +53,10 @@ function handleToggle(i: number): void {
     >
         <div class="mx-auto w-full max-w-[92rem] px-[3.2rem]">
             <div class="mb-[4.8rem] text-center">
-                <p class="mb-[2rem] text-eyebrow text-brand">Частые вопросы</p>
+                <p class="mb-[2rem] text-eyebrow text-brand">{{ COPY.eyebrow }}</p>
                 <h2 class="font-serif text-[5.6rem] font-medium leading-[1.03] tracking-[-0.03em] text-text-primary">
-                    Что обычно
-                    <em class="italic text-brand">спрашивают</em>
+                    {{ COPY.titleLead }}
+                    <em class="italic text-brand">{{ COPY.titleAccent }}</em>
                 </h2>
             </div>
 

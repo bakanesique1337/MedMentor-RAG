@@ -11,6 +11,8 @@ import ru.medmentor.dto.SimulationSessionDto;
 import ru.medmentor.model.ConversationMessage;
 import ru.medmentor.model.MedicalCase;
 import ru.medmentor.model.MedicalCaseFacts;
+import ru.medmentor.model.MedicalCasePassport;
+import ru.medmentor.model.MedicalCaseVitals;
 import ru.medmentor.model.OpeningStatus;
 import ru.medmentor.model.SimulationResult;
 import ru.medmentor.model.SimulationSession;
@@ -123,6 +125,7 @@ class SimulationServiceImplTest {
                 .thoroughness(0.60)
                 .empathy(0.90)
                 .diagnosisCorrect(1.00)
+                .totalScore(0.80)
                 .createdAt(createdAt)
                 .build();
         final SimulationResult persistedResult = SimulationResult.builder()
@@ -136,17 +139,20 @@ class SimulationServiceImplTest {
         when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
         when(simulationInFlightRegistry.isAnyResponseInFlight(200L)).thenReturn(false);
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(200L)).thenReturn(List.of());
-        when(simulationAiService.generateScoreReview(eq(medicalCase), any(), eq("Influenza")))
+        when(simulationAiService.generateScoreReview(eq(medicalCase), any(), eq("Influenza"), eq("Typical flu"), eq(80)))
                 .thenReturn(new ScoreReviewPayload(
                         new ScoreReviewPayload.ScorePayload(0.8, 0.7, 0.6, 0.9, 0.0),
-                        "Good structure"
+                        "Good structure",
+                        null,
+                        List.of(),
+                        List.of()
                 ));
         when(userScoreRepository.findBySessionId(200L)).thenReturn(Optional.empty(), Optional.of(persistedScore));
         when(simulationResultRepository.findBySessionId(200L)).thenReturn(Optional.empty(), Optional.of(persistedResult));
         when(simulationResultRepository.save(any(SimulationResult.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final SimulationSessionDto response = simulationService.submitDiagnosis("doctor", 200L, "Influenza");
+        final SimulationSessionDto response = simulationService.submitDiagnosis("doctor", 200L, "Influenza", "Typical flu", 80);
 
         assertEquals(SimulationState.COMPLETED, response.state());
         assertNotNull(response.result());
@@ -154,7 +160,10 @@ class SimulationServiceImplTest {
         final ArgumentCaptor<UserScore> scoreCaptor = ArgumentCaptor.forClass(UserScore.class);
         verify(userScoreRepository).save(scoreCaptor.capture());
         assertEquals(1.00, scoreCaptor.getValue().getDiagnosisCorrect());
+        assertEquals(0.80, scoreCaptor.getValue().getTotalScore());
         assertEquals(SimulationState.COMPLETED, session.getState());
+        assertEquals("Typical flu", session.getSelectedDiagnosisRationale());
+        assertEquals(80, session.getSelectedDiagnosisConfidence());
     }
 
     @Test
@@ -170,6 +179,7 @@ class SimulationServiceImplTest {
                 .thoroughness(0.60)
                 .empathy(0.90)
                 .diagnosisCorrect(1.00)
+                .totalScore(0.80)
                 .createdAt(createdAt)
                 .build();
         final SimulationResult persistedResult = SimulationResult.builder()
@@ -183,10 +193,13 @@ class SimulationServiceImplTest {
         when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
         when(simulationInFlightRegistry.isAnyResponseInFlight(300L)).thenReturn(false);
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(300L)).thenReturn(List.of());
-        when(simulationAiService.generateScoreReview(eq(medicalCase), any(), eq("Influenza")))
+        when(simulationAiService.generateScoreReview(eq(medicalCase), any(), eq("Influenza"), eq(null), eq(null)))
                 .thenReturn(new ScoreReviewPayload(
                         new ScoreReviewPayload.ScorePayload(0.8, 0.7, 0.6, 0.9, 0.0),
-                        "Good structure"
+                        "Good structure",
+                        null,
+                        List.of(),
+                        List.of()
                 ));
         when(userScoreRepository.findBySessionId(300L)).thenReturn(Optional.empty(), Optional.of(persistedScore));
         when(simulationResultRepository.findBySessionId(300L)).thenReturn(Optional.empty(), Optional.of(persistedResult));
@@ -197,7 +210,7 @@ class SimulationServiceImplTest {
         });
         when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final SimulationSessionDto response = simulationService.submitDiagnosis("doctor", 300L, "Influenza");
+        final SimulationSessionDto response = simulationService.submitDiagnosis("doctor", 300L, "Influenza", null, null);
 
         assertEquals(SimulationState.COMPLETED, response.state());
         assertNotNull(response.score());
@@ -237,11 +250,86 @@ class SimulationServiceImplTest {
                 26,
                 "female",
                 "brief",
+                new MedicalCasePassport(170, 62, "не выявлено", "не выявлено", "не курит"),
+                new MedicalCaseVitals(96, "118/74", 18, 97, 38.7),
                 "opening",
                 "author note",
                 new MedicalCaseFacts(List.of("fever"), List.of("history"), List.of("negative")),
                 List.of("Influenza", "Common cold"),
                 correctDiagnosis
         );
+    }
+
+    @Test
+    void sendMessageRevealsExamWhenKeywordPresent() {
+        final UserAccount user = user(1L, "doctor");
+        final SimulationSession session = session(401L, user, "case-1", SimulationState.IN_PROGRESS, OpeningStatus.OPENING_READY);
+
+        when(userAccountService.getByUsername("doctor")).thenReturn(user);
+        when(simulationSessionRepository.findById(401L)).thenReturn(Optional.of(session));
+        when(simulationInFlightRegistry.isAnyResponseInFlight(401L)).thenReturn(false);
+        when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(401L)).thenReturn(List.of());
+        when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        simulationService.sendMessage("doctor", 401L, "Какое у вас давление?");
+
+        assertEquals(true, session.isExamRevealed());
+        verify(simulationStreamingService).startPatientReply(eq(401L), eq("Какое у вас давление?"));
+    }
+
+    @Test
+    void sendMessageDoesNotRevealExamForUnrelatedKeywords() {
+        final UserAccount user = user(1L, "doctor");
+        final SimulationSession session = session(402L, user, "case-1", SimulationState.IN_PROGRESS, OpeningStatus.OPENING_READY);
+
+        when(userAccountService.getByUsername("doctor")).thenReturn(user);
+        when(simulationSessionRepository.findById(402L)).thenReturn(Optional.of(session));
+        when(simulationInFlightRegistry.isAnyResponseInFlight(402L)).thenReturn(false);
+        when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(402L)).thenReturn(List.of());
+        when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        simulationService.sendMessage("doctor", 402L, "Расскажите подробнее, когда началось?");
+
+        assertEquals(false, session.isExamRevealed());
+    }
+
+    @Test
+    void revealExamFlipsFlagAndReturnsPassportAndVitals() {
+        final UserAccount user = user(1L, "doctor");
+        final SimulationSession session = session(403L, user, "case-1", SimulationState.IN_PROGRESS, OpeningStatus.OPENING_READY);
+        final MedicalCase medicalCase = medicalCaseOf("case-1", "Influenza");
+
+        when(userAccountService.getByUsername("doctor")).thenReturn(user);
+        when(simulationSessionRepository.findById(403L)).thenReturn(Optional.of(session));
+        when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
+        when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(403L)).thenReturn(List.of());
+        when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        final SimulationSessionDto dto = simulationService.revealExam("doctor", 403L);
+
+        assertEquals(true, session.isExamRevealed());
+        assertEquals(true, dto.examRevealed());
+        assertNotNull(dto.passport());
+        assertNotNull(dto.vitals());
+        assertEquals("118/74", dto.vitals().bloodPressure());
+        verify(simulationSessionRepository).save(session);
+    }
+
+    @Test
+    void revealExamIsIdempotentWhenAlreadyRevealed() {
+        final UserAccount user = user(1L, "doctor");
+        final SimulationSession session = session(404L, user, "case-1", SimulationState.IN_PROGRESS, OpeningStatus.OPENING_READY);
+        session.setExamRevealed(true);
+        final MedicalCase medicalCase = medicalCaseOf("case-1", "Influenza");
+
+        when(userAccountService.getByUsername("doctor")).thenReturn(user);
+        when(simulationSessionRepository.findById(404L)).thenReturn(Optional.of(session));
+        when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
+        when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(404L)).thenReturn(List.of());
+
+        final SimulationSessionDto dto = simulationService.revealExam("doctor", 404L);
+
+        assertEquals(true, dto.examRevealed());
+        verify(simulationSessionRepository, never()).save(any(SimulationSession.class));
     }
 }

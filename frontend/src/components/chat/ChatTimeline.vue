@@ -2,7 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 
 import ChatMessageBubble from '@/components/chat/ChatMessageBubble.vue'
-import type { ConversationMessage } from '@/types'
+import ExamFindingsCard from '@/components/chat/ExamFindingsCard.vue'
+import type { ConversationMessage, PatientPassport, PatientVitals } from '@/types'
+
+const COPY = {
+    fallbackInitial: 'П',
+    emptyState: 'Диалог появится здесь, как только пациент начнёт говорить.',
+} as const
 
 interface Props {
     messages: ConversationMessage[]
@@ -10,11 +16,17 @@ interface Props {
     streamingContent: string
     isStreamingActive: boolean
     patientName?: string
+    examRevealed?: boolean
+    passport?: PatientPassport | null
+    vitals?: PatientVitals | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
     pendingDoctorMessage: null,
     patientName: 'Пациент',
+    examRevealed: false,
+    passport: null,
+    vitals: null,
 })
 
 const timelineRef = ref<HTMLElement | null>(null)
@@ -25,7 +37,7 @@ const patientInitials = computed(() =>
         .slice(0, 2)
         .map((p) => p[0] ?? '')
         .join('')
-        .toUpperCase() || 'П',
+        .toUpperCase() || COPY.fallbackInitial,
 )
 
 /**
@@ -38,7 +50,7 @@ function scrollToBottom(): void {
 }
 
 watch(
-    () => [props.messages.length, props.streamingContent, props.isStreamingActive] as const,
+    () => [props.messages.length, props.streamingContent, props.isStreamingActive, props.examRevealed] as const,
     scrollToBottom,
     { flush: 'post' },
 )
@@ -77,12 +89,18 @@ onMounted(() => {
                 :patient-initials="patientInitials"
             />
 
+            <ExamFindingsCard
+                v-if="examRevealed && !isStreamingActive"
+                :passport="passport"
+                :vitals="vitals"
+            />
+
             <div
                 v-if="messages.length === 0 && !isStreamingActive"
                 class="flex flex-1 items-center justify-center py-[4rem] text-center"
             >
                 <p class="text-[1.35rem] text-text-tertiary">
-                    Диалог появится здесь, как только пациент начнёт говорить.
+                    {{ COPY.emptyState }}
                 </p>
             </div>
         </div>

@@ -3,6 +3,15 @@ import { ref } from 'vue'
 
 import MmArrow from '@/components/common/MmArrow.vue'
 
+const COPY = {
+    eyebrow: 'Финальный диагноз',
+    titleLead: 'Подтвердите',
+    titleAccent: 'диагноз',
+    description: 'После подтверждения симуляция завершится, и модель сравнит ваш ответ с эталоном.',
+    submitting: 'Подтверждаем...',
+    submit: 'Подтвердить и завершить',
+} as const
+
 interface Props {
     diagnosisOptions: string[]
     isPending: boolean
@@ -10,7 +19,7 @@ interface Props {
 }
 
 const emit = defineEmits<{
-    diagnose: [diagnosis: string]
+    diagnose: [payload: { diagnosis: string; rationale: string | null; confidence: number | null }]
 }>()
 
 const props = defineProps<Props>()
@@ -18,23 +27,23 @@ const props = defineProps<Props>()
 const selected = ref<string | null>(null)
 
 /**
- * Submits the selected diagnosis.
+ * Submits the selected diagnosis without a rationale or self-reported confidence.
  */
 function handleSubmit(): void {
     if (!selected.value || props.isPending) return
-    emit('diagnose', selected.value)
+    emit('diagnose', { diagnosis: selected.value, rationale: null, confidence: null })
 }
 </script>
 
 <template>
     <div class="shrink-0 border-t border-[color:var(--color-line-2)] bg-surface-base px-[2.4rem] py-[2rem]">
         <div class="mx-auto w-full max-w-[84rem]">
-            <p class="mb-[0.4rem] text-eyebrow text-brand">Финальный диагноз</p>
+            <p class="mb-[0.4rem] text-eyebrow text-brand">{{ COPY.eyebrow }}</p>
             <h3 class="mb-[1rem] font-serif text-[2.2rem] font-medium leading-[1.15] tracking-[-0.02em] text-text-primary">
-                Подтвердите <em class="italic text-brand">диагноз</em>
+                {{ COPY.titleLead }} <em class="italic text-brand">{{ COPY.titleAccent }}</em>
             </h3>
             <p class="mb-[1.6rem] text-[1.3rem] text-text-secondary">
-                После подтверждения симуляция завершится, и модель сравнит ваш ответ с эталоном.
+                {{ COPY.description }}
             </p>
 
             <div
@@ -81,9 +90,9 @@ function handleSubmit(): void {
                 :disabled="selected === null || isPending"
                 @click="handleSubmit"
             >
-                <template v-if="isPending">Подтверждаем…</template>
+                <template v-if="isPending">{{ COPY.submitting }}</template>
                 <template v-else>
-                    Подтвердить и завершить
+                    {{ COPY.submit }}
                     <MmArrow :size="12" />
                 </template>
             </button>

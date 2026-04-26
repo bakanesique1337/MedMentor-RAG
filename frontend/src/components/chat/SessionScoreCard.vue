@@ -3,6 +3,15 @@ import { computed } from 'vue'
 
 import type { Result, Score } from '@/types'
 
+const COPY = {
+    eyebrow: 'Разбор сессии',
+    title: 'Симуляция завершена',
+    scoreOutOf: '/ 100',
+    modelCommentLabel: 'Комментарий модели',
+    emptyValue: '—',
+    fallback: 'Данные об оценке недоступны для этой сессии.',
+} as const
+
 interface Props {
     score: Score | null
     result: Result | null
@@ -50,9 +59,9 @@ const total = computed(() => {
     <div class="rounded-[1.4rem] border border-[color:var(--color-line)] bg-white p-[2.4rem] shadow-card">
         <div class="flex flex-wrap items-center justify-between gap-[1.2rem] border-b border-[color:var(--color-line)] pb-[1.6rem]">
             <div>
-                <p class="text-eyebrow text-brand">Разбор сессии</p>
+                <p class="text-eyebrow text-brand">{{ COPY.eyebrow }}</p>
                 <h2 class="mt-[0.4rem] font-serif text-[2.4rem] font-medium leading-[1.15] tracking-[-0.02em] text-text-primary">
-                    Симуляция завершена
+                    {{ COPY.title }}
                 </h2>
                 <p class="mt-[0.4rem] text-[1.35rem] text-text-secondary">
                     {{ caseTitle }}
@@ -65,7 +74,7 @@ const total = computed(() => {
                 <span class="font-serif text-[4.8rem] font-medium leading-none text-brand tabular">
                     {{ total }}
                 </span>
-                <span class="text-[1.35rem] text-text-tertiary">/ 100</span>
+                <span class="text-[1.35rem] text-text-tertiary">{{ COPY.scoreOutOf }}</span>
             </div>
         </div>
 
@@ -87,7 +96,7 @@ const total = computed(() => {
                     />
                 </div>
                 <p class="text-right font-mono text-[1.2rem] text-text-secondary tabular">
-                    {{ entry.value === null ? '—' : entry.percent }}
+                    {{ entry.value === null ? COPY.emptyValue : entry.percent }}
                 </p>
             </div>
         </div>
@@ -96,7 +105,7 @@ const total = computed(() => {
             v-if="result"
             class="mt-[2rem] rounded-[1rem] border border-[color:rgb(13_115_119_/_0.2)] bg-brand-ghost p-[1.6rem]"
         >
-            <p class="text-eyebrow-sm text-brand-deep">Комментарий модели</p>
+            <p class="text-eyebrow-sm text-brand-deep">{{ COPY.modelCommentLabel }}</p>
             <p class="mt-[0.8rem] font-serif text-[1.55rem] italic leading-[1.45] text-text-primary">
                 &laquo;{{ result.summary }}&raquo;
             </p>
@@ -106,7 +115,7 @@ const total = computed(() => {
             v-if="!score && !result"
             class="mt-[1.6rem] text-[1.35rem] text-text-secondary"
         >
-            Данные об оценке недоступны для этой сессии.
+            {{ COPY.fallback }}
         </p>
     </div>
 </template>
