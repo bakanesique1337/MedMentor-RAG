@@ -1,15 +1,26 @@
+/**
+ * @file Быстрые подсказки ("quick-prompts") для чата симуляции.
+ *
+ * Каждый prompt — это типовое действие врача, которое отправляется в LLM
+ * одной кнопкой, чтобы пользователь не печатал длинную формулировку вручную.
+ */
+
+/**
+ * Ключи быстрых подсказок. Используются как стабильный идентификатор
+ */
 export type SimulationQuickPromptKey =
     | 'physical-exam'
     | 'lab-diagnostics'
     | 'instrumental-diagnostics'
 
 /**
- * Quick-prompt action types. `exam` quick prompts also trigger the
- * dedicated reveal-exam endpoint in addition to sending the LLM message,
- * so the sidebar passport and vitals open immediately.
+ * Тип побочного действия quick-prompt'а.
  */
 export type SimulationQuickPromptAction = 'exam' | null
 
+/**
+ * Описание одного quick-prompt'а
+ */
 export interface SimulationQuickPrompt {
     key: SimulationQuickPromptKey
     label: string
@@ -17,6 +28,9 @@ export interface SimulationQuickPrompt {
     action: SimulationQuickPromptAction
 }
 
+/**
+ * Полный список доступных quick-prompt'ов.
+ */
 export const SIMULATION_QUICK_PROMPTS: readonly SimulationQuickPrompt[] = [
     {
         key: 'physical-exam',

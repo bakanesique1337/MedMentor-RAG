@@ -20,6 +20,7 @@ public class ClasspathPromptTemplateService implements PromptTemplateService {
     private String patientRolePrompt;
     private String sessionOpeningPrompt;
     private String scoreReviewPrompt;
+    private String examinationFindingPrompt;
 
     public ClasspathPromptTemplateService(ResourceLoader resourceLoader, AiProperties aiProperties) {
         this.resourceLoader = resourceLoader;
@@ -32,6 +33,7 @@ public class ClasspathPromptTemplateService implements PromptTemplateService {
         patientRolePrompt = readRequiredPrompt(aiProperties.getPromptPatientRole());
         sessionOpeningPrompt = readRequiredPrompt(aiProperties.getPromptSessionOpening());
         scoreReviewPrompt = readRequiredPrompt(aiProperties.getPromptScoreReview());
+        examinationFindingPrompt = readRequiredPrompt(aiProperties.getPromptExaminationFinding());
     }
 
     @Override
@@ -52,6 +54,11 @@ public class ClasspathPromptTemplateService implements PromptTemplateService {
     @Override
     public String getScoreReviewPrompt() {
         return scoreReviewPrompt;
+    }
+
+    @Override
+    public String getExaminationFindingPrompt() {
+        return examinationFindingPrompt;
     }
 
     private String readRequiredPrompt(String location) {

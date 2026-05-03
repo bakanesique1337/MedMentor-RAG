@@ -46,6 +46,13 @@ UPDATE user_scores
    SET total_score = ROUND(((politeness + questioning_structure + thoroughness + empathy + diagnosis_correct) / 5.0)::numeric, 2)
    WHERE total_score = 0.0;
 
+-- Binary semantic equivalence verdict from the AI scoring pass: TRUE means the
+-- submitted diagnosis is the same disease as the case reference (synonyms /
+-- abbreviations / minor wording variants count). Nullable on purpose: legacy
+-- rows scored before this column existed leave it NULL, which the UI renders
+-- as "no verdict available".
+ALTER TABLE user_scores ADD COLUMN IF NOT EXISTS diagnosis_match BOOLEAN;
+
 -- Refresh the CHECK constraint that pins simulation_sessions.state to the enum values.
 -- Hibernate ddl-auto=update creates this constraint on initial schema generation but never
 -- regenerates it when the enum gains new values (e.g. ABANDONED). Drop the legacy

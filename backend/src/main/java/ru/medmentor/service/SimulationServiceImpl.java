@@ -52,6 +52,34 @@ public class SimulationServiceImpl implements SimulationService {
             Pattern.CASE_INSENSITIVE
     );
 
+    /**
+     * Detects manipulation verbs (palpation, percussion, auscultation of a specific area,
+     * targeted maneuvers, special tests, use of hand-held instruments).
+     */
+    private static final Pattern TARGETED_EXAM_VERB_PATTERN = Pattern.compile(
+            "(пальпир|перкус|аускульт|пощуп|потрог|постуч|надав|маневр|манёвр|симптом|"
+                    + "рефлекс|посвет|освет|направ|оцен[а-яё]*\\s+(?:рефлекс|реакц)|реакц[а-яё]*\\s+зрач|"
+                    + "проба\\s+|\\bтест\\b|\\bпри[её]м\\b)",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    /**
+     * Anatomical loci or hand-held instruments. The combination of a verb and a locus is
+     * what triggers the OOS finding pipeline; a verb on its own (general exam request)
+     * keeps the regular patient-reply pipeline.
+     */
+    private static final Pattern TARGETED_EXAM_LOCUS_PATTERN = Pattern.compile(
+            "(лимфоуз|лимфатическ|подмышечн|шейн[а-яё]*\\s+(?:узл|лимф)|надключичн|"
+                    + "сонн[а-яё]*\\s+артер|каротид|щитовидн|"
+                    + "печен|селезён|селезен|эпигастр|подреберь|"
+                    + "голен|икр[аыоу]|хоманс|тыл\\s+стоп|стопе|стопах|a\\.\\s*dorsalis|"
+                    + "кернига|брудзинск|менинге|ригидност|ромберг|бабинск|"
+                    + "зрач|роговичн|конъюнкт|склер|тургор|"
+                    + "фонар|вспышк|молоточек|молоточк|шпател|ложечк|зеркал|игл[аыоу]|ватк|"
+                    + "перчатк|карандаш|линейк|нитк)",
+            Pattern.CASE_INSENSITIVE
+    );
+
     private final CaseLoaderService caseLoaderService;
     private final ConversationMessageRepository conversationMessageRepository;
     private final SimulationAiService simulationAiService;
@@ -199,6 +227,12 @@ public class SimulationServiceImpl implements SimulationService {
         }
 
         simulationSessionRepository.save(session);
+
+        if (isTargetedExamRequest(trimmedContent)) {
+            simulationStreamingService.startExaminationFinding(sessionId, trimmedContent);
+            return new SimulationCommandResponseDto(sessionId, "FINDING_STARTED");
+        }
+
         simulationStreamingService.startPatientReply(sessionId, trimmedContent);
         return new SimulationCommandResponseDto(sessionId, "REPLY_STARTED");
     }
@@ -243,6 +277,22 @@ public class SimulationServiceImpl implements SimulationService {
             return false;
         }
         return EXAM_KEYWORD_PATTERN.matcher(message.toLowerCase(Locale.ROOT)).find();
+    }
+
+    /**
+     * Routes the doctor message to the examination-finding pipeline when both a manipulation
+     * verb and a specific anatomical locus / instrument are present. A bare "осмотрите
+     * пациента" lacks a locus and falls through to the regular patient-reply pipeline.
+     */
+    private boolean isTargetedExamRequest(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+        final String lowered = message.toLowerCase(Locale.ROOT);
+        if (!TARGETED_EXAM_VERB_PATTERN.matcher(lowered).find()) {
+            return false;
+        }
+        return TARGETED_EXAM_LOCUS_PATTERN.matcher(lowered).find();
     }
 
     @Override
@@ -301,6 +351,7 @@ public class SimulationServiceImpl implements SimulationService {
                                     score.getThoroughness(),
                                     score.getEmpathy(),
                                     score.getDiagnosisCorrect(),
+                                    score.getDiagnosisMatch(),
                                     score.getTotalScore(),
                                     score.getCreatedAt()
                             )).orElse(null),
@@ -378,9 +429,10 @@ public class SimulationServiceImpl implements SimulationService {
                 session.getSelectedDiagnosisRationale(),
                 session.getSelectedDiagnosisConfidence()
         );
-        final String selected = session.getSelectedDiagnosis() == null ? "" : session.getSelectedDiagnosis().trim();
-        final String correct = medicalCase.correctDiagnosis() == null ? "" : medicalCase.correctDiagnosis().trim();
-        final Double diagnosisCorrectScore = !selected.isEmpty() && selected.equalsIgnoreCase(correct)
+        final boolean hasDiagnosis = session.getSelectedDiagnosis() != null
+                && !session.getSelectedDiagnosis().isBlank();
+        final boolean diagnosisMatch = hasDiagnosis && payload.diagnosisMatch();
+        final Double diagnosisCorrectScore = diagnosisMatch
                 ? 1.00
                 : toScore(payload.score().correctDiagnosis());
 
@@ -400,6 +452,7 @@ public class SimulationServiceImpl implements SimulationService {
                 .thoroughness(thoroughnessScore)
                 .empathy(empathyScore)
                 .diagnosisCorrect(diagnosisCorrectScore)
+                .diagnosisMatch(diagnosisMatch)
                 .totalScore(totalScore)
                 .build());
 
@@ -465,6 +518,21 @@ public class SimulationServiceImpl implements SimulationService {
         return "warn".equals(normalized) ? "warn" : "good";
     }
 
+    private String resolveStreamingStatusType(SimulationSession session) {
+        if (session.getOpeningStatus() != OpeningStatus.OPENING_READY
+                && session.getOpeningStatus() != OpeningStatus.OPENING_FAILED) {
+            return "opening";
+        }
+        final Long sessionId = session.getId();
+        if (simulationInFlightRegistry.isFindingInFlight(sessionId)) {
+            return "finding";
+        }
+        if (simulationInFlightRegistry.isMessageInFlight(sessionId)) {
+            return "message";
+        }
+        return "idle";
+    }
+
     private SimulationSessionDto buildSessionDto(SimulationSession session, MedicalCase medicalCase) {
         final List<ConversationMessage> messages = conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(session.getId());
         final Optional<UserScore> userScore = userScoreRepository.findBySessionId(session.getId());
@@ -504,10 +572,7 @@ public class SimulationServiceImpl implements SimulationService {
                         .toList(),
                 new StreamingStatusDto(
                         simulationInFlightRegistry.isAnyResponseInFlight(session.getId()),
-                        session.getOpeningStatus() != OpeningStatus.OPENING_READY
-                                && session.getOpeningStatus() != OpeningStatus.OPENING_FAILED
-                                ? "opening"
-                                : simulationInFlightRegistry.isMessageInFlight(session.getId()) ? "message" : "idle"
+                        resolveStreamingStatusType(session)
                 ),
                 examRevealed,
                 passportDto,
@@ -518,6 +583,7 @@ public class SimulationServiceImpl implements SimulationService {
                         score.getThoroughness(),
                         score.getEmpathy(),
                         score.getDiagnosisCorrect(),
+                        score.getDiagnosisMatch(),
                         score.getTotalScore(),
                         score.getCreatedAt()
                 )).orElse(null),

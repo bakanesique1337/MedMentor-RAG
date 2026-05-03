@@ -11,6 +11,7 @@ import ru.medmentor.model.MedicalCaseFacts;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,12 +36,17 @@ public class SimulationAiServiceImpl implements SimulationAiService {
 
     @Override
     public String generateOpeningMessage(MedicalCase medicalCase) {
-        return callText(buildOpeningPrompt(medicalCase));
+        return callText(buildOpeningPrompt(medicalCase, warning -> { }));
     }
 
     @Override
     public Flux<String> streamOpeningMessage(MedicalCase medicalCase) {
-        return streamText(buildOpeningPrompt(medicalCase));
+        return streamOpeningMessage(medicalCase, warning -> { });
+    }
+
+    @Override
+    public Flux<String> streamOpeningMessage(MedicalCase medicalCase, Consumer<String> warningSink) {
+        return streamText(buildOpeningPrompt(medicalCase, warningSink));
     }
 
     @Override
@@ -49,7 +55,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             List<ConversationMessage> conversationHistory,
             String doctorMessage
     ) {
-        return callText(buildReplyPrompt(medicalCase, conversationHistory, doctorMessage));
+        return callText(buildReplyPrompt(medicalCase, conversationHistory, doctorMessage, warning -> { }));
     }
 
     @Override
@@ -58,7 +64,27 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             List<ConversationMessage> conversationHistory,
             String doctorMessage
     ) {
-        return streamText(buildReplyPrompt(medicalCase, conversationHistory, doctorMessage));
+        return streamPatientReply(medicalCase, conversationHistory, doctorMessage, warning -> { });
+    }
+
+    @Override
+    public Flux<String> streamPatientReply(
+            MedicalCase medicalCase,
+            List<ConversationMessage> conversationHistory,
+            String doctorMessage,
+            Consumer<String> warningSink
+    ) {
+        return streamText(buildReplyPrompt(medicalCase, conversationHistory, doctorMessage, warningSink));
+    }
+
+    @Override
+    public Flux<String> streamExaminationFinding(
+            MedicalCase medicalCase,
+            List<ConversationMessage> conversationHistory,
+            String doctorMessage,
+            Consumer<String> warningSink
+    ) {
+        return streamText(buildExaminationFindingPrompt(medicalCase, conversationHistory, doctorMessage, warningSink));
     }
 
     @Override
@@ -225,8 +251,8 @@ public class SimulationAiServiceImpl implements SimulationAiService {
         );
     }
 
-    private String buildOpeningPrompt(MedicalCase medicalCase) {
-        final String ragContext = ragSearchService.buildPromptContext(buildOpeningRagQuery(medicalCase));
+    private String buildOpeningPrompt(MedicalCase medicalCase, Consumer<String> warningSink) {
+        final String ragContext = ragSearchService.buildPromptContext(buildOpeningRagQuery(medicalCase), warningSink);
         return """
                 %s
 
@@ -249,10 +275,12 @@ public class SimulationAiServiceImpl implements SimulationAiService {
     private String buildReplyPrompt(
             MedicalCase medicalCase,
             List<ConversationMessage> conversationHistory,
-            String doctorMessage
+            String doctorMessage,
+            Consumer<String> warningSink
     ) {
         final String ragContext = ragSearchService.buildPromptContext(
-                buildReplyRagQuery(medicalCase, conversationHistory, doctorMessage)
+                buildReplyRagQuery(medicalCase, conversationHistory, doctorMessage),
+                warningSink
         );
         return """
                 %s
@@ -274,6 +302,68 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 ragContext.isBlank() ? "(none)" : ragContext,
                 formatConversation(conversationHistory),
                 doctorMessage
+        );
+    }
+
+    private String buildExaminationFindingPrompt(
+            MedicalCase medicalCase,
+            List<ConversationMessage> conversationHistory,
+            String doctorMessage,
+            Consumer<String> warningSink
+    ) {
+        final String ragContext = ragSearchService.buildPromptContext(
+                buildExaminationFindingRagQuery(medicalCase, conversationHistory, doctorMessage),
+                warningSink
+        );
+        return """
+                %s
+
+                Case data:
+                %s
+
+                Relevant clinical recommendations:
+                %s
+
+                Conversation so far:
+                %s
+
+                Targeted maneuver requested by the doctor:
+                %s
+                """.formatted(
+                promptTemplateService.getExaminationFindingPrompt(),
+                formatCase(medicalCase),
+                ragContext.isBlank() ? "(none)" : ragContext,
+                formatConversation(conversationHistory),
+                doctorMessage
+        );
+    }
+
+    private String buildExaminationFindingRagQuery(
+            MedicalCase medicalCase,
+            List<ConversationMessage> conversationHistory,
+            String doctorMessage
+    ) {
+        final MedicalCaseFacts facts = medicalCase.facts();
+        return """
+                targeted physical examination finding
+                patient age: %d
+                patient sex: %s
+                symptoms: %s
+                history: %s
+                negatives: %s
+                possible diagnoses: %s
+                doctor maneuver: %s
+                conversation summary:
+                %s
+                """.formatted(
+                medicalCase.patientAge(),
+                medicalCase.patientSex(),
+                String.join(", ", facts.symptoms()),
+                String.join(", ", facts.history()),
+                String.join(", ", facts.negatives()),
+                String.join(", ", medicalCase.diagnosisOptions()),
+                doctorMessage,
+                formatConversation(conversationHistory)
         );
     }
 

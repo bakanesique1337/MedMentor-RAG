@@ -9,6 +9,7 @@ const COPY = {
     sending: 'Отправка...',
     send: 'Отправить',
     keyboardHint: 'Enter — отправить · Shift + Enter — новая строка',
+    examplePrompt: 'Пример: пропальпируйте подмышечные лимфоузлы',
     versionTag: 'MedMentor-RAG v1.2',
 } as const
 
@@ -126,8 +127,11 @@ function handleKeydown(event: KeyboardEvent): void {
                 </button>
             </div>
 
-            <div class="mt-[0.6rem] flex items-center justify-between text-[1.05rem] text-text-tertiary">
-                <span>{{ COPY.keyboardHint }}</span>
+            <div class="mt-[0.6rem] flex flex-wrap items-center justify-between gap-x-[1.2rem] gap-y-[0.2rem] text-[1.05rem] text-text-tertiary">
+                <span class="flex flex-wrap items-center gap-x-[1.2rem] gap-y-[0.2rem]">
+                    <span>{{ COPY.keyboardHint }}</span>
+                    <span class="text-text-tertiary/80">{{ COPY.examplePrompt }}</span>
+                </span>
                 <span class="font-mono">{{ COPY.versionTag }}</span>
             </div>
         </div>

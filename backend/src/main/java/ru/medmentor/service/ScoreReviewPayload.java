@@ -8,6 +8,7 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ScoreReviewPayload(
         ScorePayload score,
+        boolean diagnosisMatch,
         String summary,
         CriterionNotesPayload criterionNotes,
         List<KeyTurnPayload> keyTurns,

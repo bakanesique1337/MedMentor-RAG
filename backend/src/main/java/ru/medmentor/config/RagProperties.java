@@ -27,5 +27,7 @@ public class RagProperties {
 
     private int maxChunkCharsForPrompt = 700;
 
+    private int maxQueryChars = 4000;
+
     private List<String> includeExtensions = List.of("txt", "md", "markdown", "json", "csv");
 }

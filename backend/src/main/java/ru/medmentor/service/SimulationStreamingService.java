@@ -8,5 +8,7 @@ public interface SimulationStreamingService {
 
     void startPatientReply(Long sessionId, String doctorMessage);
 
+    void startExaminationFinding(Long sessionId, String doctorMessage);
+
     boolean isAnyResponseInFlight(Long sessionId);
 }

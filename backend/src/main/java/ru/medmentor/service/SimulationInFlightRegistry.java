@@ -10,6 +10,7 @@ public class SimulationInFlightRegistry {
 
     private final Set<Long> sessionsInFlight = ConcurrentHashMap.newKeySet();
     private final Set<Long> openingSessionsInFlight = ConcurrentHashMap.newKeySet();
+    private final Set<Long> findingSessionsInFlight = ConcurrentHashMap.newKeySet();
 
     public boolean markMessageInFlight(Long sessionId) {
         return sessionsInFlight.add(sessionId);
@@ -35,7 +36,19 @@ public class SimulationInFlightRegistry {
         return openingSessionsInFlight.contains(sessionId);
     }
 
+    public boolean markFindingInFlight(Long sessionId) {
+        return findingSessionsInFlight.add(sessionId);
+    }
+
+    public void clearFindingInFlight(Long sessionId) {
+        findingSessionsInFlight.remove(sessionId);
+    }
+
+    public boolean isFindingInFlight(Long sessionId) {
+        return findingSessionsInFlight.contains(sessionId);
+    }
+
     public boolean isAnyResponseInFlight(Long sessionId) {
-        return isOpeningInFlight(sessionId) || isMessageInFlight(sessionId);
+        return isOpeningInFlight(sessionId) || isMessageInFlight(sessionId) || isFindingInFlight(sessionId);
     }
 }

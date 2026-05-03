@@ -142,6 +142,7 @@ class SimulationServiceImplTest {
         when(simulationAiService.generateScoreReview(eq(medicalCase), any(), eq("Influenza"), eq("Typical flu"), eq(80)))
                 .thenReturn(new ScoreReviewPayload(
                         new ScoreReviewPayload.ScorePayload(0.8, 0.7, 0.6, 0.9, 0.0),
+                        true,
                         "Good structure",
                         null,
                         List.of(),
@@ -196,6 +197,7 @@ class SimulationServiceImplTest {
         when(simulationAiService.generateScoreReview(eq(medicalCase), any(), eq("Influenza"), eq(null), eq(null)))
                 .thenReturn(new ScoreReviewPayload(
                         new ScoreReviewPayload.ScorePayload(0.8, 0.7, 0.6, 0.9, 0.0),
+                        true,
                         "Good structure",
                         null,
                         List.of(),

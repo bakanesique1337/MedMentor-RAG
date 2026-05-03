@@ -4,6 +4,7 @@
 @import "./base.css";
 @import "./typography.css";
 @import "./utilities.css";
+@import "./transitions.css";
 
 [data-theme="light"] {
     --surface-base: var(--color-bg);
@@ -111,6 +112,10 @@
 
     --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
     --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+    --ease-spring: cubic-bezier(0.32, 0.72, 0.24, 1);
+
+    --duration-page: 260ms;
+    --blur-page: 8px;
 
     --z-base: 0;
     --z-raised: 10;

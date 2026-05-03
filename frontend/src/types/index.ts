@@ -1,8 +1,13 @@
+import type {Ref} from 'vue'
+
 export interface AuthLoginRequest {
     username: string;
     password: string;
 }
 
+/**
+ * Состояние симуляции
+ */
 export type SimulationState =
     | 'CASE_BROWSE'
     | 'CASE_SELECTED'
@@ -13,17 +18,140 @@ export type SimulationState =
     | 'COMPLETED'
     | 'ABANDONED'
 
+export const SIMULATION_STATE = {
+    CASE_BROWSE: 'CASE_BROWSE',
+    CASE_SELECTED: 'CASE_SELECTED',
+    CASE_STARTED: 'CASE_STARTED',
+    IN_PROGRESS: 'IN_PROGRESS',
+    DIAGNOSIS_SELECT: 'DIAGNOSIS_SELECT',
+    SCORING: 'SCORING',
+    COMPLETED: 'COMPLETED',
+    ABANDONED: 'ABANDONED',
+} as const satisfies Record<string, SimulationState>
+
 export type OpeningStatus =
     | 'OPENING_PENDING'
     | 'OPENING_STREAMING'
     | 'OPENING_READY'
     | 'OPENING_FAILED'
 
-export type MessageRole = 'SYSTEM' | 'DOCTOR' | 'PATIENT'
+export const OPENING_STATUS = {
+    PENDING: 'OPENING_PENDING',
+    STREAMING: 'OPENING_STREAMING',
+    READY: 'OPENING_READY',
+    FAILED: 'OPENING_FAILED',
+} as const satisfies Record<string, OpeningStatus>
 
-export type StreamingStatusType = 'opening' | 'message' | 'idle'
+export type SimulationCommandStatus =
+    | 'OPENING_STARTED'
+    | 'REPLY_STARTED'
+    | 'FINDING_STARTED'
+    | 'ABANDONED'
 
-export type StreamChunkType = 'chunk' | 'done' | 'error'
+export const SIMULATION_COMMAND_STATUS = {
+    OPENING_STARTED: 'OPENING_STARTED',
+    REPLY_STARTED: 'REPLY_STARTED',
+    FINDING_STARTED: 'FINDING_STARTED',
+    ABANDONED: 'ABANDONED',
+} as const satisfies Record<string, SimulationCommandStatus>
+
+export type MessageRole = 'SYSTEM' | 'DOCTOR' | 'PATIENT' | 'MENTOR'
+
+export const MESSAGE_ROLE = {
+    SYSTEM: 'SYSTEM',
+    DOCTOR: 'DOCTOR',
+    PATIENT: 'PATIENT',
+    MENTOR: 'MENTOR',
+} as const satisfies Record<string, MessageRole>
+
+/**
+ * Уровень сложности клинического кейса.
+ */
+export type DifficultyLevel = 'easy' | 'medium' | 'hard'
+
+export const DIFFICULTY = {
+    EASY: 'easy',
+    MEDIUM: 'medium',
+    HARD: 'hard',
+} as const satisfies Record<string, DifficultyLevel>
+
+/**
+ * Sentinel для UI-фильтра "все уровни"
+ */
+export const ALL_DIFFICULTIES = 'all' as const
+
+export type DifficultyFilterValue = DifficultyLevel | typeof ALL_DIFFICULTIES
+
+interface DifficultyPreset {
+    label: string
+    dotCount: 1 | 2 | 3
+}
+
+/**
+ * Общие для всего UI атрибуты уровня сложности: человекочитаемая метка и
+ * количество точек-маркеров (1..3).
+ */
+export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyPreset> = {
+    easy: {label: 'Лёгкий', dotCount: 1},
+    medium: {label: 'Средний', dotCount: 2},
+    hard: {label: 'Сложный', dotCount: 3},
+}
+
+export type StreamingStatusType = 'opening' | 'message' | 'finding' | 'idle'
+
+export const STREAMING_STATUS_TYPE = {
+    OPENING: 'opening',
+    MESSAGE: 'message',
+    FINDING: 'finding',
+    IDLE: 'idle',
+} as const satisfies Record<string, StreamingStatusType>
+
+export type StreamChunkType = 'chunk' | 'done' | 'warning' | 'error'
+
+export const STREAM_CHUNK_TYPE = {
+    CHUNK: 'chunk',
+    DONE: 'done',
+    WARNING: 'warning',
+    ERROR: 'error',
+} as const satisfies Record<string, StreamChunkType>
+
+/**
+ * Сужение StreamingStatusType до тех типов, которые могут быть "активными",
+ * то есть пользователь сейчас видит идущий стрим этого вида. 'idle' исключён —
+ * это псевдо-значение для "стрима нет".
+ */
+export type ActiveStreamKind = Exclude<StreamingStatusType, 'idle'>
+
+/**
+ * Состояние транспорта WebSocket-сокета. Отражает только сетевой уровень.
+ */
+export type SocketStatus = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed' | 'error'
+
+/**
+ * Публичный API сокета симуляции.
+ */
+export interface SimulationSocket {
+    connect: (sessionId: number) => void
+    disconnect: () => void
+    reconnect: () => void
+    onChunk: (handler: (chunk: StreamChunk) => void) => () => void
+    status: Ref<SocketStatus>
+    error: Ref<ApiError | null>
+    lastChunk: Ref<StreamChunk | null>
+}
+
+/**
+ * Публичный API стрим-композабла. Используется в useChatActions, чтобы передавать
+ * стрим параметром, не импортируя сам composable как тип.
+ */
+export interface SimulationStream {
+    streamingContent: Ref<string>
+    pendingSentMessage: Ref<string | null>
+    activeStreamKind: Ref<ActiveStreamKind | null>
+    streamErrorMessage: Ref<string | null>
+    beginStream: (kind: ActiveStreamKind) => void
+    resetBuffers: () => void
+}
 
 export interface AuthUser {
     username: string;
@@ -35,7 +163,7 @@ export interface CaseCard {
     id: string;
     category: string;
     title: string;
-    difficulty: string;
+    difficulty: DifficultyLevel;
     tags: string[];
     patientName: string;
     patientAge: number;
@@ -57,6 +185,7 @@ export interface Score {
     thoroughness: number | null;
     empathy: number | null;
     diagnosisCorrect: number | null;
+    diagnosisMatch: boolean | null;
     totalScore: number | null;
     createdAt: string;
 }
@@ -118,7 +247,7 @@ export interface SimulationSession {
     caseId: string;
     caseTitle: string;
     caseCategory: string;
-    caseDifficulty: string;
+    caseDifficulty: DifficultyLevel;
     patientName: string;
     patientAge: number;
     patientSex: string;
@@ -142,7 +271,7 @@ export interface SimulationSession {
 
 export interface SimulationCommandResponse {
     sessionId: number;
-    status: string;
+    status: SimulationCommandStatus;
 }
 
 export interface ActiveSimulation {
@@ -213,130 +342,4 @@ export interface ApiError {
     error: string;
     status: number;
     fieldErrors?: Record<string, string>;
-}
-
-const SIMULATION_STATES = new Set<string>([
-    'CASE_BROWSE',
-    'CASE_SELECTED',
-    'CASE_STARTED',
-    'IN_PROGRESS',
-    'DIAGNOSIS_SELECT',
-    'SCORING',
-    'COMPLETED',
-    'ABANDONED',
-])
-
-const OPENING_STATUSES = new Set<string>([
-    'OPENING_PENDING',
-    'OPENING_STREAMING',
-    'OPENING_READY',
-    'OPENING_FAILED',
-])
-
-const STREAMING_STATUS_TYPES = new Set<string>([
-    'opening',
-    'message',
-    'idle',
-])
-
-const STREAM_CHUNK_TYPES = new Set<string>([
-    'chunk',
-    'done',
-    'error',
-])
-
-/**
- * Checks whether an unknown value matches the shared API error shape.
- */
-export function isApiError(value: unknown): value is ApiError {
-    if (typeof value !== 'object' || value === null) {
-        return false
-    }
-
-    const candidate = value as Record<string, unknown>
-    const fieldErrors = candidate.fieldErrors
-    const hasValidFieldErrors = fieldErrors === undefined || isStringRecord(fieldErrors)
-
-    return typeof candidate.error === 'string'
-        && typeof candidate.status === 'number'
-        && hasValidFieldErrors
-}
-
-/**
- * Checks whether an unknown value matches an active simulation payload.
- */
-export function isActiveSimulation(value: unknown): value is ActiveSimulation {
-    if (typeof value !== 'object' || value === null) {
-        return false
-    }
-
-    const candidate = value as Record<string, unknown>
-
-    return typeof candidate.id === 'number'
-        && typeof candidate.caseId === 'string'
-        && typeof candidate.caseTitle === 'string'
-        && typeof candidate.patientName === 'string'
-        && isSimulationState(candidate.state)
-        && isOpeningStatus(candidate.openingStatus)
-        && typeof candidate.updatedAt === 'string'
-}
-
-/**
- * Checks whether an unknown value matches a simulation stream chunk.
- */
-export function isStreamChunk(value: unknown): value is StreamChunk {
-    if (typeof value !== 'object' || value === null) {
-        return false
-    }
-
-    const candidate = value as Record<string, unknown>
-    const content = candidate.content
-    const error = candidate.error
-
-    // Backend serializes absent fields as JSON null (no @JsonInclude), so null
-    // must be accepted alongside undefined for optional fields.
-    return typeof candidate.conversationId === 'string'
-        && (typeof content === 'string' || content === undefined || content === null)
-        && isStreamChunkType(candidate.type)
-        && (typeof error === 'string' || error === undefined || error === null)
-        && typeof candidate.timestamp === 'number'
-}
-
-/**
- * Validates backend simulation state enum values.
- */
-export function isSimulationState(value: unknown): value is SimulationState {
-    return typeof value === 'string' && SIMULATION_STATES.has(value)
-}
-
-/**
- * Validates backend opening status enum values.
- */
-export function isOpeningStatus(value: unknown): value is OpeningStatus {
-    return typeof value === 'string' && OPENING_STATUSES.has(value)
-}
-
-/**
- * Validates frontend stream status values.
- */
-export function isStreamingStatusType(value: unknown): value is StreamingStatusType {
-    return typeof value === 'string' && STREAMING_STATUS_TYPES.has(value)
-}
-
-/**
- * Validates simulation chunk event names.
- */
-export function isStreamChunkType(value: unknown): value is StreamChunkType {
-    return typeof value === 'string' && STREAM_CHUNK_TYPES.has(value)
-}
-
-/**
- * Validates that a value is a string-keyed record of string values.
- */
-function isStringRecord(value: unknown): value is Record<string, string> {
-    if (typeof value !== 'object' || value === null) {
-        return false
-    }
-
-    return Object.values(value).every((entry) => typeof entry === 'string')
 }

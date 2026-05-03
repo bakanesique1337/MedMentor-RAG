@@ -74,8 +74,21 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
     }
 
     @Override
+    public void startExaminationFinding(Long sessionId, String doctorMessage) {
+        if (!simulationInFlightRegistry.markFindingInFlight(sessionId)) {
+            throw new IllegalStateException("AI response is already in flight for this session");
+        }
+        log.info("[stream] startExaminationFinding dispatch sessionId={} messageLen={}", sessionId, doctorMessage.length());
+        CompletableFuture.runAsync(() -> streamExaminationFinding(sessionId, doctorMessage))
+                .exceptionally(ex -> {
+                    log.error("[stream] streamExaminationFinding async task failed sessionId={}", sessionId, ex);
+                    return null;
+                });
+    }
+
+    @Override
     public boolean isAnyResponseInFlight(Long sessionId) {
-        return simulationInFlightRegistry.isOpeningInFlight(sessionId) || simulationInFlightRegistry.isMessageInFlight(sessionId);
+        return simulationInFlightRegistry.isAnyResponseInFlight(sessionId);
     }
 
     @Transactional(noRollbackFor = RuntimeException.class)
@@ -86,7 +99,10 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
         simulationSessionRepository.save(session);
 
         final StringBuilder buffer = new StringBuilder();
-        final Flux<String> flux = simulationAiService.streamOpeningMessage(medicalCase);
+        final Flux<String> flux = simulationAiService.streamOpeningMessage(
+                medicalCase,
+                warning -> publishWarning(sessionId, warning)
+        );
 
         try {
             flux.doOnNext(chunk -> {
@@ -118,7 +134,12 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
         final List<ConversationMessage> history = conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(sessionId);
         final StringBuilder buffer = new StringBuilder();
         log.info("[stream] streamReply building flux sessionId={} historySize={}", sessionId, history.size());
-        final Flux<String> flux = simulationAiService.streamPatientReply(medicalCase, history, doctorMessage);
+        final Flux<String> flux = simulationAiService.streamPatientReply(
+                medicalCase,
+                history,
+                doctorMessage,
+                warning -> publishWarning(sessionId, warning)
+        );
         log.info("[stream] streamReply flux built, subscribing sessionId={}", sessionId);
 
         try {
@@ -144,6 +165,41 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
         }
     }
 
+    @Transactional(noRollbackFor = RuntimeException.class)
+    protected void streamExaminationFinding(Long sessionId, String doctorMessage) {
+        log.info("[stream] streamExaminationFinding enter sessionId={}", sessionId);
+        final SimulationSession session = getSession(sessionId);
+        final MedicalCase medicalCase = caseLoaderService.getCaseById(session.getCaseId());
+        final List<ConversationMessage> history = conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(sessionId);
+        final StringBuilder buffer = new StringBuilder();
+        final Flux<String> flux = simulationAiService.streamExaminationFinding(
+                medicalCase,
+                history,
+                doctorMessage,
+                warning -> publishWarning(sessionId, warning)
+        );
+
+        try {
+            flux.doOnNext(chunk -> {
+                        buffer.append(chunk);
+                        publishChunk(sessionId, chunk);
+                    })
+                    .doOnError(err -> log.error("[stream] finding flux error sessionId={}", sessionId, err))
+                    .doOnComplete(() -> log.info("[stream] finding flux complete sessionId={} totalLen={}", sessionId, buffer.length()))
+                    .blockLast();
+
+            saveMentorMessage(session, buffer.toString(), nextOrder(sessionId));
+            publishDone(sessionId);
+        } catch (RuntimeException exception) {
+            log.error("[stream] streamExaminationFinding caught exception sessionId={}", sessionId, exception);
+            publishError(sessionId, exception.getMessage());
+            throw exception;
+        } finally {
+            simulationInFlightRegistry.clearFindingInFlight(sessionId);
+            log.info("[stream] streamExaminationFinding exit sessionId={}", sessionId);
+        }
+    }
+
     private SimulationSession getSession(Long sessionId) {
         return simulationSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown session id: " + sessionId));
@@ -162,6 +218,15 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
                 .build());
     }
 
+    private void saveMentorMessage(SimulationSession session, String content, int order) {
+        conversationMessageRepository.save(ConversationMessage.builder()
+                .session(session)
+                .role(MessageRole.MENTOR)
+                .content(content.trim())
+                .messageOrder(order)
+                .build());
+    }
+
     private void publishChunk(Long sessionId, String chunk) {
         messagingTemplate.convertAndSend("/topic/simulations/" + sessionId, StreamChunkDto.chunk(String.valueOf(sessionId), chunk));
     }
@@ -172,5 +237,10 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
 
     private void publishError(Long sessionId, String error) {
         messagingTemplate.convertAndSend("/topic/simulations/" + sessionId, StreamChunkDto.error(String.valueOf(sessionId), error));
+    }
+
+    private void publishWarning(Long sessionId, String message) {
+        log.warn("[stream] publishWarning sessionId={} message={}", sessionId, message);
+        messagingTemplate.convertAndSend("/topic/simulations/" + sessionId, StreamChunkDto.warning(String.valueOf(sessionId), message));
     }
 }

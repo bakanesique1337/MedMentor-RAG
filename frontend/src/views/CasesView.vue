@@ -1,50 +1,51 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+/**
+ * CasesView — страница каталога клинических задач и точка входа в тренажер
+ * диалога с виртуальным пациентом.
+ *
+ * Роль в архитектуре (controller component):
+ *  - выполняет HTTP-запросы к REST API (задачи, активная сессия, статистика);
+ *  - хранит состояние загрузки и ошибок;
+ *  - делегирует логику фильтрации composable useCasesFilter;
+ *  - пробрасывает готовые данные в дочерние компоненты
+ *
+ * Бизнес-логика: у пользователя одновременно может существовать только
+ * одна активная сессия. Бэкенд сообщает о нарушении инварианта статусом 409,
+ * который обрабатывается отдельной веткой в handleStart.
+ */
 
+import type {
+    ActiveSimulation,
+    CaseCard as CaseCardType,
+    SimulationStatsOverview,
+} from '@/types'
+
+import {computed, onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {useCasesApi} from '@/composables/api/useCasesApi'
+import {useProfileApi} from '@/composables/api/useProfileApi'
+import {useSimulationApi} from '@/composables/api/useSimulationApi'
+import {ALL_CATEGORIES, useCasesFilter} from '@/composables/cases/useCasesFilter'
+import {usePluralize} from '@/composables/shared/usePluralize'
+import {categoryDisplayLabel} from '@/constants/caseCategories'
+import {
+    CASES_ALERTS_TEXTS,
+    CASES_EMPTY_STATE_TEXTS,
+    CASES_FILTERS_TEXTS,
+    CASES_HERO_PLURAL_FORMS,
+    CASES_HERO_TEXTS,
+} from '@/constants/casesViewTexts'
+import {HTTP_STATUS_CONFLICT} from '@/constants/http'
+import {ROUTES} from '@/constants/routes'
+import {isApiError} from '@/utils/typeGuards'
+
+import {VAlert, VButton, VEmptyState, VSkeleton} from '@/components/ui'
 import ActiveSessionBanner from '@/components/cases/ActiveSessionBanner.vue'
 import CaseCard from '@/components/cases/CaseCard.vue'
 import CasesSearchInput from '@/components/cases/CasesSearchInput.vue'
 import CasesStatStrip from '@/components/cases/CasesStatStrip.vue'
 import CategoryChip from '@/components/cases/CategoryChip.vue'
 import DifficultySegmented from '@/components/cases/DifficultySegmented.vue'
-import type { DifficultyFilterValue } from '@/components/cases/DifficultySegmented.vue'
-import { VAlert, VButton, VEmptyState, VSkeleton } from '@/components/ui'
-import { useCasesApi } from '@/composables/useCasesApi'
-import { useProfileApi } from '@/composables/useProfileApi'
-import { useSimulationApi } from '@/composables/useSimulationApi'
-import { categoryDisplayLabel } from '@/constants/caseCategories'
-import { ROUTES } from '@/constants/routes'
-import type {
-    ActiveSimulation,
-    CaseCard as CaseCardType,
-    SimulationStatsOverview,
-} from '@/types'
-import { isApiError } from '@/types'
-
-const COPY = {
-    breadcrumbAriaLabel: 'Хлебные крошки',
-    breadcrumbLibrary: 'Библиотека',
-    breadcrumbCatalog: 'Каталог кейсов',
-    catalogPrefix: 'Каталог',
-    casesNoun: 'кейсов',
-    specializationsNoun: 'специализаций',
-    titleLead: 'Клинические',
-    titleAccent: 'задачи',
-    description: 'Симулируемые пациенты по ключевым специализациям. Выберите категорию и уровень сложности, чтобы потренировать сбор анамнеза, дифференциальную диагностику и коммуникацию.',
-    conflictAlertTitle: 'Конфликт сессии',
-    loadErrorAlertTitle: 'Ошибка загрузки',
-    allChip: 'Все',
-    foundLabel: 'Найдено',
-    foundOf: 'из',
-    emptyFilteredTitle: 'Ничего не нашлось',
-    emptyFilteredDescription: 'Попробуйте сбросить фильтры или изменить запрос.',
-    resetFiltersButton: 'Сбросить фильтры',
-    emptyAllTitle: 'Пока нет кейсов',
-    emptyAllDescription: 'Загляните позже — библиотека постоянно пополняется.',
-} as const
-
-const ALL_CATEGORIES = '__all__'
 
 const router = useRouter()
 const casesApi = useCasesApi()
@@ -59,9 +60,16 @@ const isLoadingCases = ref(true)
 const isLoadingActive = ref(true)
 const isLoadingStats = ref(true)
 
-const selectedCategory = ref<string>(ALL_CATEGORIES)
-const selectedDifficulty = ref<DifficultyFilterValue>('all')
-const searchQuery = ref('')
+const {
+    selectedCategory,
+    selectedDifficulty,
+    searchQuery,
+    orderedCategories,
+    categoryCounts,
+    filteredCases,
+    isFiltered,
+    resetFilters,
+} = useCasesFilter(cases)
 
 const startPendingCaseId = ref<string | null>(null)
 const pageError = ref<string | null>(null)
@@ -69,56 +77,21 @@ const conflictMessage = ref<string | null>(null)
 
 const isLoading = computed(() => isLoadingCases.value || isLoadingActive.value)
 
-const SKELETON_KEYS = Array.from({ length: 6 }, (_, i) => `skeleton-card-${i}`)
-
-const orderedCategories = computed<string[]>(() => {
-    const seen = new Set<string>()
-    const out: string[] = []
-    for (const item of cases.value) {
-        if (!seen.has(item.category)) {
-            seen.add(item.category)
-            out.push(item.category)
-        }
-    }
-    return out
-})
-
-const categoryCounts = computed<Record<string, number>>(() => {
-    const counts: Record<string, number> = {}
-    for (const item of cases.value) {
-        counts[item.category] = (counts[item.category] ?? 0) + 1
-    }
-    return counts
-})
-
-const filteredCases = computed<CaseCardType[]>(() => {
-    const query = searchQuery.value.trim().toLowerCase()
-    return cases.value.filter((item) => {
-        const matchesCategory = selectedCategory.value === ALL_CATEGORIES
-            || item.category === selectedCategory.value
-        const matchesDifficulty = selectedDifficulty.value === 'all'
-            || item.difficulty.toLowerCase() === selectedDifficulty.value
-        const matchesQuery = query === ''
-            || item.title.toLowerCase().includes(query)
-            || item.patientName.toLowerCase().includes(query)
-            || item.patientBrief.toLowerCase().includes(query)
-            || item.tags.some((tag) => tag.toLowerCase().includes(query))
-        return matchesCategory && matchesDifficulty && matchesQuery
-    })
-})
-
-const isFiltered = computed(
-    () => selectedCategory.value !== ALL_CATEGORIES
-        || selectedDifficulty.value !== 'all'
-        || searchQuery.value.trim() !== '',
-)
+const SKELETON_KEYS = Array.from({length: 6}, (_, i) => `skeleton-card-${i}`)
 
 const totalCount = computed<number>(() => cases.value.length)
 const completedCount = computed<number>(() => stats.value?.completedSessions ?? 0)
 const averageTotalScore = computed<number | null>(() => stats.value?.averageTotalScore ?? null)
 
+const casesNoun = usePluralize(totalCount, CASES_HERO_PLURAL_FORMS.cases)
+const specializationsNoun = usePluralize(() => orderedCategories.value.length, CASES_HERO_PLURAL_FORMS.specializations)
+
 /**
- * Fetches the full case list.
+ * Загружает полный список доступных клинических задач одним запросом.
+ *
+ * Фильтрация по категории, сложности и поисковому запросу выполняется на клиенте
+ * (см. useCasesFilter), поэтому пагинация и query-параметры здесь не используются:
+ * объём каталога в рамках MVP заведомо мал и помещается в одну выдачу.
  */
 async function fetchCases(): Promise<void> {
     isLoadingCases.value = true
@@ -126,14 +99,18 @@ async function fetchCases(): Promise<void> {
     try {
         cases.value = await casesApi.getCases()
     } catch {
-        pageError.value = 'Не удалось загрузить список кейсов. Попробуйте обновить страницу.'
+        pageError.value = CASES_ALERTS_TEXTS.loadCasesError
     } finally {
         isLoadingCases.value = false
     }
 }
 
 /**
- * Fetches the currently active session; silently ignores failures.
+ * Запрашивает у бэкенда активную (незавершённую) сессию пользователя, если она есть.
+ *
+ * Ошибка подавляется намеренно: отсутствие активной сессии — нормальное состояние,
+ * а сетевой сбой здесь не должен блокировать работу с каталогом.
+ * При неудаче баннер ActiveSessionBanner просто не показывается.
  */
 async function fetchActiveSession(): Promise<void> {
     isLoadingActive.value = true
@@ -147,7 +124,11 @@ async function fetchActiveSession(): Promise<void> {
 }
 
 /**
- * Fetches the aggregate stats overview to feed the hero stat strip; silently ignores failures.
+ * Запрашивает агрегированную статистику пользователя
+ * (число завершённых сессий и средний балл) для шапки страницы.
+ *
+ * Ошибка подавляется: статистика — вспомогательный декоративный элемент,
+ * её отсутствие не должно мешать пользователю выбирать кейс и запускать симуляцию.
  */
 async function fetchStats(): Promise<void> {
     isLoadingStats.value = true
@@ -161,7 +142,21 @@ async function fetchStats(): Promise<void> {
 }
 
 /**
- * Starts a new simulation and navigates to chat; handles 409 conflicts.
+ * Запускает новую симуляцию по выбранному кейсу и переводит пользователя в чат.
+ *
+ * Защита от двойного клика: пока запрос в работе, повторный вызов с любым caseId
+ * игнорируется через startPendingCaseId. Это страхует от случая, когда пользователь
+ * успевает кликнуть по карточке несколько раз до завершения первого запроса.
+ *
+ * Особый случай — HTTP 409: бэкенд сообщает, что у пользователя уже существует
+ * активная сессия. В этом случае:
+ *  - выводится предупреждение conflictMessage;
+ *  - повторно запрашивается активная сессия, чтобы баннер ActiveSessionBanner
+ *    показал актуальную сессию и пользователь мог либо продолжить её, либо завершить.
+ *
+ * Все остальные ошибки трактуются как сбой запуска и показываются в pageError.
+ *
+ * @param caseId — идентификатор кейса, с которого запускается симуляция
  */
 async function handleStart(caseId: string): Promise<void> {
     if (startPendingCaseId.value !== null) return
@@ -170,13 +165,13 @@ async function handleStart(caseId: string): Promise<void> {
 
     try {
         const response = await simulationApi.start(caseId)
-        await router.push({ name: ROUTES.CHAT, params: { sessionId: String(response.sessionId) } })
+        await router.push({name: ROUTES.CHAT, params: {sessionId: String(response.sessionId)}})
     } catch (err: unknown) {
-        if (isApiError(err) && err.status === 409) {
-            conflictMessage.value = 'У вас уже есть активная симуляция. Продолжите её из баннера выше.'
+        if (isApiError(err) && err.status === HTTP_STATUS_CONFLICT) {
+            conflictMessage.value = CASES_ALERTS_TEXTS.conflictMessage
             await fetchActiveSession()
         } else {
-            pageError.value = 'Не удалось начать кейс. Попробуйте снова.'
+            pageError.value = CASES_ALERTS_TEXTS.startCaseError
         }
     } finally {
         startPendingCaseId.value = null
@@ -184,28 +179,16 @@ async function handleStart(caseId: string): Promise<void> {
 }
 
 /**
- * Navigates to an existing session.
+ * Переход к уже существующей сессии по её идентификатору.
+ *
+ * @param sessionId — идентификатор сессии, к которой нужно вернуться
  */
 async function handleResume(sessionId: number): Promise<void> {
-    await router.push({ name: ROUTES.CHAT, params: { sessionId: String(sessionId) } })
+    await router.push({name: ROUTES.CHAT, params: {sessionId: String(sessionId)}})
 }
 
-/**
- * Resets all filter state to its initial value.
- */
-function handleResetFilters(): void {
-    selectedCategory.value = ALL_CATEGORIES
-    selectedDifficulty.value = 'all'
-    searchQuery.value = ''
-}
-
-/**
- * Selects a category chip; passing the all-sentinel clears the category filter.
- */
-function handleCategorySelect(category: string): void {
-    selectedCategory.value = category
-}
-
+// Параллельная загрузка трёх независимых ресурсов через Promise.all:
+// каталог задач, баннер активной сессии и шапка статистики не зависят друг от друга,
 onMounted(() => {
     Promise.all([fetchCases(), fetchActiveSession(), fetchStats()])
 })
@@ -213,41 +196,42 @@ onMounted(() => {
 
 <template>
     <div class="flex h-full flex-col overflow-hidden">
+        <!--
+            Sticky-шапка с поисковым полем
+        -->
         <header
-            class="sticky top-0 z-[var(--z-sticky)] flex shrink-0 items-center gap-[1.6rem] border-b border-[color:var(--color-line)] bg-white px-[2.8rem] py-[1.4rem]"
+            class="sticky top-0 z-(--z-sticky) flex shrink-0 items-center gap-[1.6rem] border-b border-(--color-line) bg-white px-[2.8rem] py-[1.4rem]"
         >
-            <nav
-                class="flex items-center gap-[0.6rem] font-mono text-[1.05rem] uppercase tracking-[0.06em] text-text-secondary"
-                :aria-label="COPY.breadcrumbAriaLabel"
-            >
-                <span class="text-text-tertiary">{{ COPY.breadcrumbLibrary }}</span>
-                <span class="text-[color:var(--color-line-2)]">/</span>
-                <span class="font-medium text-text-primary">{{ COPY.breadcrumbCatalog }}</span>
-            </nav>
-            <div class="flex-1" />
-            <CasesSearchInput v-model="searchQuery" />
+            <div class="flex-1"/>
+            <CasesSearchInput v-model="searchQuery"/>
         </header>
 
-        <div class="flex-1 overflow-y-auto">
+        <div class="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+            <!-- HERO-секция -->
             <section
-                class="border-b border-[color:var(--color-line)] px-[2.8rem] py-[2.8rem]"
+                class="border-b border-(--color-line) px-[2.8rem] py-[2.8rem]"
                 style="background: linear-gradient(180deg, var(--color-teal-ghost) 0%, var(--color-bg) 100%);"
             >
-                <div class="mx-auto w-full max-w-[120rem]">
-                    <p class="mb-[1rem] font-mono text-[1.1rem] font-semibold uppercase tracking-[0.14em] text-brand">
-                        {{ COPY.catalogPrefix }} &middot; {{ totalCount }} {{ COPY.casesNoun }} &middot; {{ orderedCategories.length }} {{ COPY.specializationsNoun }}
+                <div class="mx-auto w-full max-w-480">
+                    <p class="mb-4 font-mono text-[1.1rem] font-semibold uppercase tracking-[0.14em] text-brand">
+                        {{ CASES_HERO_TEXTS.catalogPrefix }} &middot; {{ totalCount }} {{ casesNoun }} &middot;
+                        {{ orderedCategories.length }} {{ specializationsNoun }}
                     </p>
+
                     <div class="flex flex-wrap items-end justify-between gap-[2.8rem]">
-                        <div class="flex min-w-0 flex-1 basis-[42rem] flex-col">
+                        <div class="flex min-w-0 flex-1 basis-2xl flex-col">
                             <h1
                                 class="mb-[0.6rem] font-serif text-[3.4rem] font-medium leading-[1.1] tracking-[-0.02em] text-text-primary"
                             >
-                                {{ COPY.titleLead }} <em class="text-accent-italic">{{ COPY.titleAccent }}</em>
+                                {{ CASES_HERO_TEXTS.titleLead }} <em
+                                    class="text-accent-italic"
+                                >{{ CASES_HERO_TEXTS.titleAccent }}</em>
                             </h1>
-                            <p class="max-w-[62rem] text-[1.35rem] leading-[1.55] text-text-secondary">
-                                {{ COPY.description }}
+                            <p class="max-w-248 text-[1.35rem] leading-[1.55] text-text-secondary">
+                                {{ CASES_HERO_TEXTS.description }}
                             </p>
                         </div>
+
                         <CasesStatStrip
                             :completed-count="completedCount"
                             :total-count="totalCount"
@@ -257,7 +241,8 @@ onMounted(() => {
                 </div>
             </section>
 
-            <div class="mx-auto w-full max-w-[120rem] px-[2.8rem] pb-[4rem] pt-[2rem]">
+            <div class="mx-auto w-full max-w-480 px-[2.8rem] pb-16 pt-8">
+                <!-- Баннер активной сессии -->
                 <div
                     v-if="!isLoadingActive && activeSession"
                     class="mb-[1.6rem]"
@@ -268,28 +253,31 @@ onMounted(() => {
                     />
                 </div>
 
+                <!-- Предупреждение о конфликте -->
                 <div
                     v-if="conflictMessage"
                     class="mb-[1.6rem]"
                 >
                     <VAlert
                         status="warning"
-                        :title="COPY.conflictAlertTitle"
+                        :title="CASES_ALERTS_TEXTS.conflictTitle"
                         :description="conflictMessage"
                     />
                 </div>
 
+                <!-- Общая ошибка страницы -->
                 <div
                     v-if="pageError"
                     class="mb-[1.6rem]"
                 >
                     <VAlert
                         status="error"
-                        :title="COPY.loadErrorAlertTitle"
+                        :title="CASES_ALERTS_TEXTS.loadErrorTitle"
                         :description="pageError"
                     />
                 </div>
 
+                <!-- Skeleton-плейсхолдеры на время загрузки -->
                 <div
                     v-if="isLoading"
                     class="flex flex-col gap-[1.6rem]"
@@ -302,10 +290,12 @@ onMounted(() => {
                             height="3.4rem"
                         />
                     </div>
+
                     <VSkeleton
                         width="36rem"
                         height="3.4rem"
                     />
+
                     <div class="grid gap-[1.6rem] sm:grid-cols-2 lg:grid-cols-3">
                         <VSkeleton
                             v-for="key in SKELETON_KEYS"
@@ -316,55 +306,66 @@ onMounted(() => {
                 </div>
 
                 <template v-else-if="!pageError">
+                    <!-- Фильтры по категории (медицинской специализации) -->
                     <div class="mb-[1.2rem] flex flex-wrap gap-[0.8rem]">
                         <CategoryChip
-                            :label="COPY.allChip"
+                            :label="CASES_FILTERS_TEXTS.allChip"
                             :count="totalCount"
                             :active="selectedCategory === ALL_CATEGORIES"
-                            @click="handleCategorySelect(ALL_CATEGORIES)"
+                            @click="selectedCategory = ALL_CATEGORIES"
                         />
+
                         <CategoryChip
                             v-for="category in orderedCategories"
                             :key="category"
                             :label="categoryDisplayLabel(category)"
-                            :count="categoryCounts[category] ?? 0"
+                            :count="categoryCounts[category] || 0"
                             :active="selectedCategory === category"
-                            @click="handleCategorySelect(category)"
+                            @click="selectedCategory = category"
                         />
                     </div>
 
-                    <div class="mb-[2rem] flex flex-wrap items-center justify-between gap-[1.2rem]">
-                        <DifficultySegmented v-model="selectedDifficulty" />
+                    <!-- Сегментированный фильтр по уровню сложности и счётчик -->
+                    <div class="mb-8 flex flex-wrap items-center justify-between gap-[1.2rem]">
+                        <DifficultySegmented v-model="selectedDifficulty"/>
+
                         <p
                             class="font-mono text-[1.1rem] uppercase tracking-[0.06em] text-text-secondary"
                         >
-                            {{ COPY.foundLabel }} &middot;
+                            {{ CASES_FILTERS_TEXTS.foundLabel }} &middot;
                             <span class="font-semibold text-text-primary tabular">{{ filteredCases.length }}</span>
-                            {{ COPY.foundOf }} {{ totalCount }}
+                            {{ CASES_FILTERS_TEXTS.foundOf }} {{ totalCount }}
                         </p>
+
                     </div>
 
+                    <!--
+                        Два отдельных empty-state: различение важно для UX:
+                        в первом случае действие пользователя — кнопка "Сбросить",
+                        во втором — никакого действия предложить нельзя.
+                    -->
                     <VEmptyState
                         v-if="filteredCases.length === 0 && isFiltered"
-                        :title="COPY.emptyFilteredTitle"
-                        :description="COPY.emptyFilteredDescription"
+                        :title="CASES_EMPTY_STATE_TEXTS.filteredTitle"
+                        :description="CASES_EMPTY_STATE_TEXTS.filteredDescription"
                     >
                         <template #action>
                             <VButton
                                 variant="secondary"
-                                @click="handleResetFilters"
+                                @click="resetFilters"
                             >
-                                {{ COPY.resetFiltersButton }}
+                                {{ CASES_FILTERS_TEXTS.resetFiltersButton }}
                             </VButton>
                         </template>
                     </VEmptyState>
 
                     <VEmptyState
                         v-else-if="cases.length === 0"
-                        :title="COPY.emptyAllTitle"
-                        :description="COPY.emptyAllDescription"
+                        :title="CASES_EMPTY_STATE_TEXTS.allTitle"
+                        :description="CASES_EMPTY_STATE_TEXTS.allDescription"
                     />
 
+                    <!-- Список задач -->
                     <div
                         v-else
                         class="grid gap-[1.6rem] sm:grid-cols-2 lg:grid-cols-3"

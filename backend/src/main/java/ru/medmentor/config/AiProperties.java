@@ -46,4 +46,6 @@ public class AiProperties {
     private String promptSessionOpening = "classpath:prompts/session-opening.txt";
 
     private String promptScoreReview = "classpath:prompts/score-review.txt";
+
+    private String promptExaminationFinding = "classpath:prompts/examination-finding.txt";
 }

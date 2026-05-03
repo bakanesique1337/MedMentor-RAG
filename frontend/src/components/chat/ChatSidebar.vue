@@ -6,7 +6,7 @@ import WarningModal from '@/components/common/WarningModal.vue'
 import { categoryDisplayLabel } from '@/constants/caseCategories'
 import { ROUTES } from '@/constants/routes'
 import { useAuthGateStore } from '@/stores/authGate'
-import type { SimulationSession } from '@/types'
+import { DIFFICULTY_PRESETS, type SimulationSession } from '@/types'
 
 const COPY = {
     brandLogoLetter: 'M',
@@ -91,14 +91,9 @@ const doctorTurns = computed(() =>
 const categoryLabel = computed(() => categoryDisplayLabel(props.session.caseCategory).toUpperCase())
 
 /**
- * Maps case difficulty string to a 1-3 dot count.
+ * Number of filled dots (1..3) representing the case difficulty.
  */
-const difficultyLevel = computed(() => {
-    const level = props.session.caseDifficulty?.toLowerCase() ?? ''
-    if (level === 'easy') return 1
-    if (level === 'hard' || level === 'expert') return 3
-    return 2
-})
+const difficultyLevel = computed(() => DIFFICULTY_PRESETS[props.session.caseDifficulty].dotCount)
 
 const difficultyDots = computed(() => {
     const filled = difficultyLevel.value

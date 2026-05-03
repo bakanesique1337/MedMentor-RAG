@@ -26,7 +26,7 @@ public class StreamChunkDto {
     private String content;
 
     /**
-     * Type of message: "chunk", "done", "error"
+     * Type of message: "chunk", "done", "warning", "error"
      */
     private String type;
 
@@ -62,6 +62,15 @@ public class StreamChunkDto {
                 .conversationId(conversationId)
                 .type("error")
                 .error(error)
+                .timestamp(System.currentTimeMillis())
+                .build();
+    }
+
+    public static StreamChunkDto warning(String conversationId, String message) {
+        return StreamChunkDto.builder()
+                .conversationId(conversationId)
+                .type("warning")
+                .error(message)
                 .timestamp(System.currentTimeMillis())
                 .build();
     }

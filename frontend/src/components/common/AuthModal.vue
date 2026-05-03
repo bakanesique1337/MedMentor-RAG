@@ -3,9 +3,10 @@ import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import MmArrow from '@/components/common/MmArrow.vue'
+import { HTTP_STATUS_UNAUTHORIZED } from '@/constants/http'
 import { ROUTES } from '@/constants/routes'
 import { useAuthGateStore } from '@/stores/authGate'
-import { isApiError } from '@/types'
+import { isApiError } from '@/utils/typeGuards'
 
 const COPY = {
     closeAriaLabel: 'Закрыть',
@@ -74,7 +75,7 @@ function mapApiError(err: unknown): void {
         formError.value = 'Не удалось войти. Проверьте логин и пароль.'
         return
     }
-    if (err.status === 401) {
+    if (err.status === HTTP_STATUS_UNAUTHORIZED) {
         formError.value = 'Неверный логин или пароль.'
         return
     }

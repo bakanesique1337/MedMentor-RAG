@@ -6,32 +6,12 @@ import { RouterView } from 'vue-router'
     <RouterView v-slot="{ Component, route }">
         <Transition
             name="page"
-            mode="out-in"
+            mode="default"
         >
             <component
                 :is="Component"
-                :key="route.path"
+                :key="route.fullPath"
             />
         </Transition>
     </RouterView>
 </template>
-
-<style scoped>
-.page-enter-active,
-.page-leave-active {
-    transition: opacity 180ms var(--ease-soft);
-    will-change: opacity;
-}
-
-.page-enter-from,
-.page-leave-to {
-    opacity: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .page-enter-active,
-    .page-leave-active {
-        transition-duration: 100ms;
-    }
-}
-</style>

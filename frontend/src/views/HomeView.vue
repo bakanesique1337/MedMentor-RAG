@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import {useRouter} from 'vue-router'
 
 import LandingFaq from '@/components/landing/LandingFaq.vue'
 import LandingFeatures from '@/components/landing/LandingFeatures.vue'
 import LandingHero from '@/components/landing/LandingHero.vue'
 import LandingHowItWorks from '@/components/landing/LandingHowItWorks.vue'
 import LandingStats from '@/components/landing/LandingStats.vue'
-import { ROUTES } from '@/constants/routes'
-import { useAuthGateStore } from '@/stores/authGate'
+import {ROUTES} from '@/constants/routes'
+import {useAuthGateStore} from '@/stores/authGate'
 
 const router = useRouter()
 const authGate = useAuthGateStore()
@@ -17,7 +17,7 @@ const authGate = useAuthGateStore()
  */
 function handleCta(): void {
     if (authGate.isAuthenticated) {
-        router.push({ name: ROUTES.CASES }).catch(() => undefined)
+        router.push({name: ROUTES.CASES}).catch(() => undefined)
         return
     }
     authGate.openAuthModal()
@@ -30,9 +30,13 @@ function handleCta(): void {
             :is-authenticated="authGate.isAuthenticated"
             @cta="handleCta"
         />
-        <LandingStats />
-        <LandingFeatures />
-        <LandingHowItWorks />
-        <LandingFaq />
+
+        <LandingStats/>
+
+        <LandingFeatures/>
+
+        <LandingHowItWorks/>
+
+        <LandingFaq/>
     </div>
 </template>

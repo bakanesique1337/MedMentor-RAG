@@ -9,4 +9,6 @@ public interface PromptTemplateService {
     String getSessionOpeningPrompt();
 
     String getScoreReviewPrompt();
+
+    String getExaminationFindingPrompt();
 }

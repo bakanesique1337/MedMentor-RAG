@@ -3,18 +3,20 @@ import { computed, onMounted, ref, watch } from 'vue'
 
 import ChatMessageBubble from '@/components/chat/ChatMessageBubble.vue'
 import ExamFindingsCard from '@/components/chat/ExamFindingsCard.vue'
-import type { ConversationMessage, PatientPassport, PatientVitals } from '@/types'
+import OutOfScopeBlock from '@/components/chat/OutOfScopeBlock.vue'
+import type { ConversationMessage, PatientPassport, PatientVitals, StreamingStatusType } from '@/types'
 
 const COPY = {
     fallbackInitial: 'П',
     emptyState: 'Диалог появится здесь, как только пациент начнёт говорить.',
+    nowFallback: '--:--',
 } as const
 
 interface Props {
     messages: ConversationMessage[]
     pendingDoctorMessage?: string | null
     streamingContent: string
-    isStreamingActive: boolean
+    streamingKind: StreamingStatusType | null
     patientName?: string
     examRevealed?: boolean
     passport?: PatientPassport | null
@@ -27,6 +29,33 @@ const props = withDefaults(defineProps<Props>(), {
     examRevealed: false,
     passport: null,
     vitals: null,
+})
+
+const isStreamingActive = computed(() => props.streamingKind !== null && props.streamingKind !== 'idle')
+const isPatientStreamActive = computed(() => props.streamingKind === 'message' || props.streamingKind === 'opening')
+const isFindingStreamActive = computed(() => props.streamingKind === 'finding')
+
+const streamingMeta = ref<string>(COPY.nowFallback)
+
+/**
+ * Refreshes the live HH:MM stamp shown on the streaming OOS block. Computed once
+ * when a finding stream begins to avoid per-chunk re-renders.
+ */
+function refreshStreamingMeta(): void {
+    streamingMeta.value = formatTimestamp(new Date())
+}
+
+/**
+ * Formats a Date or ISO timestamp string into HH:MM in local time.
+ */
+function formatTimestamp(value: Date | string): string {
+    const date = typeof value === 'string' ? new Date(value) : value
+    if (Number.isNaN(date.getTime())) return COPY.nowFallback
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+watch(isFindingStreamActive, (active) => {
+    if (active) refreshStreamingMeta()
 })
 
 const timelineRef = ref<HTMLElement | null>(null)
@@ -50,7 +79,7 @@ function scrollToBottom(): void {
 }
 
 watch(
-    () => [props.messages.length, props.streamingContent, props.isStreamingActive, props.examRevealed] as const,
+    () => [props.messages.length, props.streamingContent, isStreamingActive.value, props.examRevealed] as const,
     scrollToBottom,
     { flush: 'post' },
 )
@@ -66,13 +95,22 @@ onMounted(() => {
         class="flex flex-1 flex-col overflow-y-auto px-[2.4rem] py-[1.2rem]"
     >
         <div class="mx-auto flex w-full max-w-[84rem] flex-col">
-            <ChatMessageBubble
+            <template
                 v-for="msg in messages"
                 :key="msg.id"
-                :role="msg.role"
-                :content="msg.content"
-                :patient-initials="patientInitials"
-            />
+            >
+                <OutOfScopeBlock
+                    v-if="msg.role === 'MENTOR'"
+                    :finding="msg.content"
+                    :meta="formatTimestamp(msg.timestamp)"
+                />
+                <ChatMessageBubble
+                    v-else
+                    :role="msg.role"
+                    :content="msg.content"
+                    :patient-initials="patientInitials"
+                />
+            </template>
 
             <ChatMessageBubble
                 v-if="pendingDoctorMessage"
@@ -82,11 +120,18 @@ onMounted(() => {
             />
 
             <ChatMessageBubble
-                v-if="isStreamingActive"
+                v-if="isPatientStreamActive"
                 role="PATIENT"
                 :content="streamingContent"
                 :is-streaming="true"
                 :patient-initials="patientInitials"
+            />
+
+            <OutOfScopeBlock
+                v-if="isFindingStreamActive"
+                :finding="streamingContent"
+                :meta="streamingMeta"
+                :is-streaming="true"
             />
 
             <ExamFindingsCard

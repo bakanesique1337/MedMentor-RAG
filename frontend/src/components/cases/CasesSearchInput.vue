@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const COPY = {
-    placeholder: 'Поиск по симптомам, пациенту, тегам...',
+    placeholder: 'Поиск по названию',
     clearAriaLabel: 'Очистить поиск',
 } as const
 
@@ -34,7 +34,7 @@ function handleClear(): void {
 
 <template>
     <label
-        class="flex h-[3.4rem] w-[28rem] items-center gap-[0.8rem] rounded-[0.7rem] border border-[color:var(--color-line)] bg-surface-base px-[1.2rem] focus-within:border-brand"
+        class="flex h-[3.4rem] w-md items-center gap-[0.8rem] rounded-sm border border-(--color-line) bg-surface-base px-[1.2rem] focus-within:border-brand"
     >
         <svg
             width="14"
@@ -60,7 +60,7 @@ function handleClear(): void {
         </svg>
         <input
             :value="modelValue"
-            type="search"
+            type="text"
             :placeholder="COPY.placeholder"
             class="min-w-0 flex-1 border-0 bg-transparent p-0 text-[1.25rem] text-text-primary outline-none placeholder:text-text-tertiary"
             @input="handleInput"

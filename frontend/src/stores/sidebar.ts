@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-import { useCasesApi } from '@/composables/useCasesApi'
-import { useSimulationApi } from '@/composables/useSimulationApi'
+import { useCasesApi } from '@/composables/api/useCasesApi'
+import { useSimulationApi } from '@/composables/api/useSimulationApi'
 import type { ActiveSimulation } from '@/types'
 
 /**

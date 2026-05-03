@@ -2,11 +2,12 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { Router } from 'vue-router'
 
-import { onUnauthorized } from '@/composables/authBus'
-import { useAuthApi } from '@/composables/useAuthApi'
+import { useAuthApi } from '@/composables/api/useAuthApi'
+import { onUnauthorized } from '@/composables/shared/authBus'
+import { HTTP_STATUS_UNAUTHORIZED } from '@/constants/http'
 import { ROUTES } from '@/constants/routes'
 import type { ApiError, AuthLoginRequest, AuthUser } from '@/types'
-import { isApiError } from '@/types'
+import { isApiError } from '@/utils/typeGuards'
 
 // ---------------------------------------------------------------------------
 // Persistence helpers
@@ -262,7 +263,7 @@ export const useAuthGateStore = defineStore('authGate', () => {
                 const apiErr = isApiError(err) ? err : null
                 const status = apiErr?.status ?? -1
 
-                if (status === 401) {
+                if (status === HTTP_STATUS_UNAUTHORIZED) {
                     _clearSession()
                     return { ok: false, reason: 'unauthenticated' } satisfies BootstrapResult
                 }

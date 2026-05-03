@@ -9,7 +9,7 @@ import ResultScoreRing from '@/components/result/ResultScoreRing.vue'
 import ResultSectionTitle from '@/components/result/ResultSectionTitle.vue'
 import { VAlert, VButton, VSpinner } from '@/components/ui'
 import { ROUTES } from '@/constants/routes'
-import { useSimulationApi } from '@/composables/useSimulationApi'
+import { useSimulationApi } from '@/composables/api/useSimulationApi'
 import type { CriterionNotes, Score, SimulationSession } from '@/types'
 
 const COPY = {

@@ -10,6 +10,8 @@ const COPY = {
     modelCommentLabel: 'Комментарий модели',
     emptyValue: '—',
     fallback: 'Данные об оценке недоступны для этой сессии.',
+    diagnosisMatchTrue: 'Диагноз поставлен верно',
+    diagnosisMatchFalse: 'Диагноз поставлен неверно',
 } as const
 
 interface Props {
@@ -20,7 +22,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-type ScoreKey = Exclude<keyof Score, 'createdAt'>
+type ScoreKey = Exclude<keyof Score, 'createdAt' | 'diagnosisMatch'>
 
 const SCORE_LABELS: Array<[ScoreKey, string]> = [
     ['politeness', 'Вежливость'],
@@ -76,6 +78,16 @@ const total = computed(() => {
                 </span>
                 <span class="text-[1.35rem] text-text-tertiary">{{ COPY.scoreOutOf }}</span>
             </div>
+        </div>
+
+        <div
+            v-if="score && score.diagnosisMatch !== null && score.diagnosisMatch !== undefined"
+            class="mt-[1.8rem] inline-flex items-center rounded-[0.8rem] px-[1.2rem] py-[0.7rem] text-[1.35rem] font-medium"
+            :class="score.diagnosisMatch
+                ? 'bg-brand-ghost text-brand-deep'
+                : 'bg-[color:rgb(220_38_38_/_0.08)] text-[color:var(--color-danger-bright)]'"
+        >
+            {{ score.diagnosisMatch ? COPY.diagnosisMatchTrue : COPY.diagnosisMatchFalse }}
         </div>
 
         <div

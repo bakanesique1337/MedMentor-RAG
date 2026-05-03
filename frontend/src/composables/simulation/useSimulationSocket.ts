@@ -1,34 +1,18 @@
-import { Client } from '@stomp/stompjs'
-import { ref } from 'vue'
+import type {ApiError, SimulationSocket, SocketStatus, StreamChunk} from '@/types'
+import {isStreamChunk} from '@/utils/typeGuards'
+import {Client} from '@stomp/stompjs'
+import {ref} from 'vue'
 import SockJS from 'sockjs-client'
-
-import { API_BASE_URL } from '@/constants/api'
-import type { ApiError, StreamChunk } from '@/types'
-import { isStreamChunk } from '@/types'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export type SocketStatus = 'idle' | 'connecting' | 'open' | 'reconnecting' | 'closed' | 'error'
+import {API_BASE_URL} from '@/constants/api'
 
 type ChunkHandler = (chunk: StreamChunk) => void
 
-// ---------------------------------------------------------------------------
-// Composable
-// ---------------------------------------------------------------------------
-
 /**
- * Manages the STOMP/SockJS WebSocket connection for simulation streaming.
- * Hides all topic names, subscription frames, and protocol details from views.
+ * Управляет соединением STOMP/SockJS WebSocket для стриминга симуляции.
  *
- * Usage:
- *   const socket = useSimulationSocket()
- *   socket.connect(sessionId)
- *   socket.onChunk((chunk) => { ... })
- *   onUnmounted(() => socket.disconnect())
+ * @returns SimulationSocket
  */
-export function useSimulationSocket() {
+export function useSimulationSocket(): SimulationSocket {
     const status = ref<SocketStatus>('idle')
     const lastChunk = ref<StreamChunk | null>(null)
     const error = ref<ApiError | null>(null)
@@ -39,19 +23,33 @@ export function useSimulationSocket() {
     let pendingConnect = false
     let pendingSessionId: number | null = null
 
-    // -----------------------------------------------------------------------
-    // Internal helpers
-    // -----------------------------------------------------------------------
-
+    /**
+     * Строит фабрику SockJS-сокета на базе API_BASE_URL.
+     *
+     * @returns функция, создающая новый экземпляр SockJS, приведённый
+     *          к типу WebSocket для совместимости с STOMP-клиентом.
+     */
     function buildSockJsFactory(): () => WebSocket {
         const wsBase = API_BASE_URL.replace(/\/+$/, '')
         return () => new SockJS(`${wsBase}/ws`) as unknown as WebSocket
     }
 
+    /**
+     * Возвращает путь STOMP-топика, по которому сервер публикует чанки
+     * стрима для конкретной сессии.
+     *
+     * @param sessionId — идентификатор сессии.
+     * @returns строка вида '/topic/simulations/{sessionId}'.
+     */
     function buildTopicPath(sessionId: number): string {
         return `/topic/simulations/${sessionId}`
     }
 
+    /**
+     * Сохраняет чанк в lastChunk и поочерёдно вызывает всех подписчиков.
+     *
+     * @param chunk — провалидированный StreamChunk, готовый к раздаче.
+     */
     function dispatchChunk(chunk: StreamChunk): void {
         lastChunk.value = chunk
 
@@ -60,6 +58,12 @@ export function useSimulationSocket() {
         }
     }
 
+    /**
+     * Парсит сырое тело STOMP-кадра, валидирует форму чанка и передаёт
+     * его в dispatchChunk. Невалидные сообщения логируются и отбрасываются.
+     *
+     * @param body — сырая строка тела STOMP-кадра (ожидается JSON).
+     */
     function handleIncomingMessage(body: string): void {
         console.debug('[useSimulationSocket] raw frame body:', body)
 
@@ -81,16 +85,21 @@ export function useSimulationSocket() {
         dispatchChunk(parsed)
     }
 
+    /**
+     * Подписывается на STOMP-топик указанной сессии. Если ранее уже была
+     * активная подписка — отписывается от неё перед сменой.
+     *
+     * @param sessionId — идентификатор сессии, на топик которой нужно подписаться.
+     */
     function subscribeToSession(sessionId: number): void {
         if (!client?.connected) {
-            console.debug('[useSimulationSocket] subscribe skipped -- client not connected', { sessionId })
+            console.debug('[useSimulationSocket] subscribe skipped, client not connected', {sessionId})
             return
         }
 
         const topic = buildTopicPath(sessionId)
 
-        // Unsubscribe from previous topic if switching sessions
-        client.unsubscribe(`sub-${activeSessionId ?? ''}`)
+        client.unsubscribe(`sub-${activeSessionId || ''}`)
         activeSessionId = sessionId
 
         console.debug('[useSimulationSocket] subscribing to topic', topic)
@@ -99,10 +108,13 @@ export function useSimulationSocket() {
             (frame) => {
                 handleIncomingMessage(frame.body)
             },
-            { id: `sub-${sessionId}` },
+            {id: `sub-${sessionId}`},
         )
     }
 
+    /**
+     * Полностью гасит STOMP-клиент и сбрасывает связанное с ним состояние
+     */
     function teardownClient(): void {
         if (!client) {
             return
@@ -111,7 +123,7 @@ export function useSimulationSocket() {
         try {
             client.deactivate()
         } catch {
-            // Ignore errors during teardown
+            // Ошибки во время остановки игнорируются
         }
 
         client = null
@@ -120,26 +132,24 @@ export function useSimulationSocket() {
         pendingSessionId = null
     }
 
-    // -----------------------------------------------------------------------
-    // Public API
-    // -----------------------------------------------------------------------
-
     /**
-     * Opens the socket transport and subscribes to the given session topic.
-     * Safe to call multiple times -- reconnects and resubscribes if needed.
+     * Открывает транспорт Socket и подписывается на топик указанной сессии.
+     *
+     * @param sessionId — идентификатор симуляционной сессии, на которую
+     *                    нужно подписаться.
      */
     function connect(sessionId: number): void {
         if (pendingConnect) {
-            pendingSessionId = sessionId  // store latest intent even when early-returning
+            pendingSessionId = sessionId
             return
         }
 
-        // Already connected to the same session -- nothing to do
+        // Уже подключены к этой же сессии
         if (client?.connected && activeSessionId === sessionId) {
             return
         }
 
-        // Already connected but different session -- resubscribe without reconnect
+        // Уже подключены, но к другой сессии
         if (client?.connected && activeSessionId !== sessionId) {
             subscribeToSession(sessionId)
             return
@@ -147,7 +157,7 @@ export function useSimulationSocket() {
 
         teardownClient()
         pendingConnect = true
-        pendingSessionId = sessionId       // store for onConnect
+        pendingSessionId = sessionId
         status.value = 'connecting'
         error.value = null
 
@@ -158,9 +168,8 @@ export function useSimulationSocket() {
             onConnect: () => {
                 pendingConnect = false
                 status.value = 'open'
-                // Use the latest intended sessionId, not the closure-captured one
                 const targetSession = pendingSessionId ?? sessionId
-                console.debug('[useSimulationSocket] STOMP connected, subscribing', { targetSession })
+                console.debug('[useSimulationSocket] STOMP connected, subscribing', {targetSession})
                 subscribeToSession(targetSession)
             },
 
@@ -201,8 +210,7 @@ export function useSimulationSocket() {
     }
 
     /**
-     * Closes the socket transport and clears subscription state.
-     * Call in onUnmounted or when leaving the chat route.
+     * Закрывает транспорт сокета и очищает состояние подписки.
      */
     function disconnect(): void {
         teardownClient()
@@ -210,8 +218,8 @@ export function useSimulationSocket() {
     }
 
     /**
-     * Forces a full reconnect. Re-subscribes to the last known session on success.
-     * Bypasses disconnect() to avoid emitting a spurious 'closed' transient state.
+     * Принудительно выполняет полное переподключение. После успеха
+     * переподписывается на последнюю известную сессию.
      */
     function reconnect(): void {
         const sessionId = activeSessionId
@@ -224,9 +232,12 @@ export function useSimulationSocket() {
     }
 
     /**
-     * Registers a handler that is called for every validated incoming StreamChunk.
-     * Duplicate handlers are silently ignored.
-     * Returns an unsubscribe function.
+     * Регистрирует обработчик, вызываемый для каждого провалидированного
+     * входящего StreamChunk. Повторное добавление того же обработчика
+     * молча игнорируется.
+     *
+     * @param handler — функция, принимающая очередной чанк стрима.
+     * @returns функцию отписки, удаляющую обработчик из списка подписчиков.
      */
     function onChunk(handler: ChunkHandler): () => void {
         if (!chunkHandlers.includes(handler)) {
