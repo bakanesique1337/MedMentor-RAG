@@ -26,12 +26,18 @@ export function useSimulationSocket(): SimulationSocket {
     /**
      * Строит фабрику SockJS-сокета на базе API_BASE_URL.
      *
+     * Если API_BASE_URL пустой, путь `/ws` остаётся относительным, и SockJS
+     * сам резолвит его против текущего origin. Это нужно, чтобы один бандл
+     * работал и через Vite dev proxy, и через single-port reverse proxy
+     * (docker, ngrok) без правки кода.
+     *
      * @returns функция, создающая новый экземпляр SockJS, приведённый
      *          к типу WebSocket для совместимости с STOMP-клиентом.
      */
     function buildSockJsFactory(): () => WebSocket {
         const wsBase = API_BASE_URL.replace(/\/+$/, '')
-        return () => new SockJS(`${wsBase}/ws`) as unknown as WebSocket
+        const wsUrl = `${wsBase}/ws`
+        return () => new SockJS(wsUrl) as unknown as WebSocket
     }
 
     /**

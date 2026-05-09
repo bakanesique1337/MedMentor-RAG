@@ -36,6 +36,28 @@
         <appender-ref ref="FILE"/>
     </logger>
 
+    <!--
+        Audit loggers for analyzing exactly what flows through the RAG/LLM pipeline.
+        Default OFF (INFO) so production logs stay clean. Toggle to DEBUG to see:
+          - input    : raw user inputs (case selection, doctor messages, diagnoses)
+          - rag      : RAG query text + every retrieved chunk verbatim
+          - prompt   : the variable parts of the LLM prompt (case data, RAG context,
+                       conversation, latest user message). Fixed system templates
+                       are intentionally omitted from the log to keep it readable.
+          - response : the model's full reply, emitted once when streaming completes
+                       (no per-chunk noise). Includes score-review JSON.
+        Either toggle a single family or set the parent `ru.medmentor.audit` to
+        DEBUG to enable all four at once.
+
+        Override via env var: MEDMENTOR_AUDIT_LOG_LEVEL=DEBUG
+        Or per-family from application.properties:
+          logging.level.ru.medmentor.audit.rag=DEBUG
+    -->
+    <logger name="ru.medmentor.audit" level="${MEDMENTOR_AUDIT_LOG_LEVEL:-INFO}" additivity="false">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+
     <!-- Logger for Spring Framework -->
     <logger name="org.springframework" level="INFO" additivity="false">
         <appender-ref ref="CONSOLE"/>

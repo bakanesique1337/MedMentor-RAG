@@ -1,5 +1,7 @@
 package ru.medmentor.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.medmentor.dto.ActiveSimulationDto;
@@ -37,6 +39,14 @@ import java.util.regex.Pattern;
 
 @Service
 public class SimulationServiceImpl implements SimulationService {
+
+    /**
+     * Audit logger for raw user inputs at the API boundary (case selection, doctor
+     * messages, diagnosis submissions). Toggle to DEBUG via
+     * `logging.level.ru.medmentor.audit.input=DEBUG` (or the grouped
+     * `ru.medmentor.audit` family).
+     */
+    private static final Logger inputAudit = LoggerFactory.getLogger("ru.medmentor.audit.input");
 
     private static final int MAX_USER_MESSAGES = 10;
     private static final int MAX_AI_MESSAGES = 11;
@@ -135,6 +145,7 @@ public class SimulationServiceImpl implements SimulationService {
 
     @Override
     public SimulationCommandResponseDto startSession(String username, String caseId) {
+        inputAudit.debug("startSession user={} caseId={}", username, caseId);
         final UserAccount userAccount = userAccountService.getByUsername(username);
         final Optional<SimulationSession> activeSession = findActiveSessionEntity(userAccount.getId());
         if (activeSession.isPresent()) {
@@ -193,6 +204,7 @@ public class SimulationServiceImpl implements SimulationService {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Message content must not be blank");
         }
+        inputAudit.debug("sendMessage user={} sessionId={} content:\n{}", username, sessionId, content);
 
         final UserAccount userAccount = userAccountService.getByUsername(username);
         final SimulationSession session = getOwnedSession(userAccount, sessionId);
@@ -310,6 +322,8 @@ public class SimulationServiceImpl implements SimulationService {
         if (confidence != null && (confidence < 0 || confidence > 100)) {
             throw new IllegalArgumentException("Confidence must be between 0 and 100");
         }
+        inputAudit.debug("submitDiagnosis user={} sessionId={} diagnosis={} confidence={} rationale:\n{}",
+                username, sessionId, diagnosis, confidence, rationale);
 
         final UserAccount userAccount = userAccountService.getByUsername(username);
         final SimulationSession session = getOwnedSession(userAccount, sessionId);
@@ -415,7 +429,7 @@ public class SimulationServiceImpl implements SimulationService {
     }
 
     private Double toScore(double value) {
-        final double clampedValue = Math.max(0.0, Math.min(1.0, value));
+        final double clampedValue = Math.clamp(value, 0.0, 1.0);
         return round2(clampedValue);
     }
 

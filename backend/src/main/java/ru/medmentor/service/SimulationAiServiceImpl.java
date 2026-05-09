@@ -2,41 +2,65 @@ package ru.medmentor.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import ru.medmentor.config.RagProperties;
 import ru.medmentor.model.ConversationMessage;
 import ru.medmentor.model.MedicalCase;
 import ru.medmentor.model.MedicalCaseFacts;
+import ru.medmentor.service.prompt.LlmPrompt;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class SimulationAiServiceImpl implements SimulationAiService {
 
+    /**
+     * Audit logger for everything the LLM sees except the fixed system templates.
+     * Toggle to DEBUG via `logging.level.ru.medmentor.audit.prompt=DEBUG` (or the
+     * grouped `ru.medmentor.audit` family).
+     */
+    private static final Logger promptAudit = LoggerFactory.getLogger("ru.medmentor.audit.prompt");
+
+    /**
+     * Audit logger for the model's full response. Streaming responses are buffered
+     * locally and emitted as one log entry on completion (no per-chunk noise).
+     * Toggle to DEBUG via `logging.level.ru.medmentor.audit.response=DEBUG` (or
+     * the grouped `ru.medmentor.audit` family).
+     */
+    private static final Logger responseAudit = LoggerFactory.getLogger("ru.medmentor.audit.response");
+
     private final ChatClient chatClient;
     private final PromptTemplateService promptTemplateService;
     private final RagSearchService ragSearchService;
+    private final RagProperties ragProperties;
     private final ObjectMapper objectMapper;
 
     public SimulationAiServiceImpl(
             ChatClient chatClient,
             PromptTemplateService promptTemplateService,
             RagSearchService ragSearchService,
+            RagProperties ragProperties,
             ObjectMapper objectMapper
     ) {
         this.chatClient = chatClient;
         this.promptTemplateService = promptTemplateService;
         this.ragSearchService = ragSearchService;
+        this.ragProperties = ragProperties;
         this.objectMapper = objectMapper;
     }
 
     @Override
     public String generateOpeningMessage(MedicalCase medicalCase) {
-        return callText(buildOpeningPrompt(medicalCase, warning -> { }));
+        return callText("opening", buildOpeningPrompt(medicalCase, warning -> { }));
     }
 
     @Override
@@ -46,7 +70,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
 
     @Override
     public Flux<String> streamOpeningMessage(MedicalCase medicalCase, Consumer<String> warningSink) {
-        return streamText(buildOpeningPrompt(medicalCase, warningSink));
+        return streamText("opening", buildOpeningPrompt(medicalCase, warningSink));
     }
 
     @Override
@@ -55,7 +79,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             List<ConversationMessage> conversationHistory,
             String doctorMessage
     ) {
-        return callText(buildReplyPrompt(medicalCase, conversationHistory, doctorMessage, warning -> { }));
+        return callText("reply", buildReplyPrompt(medicalCase, conversationHistory, doctorMessage, warning -> { }));
     }
 
     @Override
@@ -74,7 +98,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             String doctorMessage,
             Consumer<String> warningSink
     ) {
-        return streamText(buildReplyPrompt(medicalCase, conversationHistory, doctorMessage, warningSink));
+        return streamText("reply", buildReplyPrompt(medicalCase, conversationHistory, doctorMessage, warningSink));
     }
 
     @Override
@@ -84,7 +108,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             String doctorMessage,
             Consumer<String> warningSink
     ) {
-        return streamText(buildExaminationFindingPrompt(medicalCase, conversationHistory, doctorMessage, warningSink));
+        return streamText("examination-finding", buildExaminationFindingPrompt(medicalCase, conversationHistory, doctorMessage, warningSink));
     }
 
     @Override
@@ -95,46 +119,16 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             String selectedDiagnosisRationale,
             Integer selectedDiagnosisConfidence
     ) {
-        final String ragContext = ragSearchService.buildPromptContext(
-                buildScoreRagQuery(medicalCase, conversationHistory, selectedDiagnosis)
+        final String rawResponse = callText(
+                "score-review",
+                buildScoreReviewPrompt(
+                        medicalCase,
+                        conversationHistory,
+                        selectedDiagnosis,
+                        selectedDiagnosisRationale,
+                        selectedDiagnosisConfidence
+                )
         );
-        final String rationaleSection = selectedDiagnosisRationale == null || selectedDiagnosisRationale.isBlank()
-                ? "(not provided)"
-                : selectedDiagnosisRationale.trim();
-        final String confidenceSection = selectedDiagnosisConfidence == null
-                ? "(not provided)"
-                : selectedDiagnosisConfidence + "%";
-        final String prompt = """
-                %s
-
-                Case data:
-                %s
-
-                Relevant clinical recommendations:
-                %s
-
-                Selected diagnosis:
-                %s
-
-                Doctor's rationale:
-                %s
-
-                Doctor's self-reported confidence:
-                %s
-
-                Conversation (each doctor message is labelled with its 1-based `doctor turn N`
-                index; reference these N values verbatim in the `turn` field of `keyTurns`):
-                %s
-                """.formatted(
-                promptTemplateService.getScoreReviewPrompt(),
-                formatCase(medicalCase),
-                ragContext.isBlank() ? "(none)" : ragContext,
-                selectedDiagnosis,
-                rationaleSection,
-                confidenceSection,
-                formatConversationWithTurnIndex(conversationHistory)
-        );
-        final String rawResponse = callText(prompt);
         return parseScorePayload(rawResponse);
     }
 
@@ -150,7 +144,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
         final StringBuilder builder = new StringBuilder();
         int doctorTurn = 0;
         for (ConversationMessage message : conversationHistory) {
-            if (builder.length() > 0) {
+            if (!builder.isEmpty()) {
                 builder.append('\n');
             }
             switch (message.getRole()) {
@@ -166,23 +160,50 @@ public class SimulationAiServiceImpl implements SimulationAiService {
         return builder.toString();
     }
 
-    private String callText(String prompt) {
+    private String callText(String promptKind, LlmPrompt prompt) {
+        auditPrompt(promptKind, prompt);
         final String response = chatClient.prompt()
-                .user(prompt)
+                .user(prompt.forLlm())
                 .call()
                 .content();
         if (response == null || response.isBlank()) {
             throw new IllegalStateException("AI returned an empty response");
         }
-        return response.trim();
+        final String trimmed = response.trim();
+        auditResponse(promptKind, trimmed);
+        return trimmed;
     }
 
-    private Flux<String> streamText(String prompt) {
+    private Flux<String> streamText(String promptKind, LlmPrompt prompt) {
+        auditPrompt(promptKind, prompt);
+        final StringBuilder accumulator = new StringBuilder();
         return chatClient.prompt()
-                .user(prompt)
+                .user(prompt.forLlm())
                 .stream()
                 .content()
-                .filter(chunk -> chunk != null && !chunk.isEmpty());
+                .filter(chunk -> chunk != null && !chunk.isEmpty())
+                .doOnNext(accumulator::append)
+                .doOnComplete(() -> auditResponse(promptKind, accumulator.toString()))
+                .doOnError(error -> auditResponseError(promptKind, accumulator.toString(), error));
+    }
+
+    private void auditPrompt(String promptKind, LlmPrompt prompt) {
+        if (promptAudit.isDebugEnabled()) {
+            promptAudit.debug("LLM prompt [{}] (system templates omitted):\n{}", promptKind, prompt.forAudit());
+        }
+    }
+
+    private void auditResponse(String promptKind, String response) {
+        if (responseAudit.isDebugEnabled()) {
+            responseAudit.debug("LLM response [{}]:\n{}", promptKind, response);
+        }
+    }
+
+    private void auditResponseError(String promptKind, String partialResponse, Throwable error) {
+        if (responseAudit.isDebugEnabled()) {
+            responseAudit.debug("LLM response [{}] failed after partial output:\n{}\nError: {}",
+                    promptKind, partialResponse, error.toString());
+        }
     }
 
     private ScoreReviewPayload parseScorePayload(String rawResponse) {
@@ -216,7 +237,135 @@ public class SimulationAiServiceImpl implements SimulationAiService {
         throw new IllegalStateException("No JSON object found in score response: " + rawResponse);
     }
 
-    private String formatCase(MedicalCase medicalCase) {
+    /**
+     * Marks objective examination findings inside the symptom list. Lines starting
+     * with "при осмотре" hold values the patient cannot know first-hand (vital
+     * signs, observed status); they are stripped from the patient view and only
+     * surface in the exam-finding and review views.
+     */
+    private static final Pattern OBJECTIVE_SYMPTOM_PREFIX =
+            Pattern.compile("^\\s*при\\s+осмотре\\b", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Marks lab/instrumental records inside the history list. The patient should
+     * not volunteer these verbatim; the doctor learns them through targeted
+     * exam requests, which use the exam-finding view.
+     */
+    private static final Pattern INSTRUMENTAL_HISTORY_PREFIX = Pattern.compile(
+            "^\\s*(ЭКГ|ЭхоКГ|КТ|МРТ|УЗИ|Рентген|тропонин|электролит|общий\\s+анализ|биохимический\\s+анализ|биохимия)\\b",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    private record SplitFacts(
+            List<String> subjectiveSymptoms,
+            List<String> objectiveSymptoms,
+            List<String> anamnesisHistory,
+            List<String> instrumentalHistory,
+            List<String> negatives
+    ) { }
+
+    /**
+     * Partitions facts into "what the patient could naturally know and say" and
+     * "what is only revealed by an exam or workup". Uses simple prefix patterns
+     * agreed for the case format; entries that do not match a marker default to
+     * the patient-visible buckets so the partitioning is fail-open (never
+     * accidentally hides anamnesis from the patient view).
+     */
+    private SplitFacts splitFacts(MedicalCaseFacts facts) {
+        final List<String> subjectiveSymptoms = new ArrayList<>();
+        final List<String> objectiveSymptoms = new ArrayList<>();
+        for (String entry : facts.symptoms()) {
+            if (OBJECTIVE_SYMPTOM_PREFIX.matcher(entry).find()) {
+                objectiveSymptoms.add(entry);
+            } else {
+                subjectiveSymptoms.add(entry);
+            }
+        }
+        final List<String> anamnesisHistory = new ArrayList<>();
+        final List<String> instrumentalHistory = new ArrayList<>();
+        for (String entry : facts.history()) {
+            if (INSTRUMENTAL_HISTORY_PREFIX.matcher(entry).find()) {
+                instrumentalHistory.add(entry);
+            } else {
+                anamnesisHistory.add(entry);
+            }
+        }
+        return new SplitFacts(
+                subjectiveSymptoms,
+                objectiveSymptoms,
+                anamnesisHistory,
+                instrumentalHistory,
+                facts.negatives()
+        );
+    }
+
+    /**
+     * Patient-facing view of the case. Hides everything the patient could not
+     * plausibly know (objective exam findings, lab/instrumental records) and
+     * everything that would leak the answer (diagnosisOptions, correctDiagnosis,
+     * meta fields). Used by opening and reply prompts.
+     */
+    private String formatCaseForPatient(MedicalCase medicalCase) {
+        final SplitFacts split = splitFacts(medicalCase.facts());
+        return """
+                patientName: %s
+                patientAge: %d
+                patientSex: %s
+                patientBrief: %s
+                openingComplaint: %s
+                authorNote: %s
+                symptoms: %s
+                history: %s
+                negatives: %s
+                """.formatted(
+                medicalCase.patientName(),
+                medicalCase.patientAge(),
+                medicalCase.patientSex(),
+                medicalCase.patientBrief(),
+                medicalCase.openingComplaint(),
+                medicalCase.authorNote(),
+                String.join(", ", split.subjectiveSymptoms()),
+                String.join(", ", split.anamnesisHistory()),
+                String.join(", ", split.negatives())
+        );
+    }
+
+    /**
+     * Exam-finding view of the case. Same as the patient view PLUS the objective
+     * exam findings and lab/instrumental records (which are exactly the data the
+     * physical-exam prompt is supposed to surface to the doctor). Still hides
+     * diagnosisOptions and correctDiagnosis to avoid biasing the finding text.
+     */
+    private String formatCaseForExamFinding(MedicalCase medicalCase) {
+        final SplitFacts split = splitFacts(medicalCase.facts());
+        return """
+                patientName: %s
+                patientAge: %d
+                patientSex: %s
+                patientBrief: %s
+                openingComplaint: %s
+                authorNote: %s
+                symptoms: %s
+                history: %s
+                negatives: %s
+                """.formatted(
+                medicalCase.patientName(),
+                medicalCase.patientAge(),
+                medicalCase.patientSex(),
+                medicalCase.patientBrief(),
+                medicalCase.openingComplaint(),
+                medicalCase.authorNote(),
+                String.join(", ", medicalCase.facts().symptoms()),
+                String.join(", ", medicalCase.facts().history()),
+                String.join(", ", split.negatives())
+        );
+    }
+
+    /**
+     * Review view of the case. Full ground truth — including diagnosisOptions and
+     * correctDiagnosis — so the scoring LLM can grade the doctor's reasoning.
+     */
+    private String formatCaseForReview(MedicalCase medicalCase) {
         final MedicalCaseFacts facts = medicalCase.facts();
         return """
                 id: %s
@@ -251,91 +400,108 @@ public class SimulationAiServiceImpl implements SimulationAiService {
         );
     }
 
-    private String buildOpeningPrompt(MedicalCase medicalCase, Consumer<String> warningSink) {
-        final String ragContext = ragSearchService.buildPromptContext(buildOpeningRagQuery(medicalCase), warningSink);
-        return """
-                %s
-
-                Case data:
-                %s
-
-                Relevant clinical recommendations:
-                %s
-
-                Instructions:
-                %s
-                """.formatted(
-                promptTemplateService.getPatientRolePrompt(),
-                formatCase(medicalCase),
-                ragContext.isBlank() ? "(none)" : ragContext,
-                promptTemplateService.getSessionOpeningPrompt()
+    private LlmPrompt buildOpeningPrompt(MedicalCase medicalCase, Consumer<String> warningSink) {
+        final String ragContext = ragSearchService.buildPromptContext(
+                "opening",
+                buildOpeningRagQuery(medicalCase),
+                warningSink
         );
+        return LlmPrompt.builder()
+                .system(promptTemplateService.getPatientRolePrompt())
+                .section("Case data", formatCaseForPatient(medicalCase))
+                .section("Relevant clinical recommendations", ragContext.isBlank() ? "(none)" : ragContext)
+                .system("Instructions", promptTemplateService.getSessionOpeningPrompt())
+                .build();
     }
 
-    private String buildReplyPrompt(
+    private LlmPrompt buildReplyPrompt(
             MedicalCase medicalCase,
             List<ConversationMessage> conversationHistory,
             String doctorMessage,
             Consumer<String> warningSink
     ) {
         final String ragContext = ragSearchService.buildPromptContext(
+                "reply",
                 buildReplyRagQuery(medicalCase, conversationHistory, doctorMessage),
                 warningSink
         );
-        return """
-                %s
-
-                Case data:
-                %s
-
-                Relevant clinical recommendations:
-                %s
-
-                Conversation so far:
-                %s
-
-                Latest doctor message:
-                %s
-                """.formatted(
-                promptTemplateService.getPatientRolePrompt(),
-                formatCase(medicalCase),
-                ragContext.isBlank() ? "(none)" : ragContext,
-                formatConversation(conversationHistory),
-                doctorMessage
-        );
+        return LlmPrompt.builder()
+                .system(promptTemplateService.getPatientRolePrompt())
+                .section("Case data", formatCaseForPatient(medicalCase))
+                .section("Relevant clinical recommendations", ragContext.isBlank() ? "(none)" : ragContext)
+                .section("Conversation so far", formatConversation(conversationHistory))
+                .section("Latest doctor message", doctorMessage)
+                .build();
     }
 
-    private String buildExaminationFindingPrompt(
+    private LlmPrompt buildExaminationFindingPrompt(
             MedicalCase medicalCase,
             List<ConversationMessage> conversationHistory,
             String doctorMessage,
             Consumer<String> warningSink
     ) {
         final String ragContext = ragSearchService.buildPromptContext(
+                "examination-finding",
                 buildExaminationFindingRagQuery(medicalCase, conversationHistory, doctorMessage),
                 warningSink
         );
-        return """
-                %s
+        return LlmPrompt.builder()
+                .system(promptTemplateService.getExaminationFindingPrompt())
+                .section("Case data", formatCaseForExamFinding(medicalCase))
+                .section("Relevant clinical recommendations", ragContext.isBlank() ? "(none)" : ragContext)
+                .section("Conversation so far", formatConversation(conversationHistory))
+                .section("Targeted maneuver requested by the doctor", doctorMessage)
+                .build();
+    }
 
-                Case data:
-                %s
-
-                Relevant clinical recommendations:
-                %s
-
-                Conversation so far:
-                %s
-
-                Targeted maneuver requested by the doctor:
-                %s
-                """.formatted(
-                promptTemplateService.getExaminationFindingPrompt(),
-                formatCase(medicalCase),
-                ragContext.isBlank() ? "(none)" : ragContext,
-                formatConversation(conversationHistory),
-                doctorMessage
+    private LlmPrompt buildScoreReviewPrompt(
+            MedicalCase medicalCase,
+            List<ConversationMessage> conversationHistory,
+            String selectedDiagnosis,
+            String selectedDiagnosisRationale,
+            Integer selectedDiagnosisConfidence
+    ) {
+        final String ragContext = ragSearchService.buildPromptContext(
+                "score-review",
+                buildScoreRagQuery(medicalCase, conversationHistory, selectedDiagnosis)
         );
+        final String rationaleSection = selectedDiagnosisRationale == null || selectedDiagnosisRationale.isBlank()
+                ? "(not provided)"
+                : selectedDiagnosisRationale.trim();
+        final String confidenceSection = selectedDiagnosisConfidence == null
+                ? "(not provided)"
+                : selectedDiagnosisConfidence + "%";
+        final String conversationHeader = "Conversation (each doctor message is labelled with its 1-based `doctor turn N`\n"
+                + "index; reference these N values verbatim in the `turn` field of `keyTurns`)";
+        return LlmPrompt.builder()
+                .system(promptTemplateService.getScoreReviewPrompt())
+                .section("Case data", formatCaseForReview(medicalCase))
+                .section("Relevant clinical recommendations", ragContext.isBlank() ? "(none)" : ragContext)
+                .section("Selected diagnosis", selectedDiagnosis)
+                .section("Doctor's rationale", rationaleSection)
+                .section("Doctor's self-reported confidence", confidenceSection)
+                .section(conversationHeader, formatConversationWithTurnIndex(conversationHistory))
+                .build();
+    }
+
+    /**
+     * Front-loads the embedding query with the case's correct diagnosis (repeated
+     * `medmentor.rag.diagnosis-query-weight` times) followed by the full diagnosis
+     * options list. The repetition is the standard heuristic for biasing dense
+     * embeddings toward a specific term when the embedder has no native term
+     * weights. The string never reaches the LLM — it is only used to build the
+     * embedding vector for vector-store similarity search.
+     */
+    private String buildDiagnosisRagHeader(MedicalCase medicalCase) {
+        final int weight = Math.max(1, ragProperties.getDiagnosisQueryWeight());
+        final StringBuilder header = new StringBuilder();
+        for (int i = 0; i < weight; i++) {
+            header.append(medicalCase.correctDiagnosis()).append('\n');
+        }
+        header.append("Possible diagnoses: ")
+                .append(String.join(", ", medicalCase.diagnosisOptions()))
+                .append("\n\n");
+        return header.toString();
     }
 
     private String buildExaminationFindingRagQuery(
@@ -344,14 +510,13 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             String doctorMessage
     ) {
         final MedicalCaseFacts facts = medicalCase.facts();
-        return """
+        return buildDiagnosisRagHeader(medicalCase) + """
                 targeted physical examination finding
                 patient age: %d
                 patient sex: %s
                 symptoms: %s
                 history: %s
                 negatives: %s
-                possible diagnoses: %s
                 doctor maneuver: %s
                 conversation summary:
                 %s
@@ -361,7 +526,6 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 String.join(", ", facts.symptoms()),
                 String.join(", ", facts.history()),
                 String.join(", ", facts.negatives()),
-                String.join(", ", medicalCase.diagnosisOptions()),
                 doctorMessage,
                 formatConversation(conversationHistory)
         );
@@ -369,7 +533,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
 
     private String buildOpeningRagQuery(MedicalCase medicalCase) {
         final MedicalCaseFacts facts = medicalCase.facts();
-        return """
+        return buildDiagnosisRagHeader(medicalCase) + """
                 opening patient interaction
                 patient age: %d
                 patient sex: %s
@@ -377,15 +541,13 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 symptoms: %s
                 history: %s
                 negatives: %s
-                possible diagnoses: %s
                 """.formatted(
                 medicalCase.patientAge(),
                 medicalCase.patientSex(),
                 medicalCase.openingComplaint(),
                 String.join(", ", facts.symptoms()),
                 String.join(", ", facts.history()),
-                String.join(", ", facts.negatives()),
-                String.join(", ", medicalCase.diagnosisOptions())
+                String.join(", ", facts.negatives())
         );
     }
 
@@ -395,7 +557,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             String doctorMessage
     ) {
         final MedicalCaseFacts facts = medicalCase.facts();
-        return """
+        return buildDiagnosisRagHeader(medicalCase) + """
                 patient follow-up interaction
                 patient age: %d
                 patient sex: %s

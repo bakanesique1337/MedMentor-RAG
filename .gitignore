@@ -6,6 +6,8 @@ build/
 .Trashes
 ehthumbs.db
 Thumbs.db
+.playwright-mcp/
+.claude
 
 ### IntelliJ IDEA ###
 .idea
@@ -22,3 +24,6 @@ data/
 
 ### Environment variables ###
 .env
+
+### RAG Data ###
+rag-data/*

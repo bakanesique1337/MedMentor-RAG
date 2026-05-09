@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(bun run:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(./gradlew compileJava)",
+      "Bash(./gradlew test *)"
     ]
   },
   "enabledPlugins": {

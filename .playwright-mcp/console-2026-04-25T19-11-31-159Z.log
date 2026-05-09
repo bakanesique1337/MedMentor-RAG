@@ -1,3 +1,0 @@
-[     141ms] [LOG] 🍍 "authGate" store installed 🆕 @ http://localhost:5173/node_modules/.vite/deps/pinia.js?v=d5e2d3de:4415
-[   42329ms] [LOG] 🍍 "sidebar" store installed 🆕 @ http://localhost:5173/node_modules/.vite/deps/pinia.js?v=d5e2d3de:4415
-[   42334ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8080/api/simulations/active:0

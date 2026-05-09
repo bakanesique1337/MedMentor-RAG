@@ -18,6 +18,14 @@ public class RagSearchService {
 
     private static final Logger log = LoggerFactory.getLogger(RagSearchService.class);
 
+    /**
+     * Audit logger for the exact text that flows in and out of the vector store
+     * for each prompt build. Toggle to DEBUG via
+     * `logging.level.ru.medmentor.audit.rag=DEBUG` (or the grouped
+     * `ru.medmentor.audit` family).
+     */
+    private static final Logger ragAudit = LoggerFactory.getLogger("ru.medmentor.audit.rag");
+
     private final RagProperties ragProperties;
     private final VectorStore vectorStore;
 
@@ -27,6 +35,15 @@ public class RagSearchService {
     }
 
     public List<Document> search(String query, Integer topKOverride) {
+        return search(query, topKOverride, ragProperties.getSimilarityThreshold());
+    }
+
+    /**
+     * Variant that lets the caller override the similarity threshold. Used by the
+     * diagnostic re-query in {@link #buildPromptContext(String, String, Consumer)}
+     * to surface near-misses when the configured threshold rejects everything.
+     */
+    private List<Document> search(String query, Integer topKOverride, double threshold) {
         if (!ragProperties.isEnabled()) {
             return List.of();
         }
@@ -38,7 +55,7 @@ public class RagSearchService {
         final SearchRequest searchRequest = SearchRequest.builder()
                 .query(truncateQuery(query.trim()))
                 .topK(topK)
-                .similarityThresholdAll()
+                .similarityThreshold(threshold)
                 .build();
         return vectorStore.similaritySearch(searchRequest);
     }
@@ -52,25 +69,74 @@ public class RagSearchService {
         return query.substring(0, maxChars);
     }
 
-    public String buildPromptContext(String query) {
-        return buildPromptContext(query, warning -> { });
+    public String buildPromptContext(String promptKind, String query) {
+        return buildPromptContext(promptKind, query, warning -> { });
     }
 
-    public String buildPromptContext(String query, Consumer<String> warningSink) {
+    /**
+     * Run a RAG search and render the retrieved chunks as a single prompt-ready
+     * context string. Both the query text and the rendered context are emitted
+     * at DEBUG on the {@code ru.medmentor.audit.rag} logger, so enabling that
+     * logger gives a 1:1 view of what the LLM ends up seeing in the
+     * `Relevant clinical recommendations` block.
+     *
+     * @param promptKind short label distinguishing where this call comes from
+     *                   (e.g. "opening", "reply", "score-review"). Only used
+     *                   in audit logs to correlate with the LLM prompt audit.
+     */
+    public String buildPromptContext(String promptKind, String query, Consumer<String> warningSink) {
+        final double threshold = ragProperties.getSimilarityThreshold();
+        if (ragAudit.isDebugEnabled()) {
+            ragAudit.debug("RAG query [{}] (threshold={}):\n{}", promptKind, threshold, query);
+        }
         try {
-            final List<Document> documents = search(query, null);
+            final List<Document> documents = search(query, null, threshold);
             if (documents.isEmpty()) {
+                logEmptyResultDiagnostics(promptKind, query, threshold);
                 return "";
             }
 
-            return documents.stream()
+            final String rendered = documents.stream()
                     .map(this::toPromptSnippet)
                     .collect(Collectors.joining("\n\n"));
+            if (ragAudit.isDebugEnabled()) {
+                ragAudit.debug("RAG retrieval [{}] returned {} document(s) above threshold={}:\n{}",
+                        promptKind, documents.size(), threshold, rendered);
+            }
+            return rendered;
         } catch (RuntimeException exception) {
             final String reason = exception.getMessage();
             log.warn("RAG search failed, continuing without retrieved context: {}", reason);
             warningSink.accept("RAG search failed: " + reason);
             return "";
+        }
+    }
+
+    /**
+     * When the configured threshold rejects every chunk, repeat the search with
+     * threshold=0 so the audit log shows "what almost made it" together with the
+     * actual scores. This is the cheapest way to tell whether the threshold is
+     * too strict, the query is poor, or the corpus genuinely lacks the topic —
+     * without changing application config.
+     */
+    private void logEmptyResultDiagnostics(String promptKind, String query, double threshold) {
+        if (!ragAudit.isDebugEnabled()) {
+            return;
+        }
+        try {
+            final List<Document> nearMisses = search(query, null, 0.0);
+            if (nearMisses.isEmpty()) {
+                ragAudit.debug("RAG retrieval [{}] returned 0 documents and diagnostic re-query (threshold=0) also returned 0 — corpus may be empty or query empty", promptKind);
+                return;
+            }
+            final String rendered = nearMisses.stream()
+                    .map(this::toPromptSnippetWithScore)
+                    .collect(Collectors.joining("\n\n"));
+            ragAudit.debug("RAG retrieval [{}] returned 0 documents above threshold={}. Diagnostic top-{} (threshold=0):\n{}",
+                    promptKind, threshold, nearMisses.size(), rendered);
+        } catch (RuntimeException diagnosticException) {
+            ragAudit.debug("RAG retrieval [{}] returned 0 documents and diagnostic re-query failed: {}",
+                    promptKind, diagnosticException.getMessage());
         }
     }
 
@@ -88,6 +154,28 @@ public class RagSearchService {
         final String chunkIndex = String.valueOf(metadata.getOrDefault("chunkIndex", "?"));
         final String chunkText = trimForPrompt(document.getText());
         return "[source=%s chunk=%s]\n%s".formatted(sourcePath, chunkIndex, chunkText);
+    }
+
+    /**
+     * Snippet renderer for diagnostic logs. Same as {@link #toPromptSnippet} but
+     * also surfaces the cosine similarity (derived from the `distance` metadata
+     * key Spring AI's pgvector store sets after `similaritySearch`). Helps
+     * eyeballing whether the configured threshold is in the right ballpark.
+     */
+    private String toPromptSnippetWithScore(Document document) {
+        final Map<String, Object> metadata = document.getMetadata();
+        final String sourcePath = String.valueOf(metadata.getOrDefault("sourcePath", "unknown"));
+        final String chunkIndex = String.valueOf(metadata.getOrDefault("chunkIndex", "?"));
+        final Object distanceRaw = metadata.get("distance");
+        final String scoreLabel;
+        if (distanceRaw instanceof Number distance) {
+            final double similarity = 1.0 - distance.doubleValue();
+            scoreLabel = String.format("similarity=%.3f", similarity);
+        } else {
+            scoreLabel = "similarity=n/a";
+        }
+        final String chunkText = trimForPrompt(document.getText());
+        return "[%s source=%s chunk=%s]\n%s".formatted(scoreLabel, sourcePath, chunkIndex, chunkText);
     }
 
     private String trimForPrompt(String value) {
