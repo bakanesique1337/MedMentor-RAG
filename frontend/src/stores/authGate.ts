@@ -6,6 +6,7 @@ import { useAuthApi } from '@/composables/api/useAuthApi'
 import { onUnauthorized } from '@/composables/shared/authBus'
 import { HTTP_STATUS_UNAUTHORIZED } from '@/constants/http'
 import { ROUTES } from '@/constants/routes'
+import { useUserProfileStore } from '@/stores/userProfile'
 import type { ApiError, AuthLoginRequest, AuthUser } from '@/types'
 import { isApiError } from '@/utils/typeGuards'
 
@@ -127,6 +128,7 @@ export const useAuthGateStore = defineStore('authGate', () => {
         bootstrapError.value = null
         bootstrapPromise = null
         persistHint({ isAuthenticated: false, username: '' })
+        useUserProfileStore().reset()
     }
 
     // -----------------------------------------------------------------------

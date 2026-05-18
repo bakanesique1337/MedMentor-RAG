@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import { avatarGradient, DEFAULT_AVATAR_VARIANT } from '@/constants/avatar'
 import type { AvatarVariant } from '@/types'
 
 interface Props {
@@ -11,17 +12,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     size: 120,
-    variant: 'teal',
+    variant: DEFAULT_AVATAR_VARIANT,
 })
-
-const VARIANTS: Record<AvatarVariant, [string, string]> = {
-    teal: ['#3fb9b3', '#0d7377'],
-    sand: ['#e8c98a', '#b58a4e'],
-    rose: ['#e8b0a6', '#c77566'],
-    violet: ['#c5b8de', '#7a6da0'],
-    mint: ['#b8d8d5', '#4a8a85'],
-    sky: ['#a8c8d5', '#5a8ba3'],
-}
 
 const initials = computed<string>(() => {
     const parts = props.name.trim().split(/\s+/).slice(0, 2)
@@ -30,13 +22,12 @@ const initials = computed<string>(() => {
 })
 
 const containerStyle = computed(() => {
-    const [from, to] = VARIANTS[props.variant]
     const radius = props.size * 0.16
 
     return {
         width: `${props.size / 10}rem`,
         height: `${props.size / 10}rem`,
-        background: `linear-gradient(135deg, ${from} 0%, ${to} 100%)`,
+        background: avatarGradient(props.variant),
         borderRadius: `${radius / 10}rem`,
     }
 })

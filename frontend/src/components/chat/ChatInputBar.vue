@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { nextTick, ref, useTemplateRef, watch } from 'vue'
+import {nextTick, ref, useTemplateRef, watch} from 'vue'
 
-import type { SimulationQuickPrompt } from '@/constants/simulationQuickPrompts'
+import type {SimulationQuickPrompt} from '@/constants/simulationQuickPrompts'
 
 const COPY = {
     quickPromptsHint: 'Подсказки ↴',
@@ -9,8 +9,7 @@ const COPY = {
     sending: 'Отправка...',
     send: 'Отправить',
     keyboardHint: 'Enter — отправить · Shift + Enter — новая строка',
-    examplePrompt: 'Пример: пропальпируйте подмышечные лимфоузлы',
-    versionTag: 'MedMentor-RAG v1.2',
+    versionTag: 'MedMentor-RAG v0.5',
 } as const
 
 interface Props {
@@ -79,18 +78,18 @@ function handleKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
-    <div class="shrink-0 border-t border-[color:var(--color-line-2)] bg-surface-base px-[2.4rem] pb-[1.6rem] pt-[1.2rem]">
-        <div class="mx-auto w-full max-w-[84rem]">
-            <div class="mb-[1rem] flex flex-wrap items-center gap-[0.6rem]">
+    <div class="shrink-0 border-t border-(--color-line-2) bg-surface-base px-[2.4rem] pb-[1.6rem] pt-[1.2rem]">
+        <div class="mx-auto w-full max-w-336">
+            <div class="mb-4 flex flex-wrap items-center gap-[0.6rem]">
                 <span class="pr-[0.4rem] text-eyebrow-sm text-text-tertiary">{{ COPY.quickPromptsHint }}</span>
                 <button
                     v-for="prompt in quickPrompts"
                     :key="prompt.key"
                     type="button"
-                    class="rounded-full border px-[1rem] py-[0.5rem] text-[1.2rem] font-medium transition disabled:opacity-60"
+                    class="rounded-full border px-4 py-2 text-[1.2rem] font-medium transition disabled:opacity-60"
                     :class="prompt.action === 'exam'
-                        ? 'border-[color:var(--color-teal-deep)] bg-brand text-white hover:bg-brand-deep'
-                        : 'border-[color:var(--color-teal-soft)] bg-brand-ghost text-brand-deep hover:bg-brand-soft'"
+                        ? 'border-(--color-teal-deep) bg-brand text-white hover:bg-brand-deep'
+                        : 'border-(--color-teal-soft) bg-brand-ghost text-brand-deep hover:bg-brand-soft'"
                     :disabled="disabled"
                     @click="handleQuickPrompt(prompt)"
                 >
@@ -98,19 +97,21 @@ function handleKeydown(event: KeyboardEvent): void {
                 </button>
             </div>
 
-            <div class="flex items-center gap-[1rem] rounded-[1.2rem] border border-[color:var(--color-line-2)] bg-white px-[1.2rem] py-[1rem] shadow-[0_2px_10px_rgb(10_31_31_/_0.04)]">
+            <div
+                class="flex items-center gap-4 rounded-[1.2rem] border border-(--color-line-2) bg-white px-[1.2rem] py-4 shadow-[0_2px_10px_rgb(10_31_31/0.04)]"
+            >
                 <textarea
                     ref="textareaRef"
                     v-model="message"
                     :placeholder="COPY.placeholder"
                     rows="1"
-                    class="min-h-[2.2rem] max-h-[16rem] min-w-0 flex-1 resize-none border-0 bg-transparent p-0 text-[1.4rem] leading-[1.5] text-text-primary outline-none placeholder:text-text-tertiary"
+                    class="min-h-[2.2rem] max-h-64 min-w-0 flex-1 resize-none border-0 bg-transparent p-0 text-[1.4rem] leading-normal text-text-primary outline-none placeholder:text-text-tertiary"
                     :disabled="disabled"
                     @keydown="handleKeydown"
                 />
                 <button
                     type="button"
-                    class="inline-flex h-[3.4rem] items-center gap-[0.6rem] rounded-[0.7rem] bg-brand px-[1.4rem] text-[1.25rem] font-medium text-white shadow-primary transition hover:bg-brand-deep disabled:opacity-50"
+                    class="inline-flex h-[3.4rem] items-center gap-[0.6rem] rounded-sm bg-brand px-[1.4rem] text-[1.25rem] font-medium text-white shadow-primary transition hover:bg-brand-deep disabled:opacity-50"
                     :disabled="disabled || isSendPending || message.trim() === ''"
                     @click="handleSend"
                 >
@@ -121,22 +122,25 @@ function handleKeydown(event: KeyboardEvent): void {
                             width="10"
                             height="10"
                             viewBox="0 0 10 10"
-                        ><path
-                            d="M1 5h8M6 2l3 3-3 3"
-                            stroke="currentColor"
-                            stroke-width="1.3"
-                            fill="none"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        /></svg>
+                        >
+                            <path
+                                d="M1 5h8M6 2l3 3-3 3"
+                                stroke="currentColor"
+                                stroke-width="1.3"
+                                fill="none"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
                     </template>
                 </button>
             </div>
 
-            <div class="mt-[0.6rem] flex flex-wrap items-center justify-between gap-x-[1.2rem] gap-y-[0.2rem] text-[1.05rem] text-text-tertiary">
+            <div
+                class="mt-[0.6rem] flex flex-wrap items-center justify-between gap-x-[1.2rem] gap-y-[0.2rem] text-[1.05rem] text-text-tertiary"
+            >
                 <span class="flex flex-wrap items-center gap-x-[1.2rem] gap-y-[0.2rem]">
                     <span>{{ COPY.keyboardHint }}</span>
-                    <span class="text-text-tertiary/80">{{ COPY.examplePrompt }}</span>
                 </span>
                 <span class="font-mono">{{ COPY.versionTag }}</span>
             </div>

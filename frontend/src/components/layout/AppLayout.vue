@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import PageTransition from '@/components/common/PageTransition.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import { ROUTES } from '@/constants/routes'
+import { useUserProfileStore } from '@/stores/userProfile'
 
 const SIDEBAR_KEY = 'mm_sidebar_collapsed'
 const SIDEBAR_WIDTH_EXPANDED = '24.8rem'
@@ -12,6 +13,7 @@ const SIDEBAR_WIDTH_COLLAPSED = '6.4rem'
 
 const route = useRoute()
 const collapsed = ref(false)
+const userProfile = useUserProfileStore()
 
 /**
  * The chat view renders its own context-rich sidebar (`ChatSidebar`),
@@ -27,6 +29,8 @@ const sidebarWrapperWidth = computed(() => (showGlobalSidebar.value ? sidebarWid
 onMounted(() => {
     const stored = window.localStorage.getItem(SIDEBAR_KEY)
     if (stored === '1') collapsed.value = true
+
+    userProfile.loadSettings().catch(() => undefined)
 })
 
 function handleCollapse(value: boolean): void {

@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import {computed} from 'vue'
 
 import DifficultyPips from '@/components/common/DifficultyPips.vue'
 import MmArrow from '@/components/common/MmArrow.vue'
 import PatientAvatar from '@/components/common/PatientAvatar.vue'
 import VSpinner from '@/components/ui/VSpinner.vue'
-import { categoryDisplayLabel } from '@/constants/caseCategories'
-import type { CaseCard } from '@/types'
+import {categoryDisplayLabel} from '@/constants/caseCategories'
+import type {CaseCard} from '@/types'
 
 const COPY = {
     yearsSuffix: 'л.',
     starting: 'Открываем...',
     resumeAction: 'Продолжить',
-    startAction: 'Начать кейс',
+    startAction: 'Начать задачу',
 } as const
 
 const SEX_LABEL = {
@@ -91,19 +91,19 @@ function handleStart(): void {
         </p>
 
         <div class="flex items-center justify-between gap-[0.8rem] border-t border-[color:var(--color-line)] pt-[1rem]">
-            <DifficultyPips :level="caseData.difficulty" />
+            <DifficultyPips :level="caseData.difficulty"/>
             <span class="flex items-center gap-[0.4rem] text-[1.2rem] font-medium text-brand">
                 <template v-if="isStartPending">
-                    <VSpinner size="sm" />
+                    <VSpinner size="sm"/>
                     {{ COPY.starting }}
                 </template>
                 <template v-else-if="isActive">
                     {{ COPY.resumeAction }}
-                    <MmArrow :size="12" />
+                    <MmArrow :size="12"/>
                 </template>
                 <template v-else>
                     {{ COPY.startAction }}
-                    <MmArrow :size="12" />
+                    <MmArrow :size="12"/>
                 </template>
             </span>
         </div>

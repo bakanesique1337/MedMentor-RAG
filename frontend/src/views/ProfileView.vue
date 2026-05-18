@@ -17,6 +17,7 @@ import { useCasesApi } from '@/composables/api/useCasesApi'
 import { useProfileApi } from '@/composables/api/useProfileApi'
 import { ROUTES } from '@/constants/routes'
 import { useAuthGateStore } from '@/stores/authGate'
+import { useUserProfileStore } from '@/stores/userProfile'
 import type {
     AvatarVariant,
     CaseCard,
@@ -81,6 +82,7 @@ const router = useRouter()
 const profileApi = useProfileApi()
 const casesApi = useCasesApi()
 const authGate = useAuthGateStore()
+const userProfile = useUserProfileStore()
 
 const userSettings = ref<UserSettings | null>(null)
 const stats = ref<SimulationStatsOverview | null>(null)
@@ -202,6 +204,7 @@ async function fetchProfileData(): Promise<void> {
         stats.value = statsResult
         historyList.value = historyResult
         casesList.value = casesResult
+        userProfile.setSettings(settingsResult)
         seedFormFromSettings(settingsResult)
     } catch {
         loadError.value = 'Не удалось загрузить профиль. Попробуйте обновить страницу.'
@@ -296,6 +299,7 @@ async function handleSaveEdit(): Promise<void> {
     try {
         const updated = await profileApi.updateSettings(payload)
         userSettings.value = updated
+        userProfile.setSettings(updated)
         seedFormFromSettings(updated)
         savedSnapshot = null
         editing.value = false

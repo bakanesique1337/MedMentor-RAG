@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onClickOutside, onKeyStroke, useScrollLock } from '@vueuse/core'
-import { computed, ref, watch } from 'vue'
+import {onClickOutside, onKeyStroke, useScrollLock} from '@vueuse/core'
+import {computed, ref, watch} from 'vue'
 
 interface Props {
     modelValue: boolean
@@ -72,12 +72,12 @@ const CLOSE_ARIA_LABEL = 'Закрыть'
         <div
             v-if="isOpen"
             ref="containerRef"
-            class="anim-fade-in fixed inset-0 z-[100] flex items-center justify-center px-[2rem]"
+            class="anim-fade-in fixed inset-0 z-100 flex items-center justify-center px-8"
             style="background: rgb(10 31 31 / 55%); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);"
         >
             <div
                 ref="panelRef"
-                class="anim-pop-in relative flex w-full flex-col overflow-hidden rounded-[1.4rem] border border-[color:var(--color-line-2)] bg-surface-base shadow-modal"
+                class="anim-pop-in relative flex w-full flex-col overflow-hidden rounded-lg border border-(--color-line-2) bg-surface-base shadow-modal"
                 style="max-width: 46rem;"
                 role="dialog"
                 aria-modal="true"
@@ -92,7 +92,7 @@ const CLOSE_ARIA_LABEL = 'Закрыть'
 
                 <button
                     type="button"
-                    class="absolute right-[1.6rem] top-[2rem] flex size-[3rem] items-center justify-center rounded-[0.6rem] text-text-secondary hover:bg-surface-raised disabled:opacity-50"
+                    class="absolute right-[1.6rem] top-8 flex size-12 items-center justify-center rounded-[0.6rem] text-text-secondary hover:bg-surface-raised disabled:opacity-50"
                     :aria-label="CLOSE_ARIA_LABEL"
                     :disabled="isPending"
                     @click="handleCancel"
@@ -101,15 +101,17 @@ const CLOSE_ARIA_LABEL = 'Закрыть'
                         width="14"
                         height="14"
                         viewBox="0 0 14 14"
-                    ><path
-                        d="M2 2l10 10M12 2L2 12"
-                        stroke="currentColor"
-                        stroke-width="1.4"
-                        stroke-linecap="round"
-                    /></svg>
+                    >
+                        <path
+                            d="M2 2l10 10M12 2L2 12"
+                            stroke="currentColor"
+                            stroke-width="1.4"
+                            stroke-linecap="round"
+                        />
+                    </svg>
                 </button>
 
-                <div class="border-b border-[color:var(--color-line)] px-[2.4rem] pb-[1.6rem] pt-[2rem]">
+                <div class="border-b border-(--color-line) px-[2.4rem] pb-[1.6rem] pt-8">
                     <p
                         v-if="eyebrow"
                         class="text-eyebrow font-mono"
@@ -118,7 +120,8 @@ const CLOSE_ARIA_LABEL = 'Закрыть'
                         {{ eyebrow }}
                     </p>
                     <h2 class="mt-[0.6rem] font-serif text-[2.6rem] font-medium leading-[1.15] tracking-[-0.01em] text-text-primary">
-                        {{ title }}<template v-if="titleAccent">
+                        {{ title }}
+                        <template v-if="titleAccent">
                             <span style=" font-style: italic;color: var(--color-amber);"> {{ titleAccent }}</span>
                         </template>
                     </h2>
@@ -130,7 +133,7 @@ const CLOSE_ARIA_LABEL = 'Закрыть'
                     </p>
                 </div>
 
-                <div class="px-[2.4rem] pb-[2rem] pt-[1.8rem]">
+                <div class="px-[2.4rem] pb-8 pt-[1.8rem]">
                     <div
                         v-if="callout"
                         class="mb-[1.6rem] flex items-start gap-[1.2rem] rounded-[0.8rem] border px-[1.4rem] py-[1.2rem]"
@@ -176,10 +179,10 @@ const CLOSE_ARIA_LABEL = 'Закрыть'
                         </div>
                     </div>
 
-                    <div class="flex gap-[1rem]">
+                    <div class="flex gap-4">
                         <button
                             type="button"
-                            class="h-[3.8rem] flex-1 rounded-[0.7rem] border border-[color:var(--color-line-2)] bg-transparent px-[1.4rem] text-[1.3rem] font-medium text-text-primary transition hover:bg-surface-raised disabled:opacity-50"
+                            class="h-[3.8rem] flex-1 rounded-sm border border-(--color-line-2) bg-transparent px-[1.4rem] text-[1.3rem] font-medium text-text-primary transition hover:bg-surface-raised disabled:opacity-50"
                             :disabled="isPending"
                             @click="handleCancel"
                         >
@@ -187,7 +190,7 @@ const CLOSE_ARIA_LABEL = 'Закрыть'
                         </button>
                         <button
                             type="button"
-                            class="h-[3.8rem] flex-1 rounded-[0.7rem] border-none px-[1.4rem] text-[1.3rem] font-medium text-white transition disabled:opacity-50"
+                            class="h-[3.8rem] flex-1 rounded-sm border-none px-[1.4rem] text-[1.3rem] font-medium text-white transition disabled:opacity-50"
                             style="background: var(--color-amber); box-shadow: 0 4px 12px rgb(216 154 42 / 28%);"
                             :disabled="isPending"
                             @click="handleConfirm"
