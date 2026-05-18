@@ -46,12 +46,14 @@ export type SimulationCommandStatus =
     | 'OPENING_STARTED'
     | 'REPLY_STARTED'
     | 'FINDING_STARTED'
+    | 'SYSTEM_STARTED'
     | 'ABANDONED'
 
 export const SIMULATION_COMMAND_STATUS = {
     OPENING_STARTED: 'OPENING_STARTED',
     REPLY_STARTED: 'REPLY_STARTED',
     FINDING_STARTED: 'FINDING_STARTED',
+    SYSTEM_STARTED: 'SYSTEM_STARTED',
     ABANDONED: 'ABANDONED',
 } as const satisfies Record<string, SimulationCommandStatus>
 
@@ -97,12 +99,13 @@ export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyPreset> = {
     hard: {label: 'Сложный', dotCount: 3},
 }
 
-export type StreamingStatusType = 'opening' | 'message' | 'finding' | 'idle'
+export type StreamingStatusType = 'opening' | 'message' | 'finding' | 'system' | 'idle'
 
 export const STREAMING_STATUS_TYPE = {
     OPENING: 'opening',
     MESSAGE: 'message',
     FINDING: 'finding',
+    SYSTEM: 'system',
     IDLE: 'idle',
 } as const satisfies Record<string, StreamingStatusType>
 

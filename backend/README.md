@@ -1,181 +1,246 @@
-# MedMentor-RAG
+# MedMentor-RAG — Backend
 
-Medical testing AI chat application where doctors practice diagnostics. The AI emulates a patient, and the doctor must reach a correct diagnosis within 10 messages.
+Медицинское учебное приложение, в котором врачи отрабатывают диагностику: ИИ играет роль пациента,
+а врач должен поставить диагноз за ограниченное число сообщений.
 
-## Project Structure
+## Структура проекта
 
 ```text
 backend/
 ├── src/main/java/ru/medmentor/
-│   ├── config/              # Spring configuration (security, AI, websocket, properties)
-│   ├── controller/          # REST/WebSocket controllers (simulation, auth, RAG, etc.)
-│   ├── dto/                 # Request/response DTOs
-│   ├── model/               # JPA entities + domain models
-│   ├── repository/          # Spring Data repositories
-│   └── service/             # Business logic, AI orchestration, streaming, RAG pipeline
+│   ├── config/              # Spring-конфигурация (security, AI, websocket, properties)
+│   ├── controller/          # REST/WebSocket контроллеры (симуляция, auth, RAG и т.д.)
+│   ├── dto/                 # Request/response DTO
+│   ├── model/               # JPA-сущности + доменные модели
+│   ├── repository/          # Spring Data репозитории
+│   └── service/             # Бизнес-логика, оркестрация AI, стриминг, RAG-пайплайн
 ├── src/main/resources/
-│   ├── application.properties
-│   ├── prompts/             # Prompt templates (patient role, opening, score review)
+│   ├── application.properties             # Основной конфиг (профиль по умолчанию — Gemini)
+│   ├── application-ollama.properties      # Профиль "ollama" — локальный чат через Ollama
+│   ├── prompts/             # Шаблоны промптов (роль пациента, открытие, скоринг)
 │   └── schema.sql
-├── src/test/                # Unit + web-layer tests
+├── src/test/                # Unit + web-layer тесты
 ├── build.gradle
 └── README.md
 ```
 
-### RAG Paths in Backend
+### RAG-модули в бэкенде
 
 - `src/main/java/ru/medmentor/service/RagIngestionService.java`  
-  Startup/scheduled/manual sync orchestration.
+  Оркестрация синхронизации индекса: стартовая, по расписанию и ручная.
 - `src/main/java/ru/medmentor/service/RagSourceParserService.java`  
-  File parsing for supported source formats.
+  Парсинг поддерживаемых форматов исходников.
 - `src/main/java/ru/medmentor/service/RagChunkingService.java`  
-  Chunk creation before embedding.
+  Разбиение текста на чанки перед эмбеддингом.
 - `src/main/java/ru/medmentor/service/RagSearchService.java`  
-  Similarity search + prompt context building.
+  Similarity-поиск и сборка prompt-контекста.
 - `src/main/java/ru/medmentor/controller/RagController.java`  
-  Authenticated RAG API endpoints.
-- `src/main/java/ru/medmentor/model/RagSourceFile.java` and
+  Защищённые REST-эндпоинты RAG.
+- `src/main/java/ru/medmentor/model/RagSourceFile.java` и
   `src/main/java/ru/medmentor/repository/RagSourceFileRepository.java`  
-  Incremental indexing state storage.
+  Хранение состояния инкрементальной индексации.
 
-## Current Status
+## Текущий статус
 
-Core simulation backend is implemented, including:
-- auth + simulation flow APIs
-- AI patient chat + scoring
-- RAG ingestion pipeline with pgvector retrieval
+Базовый бэкенд симуляции реализован:
+- API авторизации и сценария симуляции;
+- ИИ-пациент и автоматическая оценка;
+- RAG-пайплайн с поиском по pgvector;
+- два чат-провайдера: облачный Google Gemini (по умолчанию) и локальный Ollama (профиль `ollama`).
 
-## Technology Stack
+## Технологический стек
 
-- **Backend:** Spring Boot 3.5.10-SNAPSHOT
-- **AI Integration:** Spring AI 1.1.2 with Google Gemini (gemini-2.5-flash)
-- **Embeddings:** Ollama with nomic-embed-text
-- **Database:** PostgreSQL 16 with pgvector extension
-- **WebSocket:** STOMP over WebSocket with SockJS fallback
-- **API Documentation:** Swagger/OpenAPI (springdoc-openapi)
-- **Language:** Java 25
-- **Build Tool:** Gradle
-- **Containerization:** Docker & Docker Compose
+- **Бэкенд:** Spring Boot 3.5.10-SNAPSHOT
+- **AI-интеграция:** Spring AI 1.1.2
+- **LLM (по умолчанию):** Google Gemini (`gemini-3.1-flash-lite-preview`)
+- **LLM (профиль `ollama`):** локальный Ollama (по умолчанию `qwen2.5:7b`)
+- **Эмбеддинги:** Ollama с `bge-m3` (1024 измерения)
+- **База данных:** PostgreSQL 16 + расширение pgvector
+- **WebSocket:** STOMP поверх WebSocket с SockJS-фолбэком
+- **API-документация:** Swagger/OpenAPI (springdoc-openapi)
+- **Язык:** Java 25
+- **Сборка:** Gradle
+- **Контейнеризация:** Docker и Docker Compose
 
-## Prerequisites
+## Предварительные требования
 
-- Docker and Docker Compose installed
-- Google Gemini API key (get one at https://makersuite.google.com/app/apikey - free tier available)
-- Java 25 (for local development without Docker)
+- Установленные Docker и Docker Compose;
+- API-ключ Google Gemini (получить можно на https://makersuite.google.com/app/apikey,
+  бесплатный тариф доступен) — **только** если планируется запуск с дефолтным Gemini-профилем;
+- Установленный Ollama локально или контейнером — если планируется запуск с локальным LLM;
+- Java 25 — для локальной разработки без Docker.
 
-## Environment Variables
+## Переменные окружения
 
-Copy the `.env.example` file to `.env` and set your API key:
+Скопируйте `.env.example` в `.env` и задайте нужные значения:
 
 ```bash
 cp .env.example .env
-# Then edit .env and add your actual API key
+# Затем отредактируйте .env под свою конфигурацию (Gemini API key и/или профиль Ollama).
 ```
 
-`docker compose` uses this root `.env` file for both `postgres-pgvector` and
-`backend` containers, so DB credentials, bootstrap user credentials, and API keys
-come from one place in local Docker runs.
+`docker compose` читает корневой `.env` для контейнеров `postgres-pgvector` и `backend`,
+поэтому учётные данные БД, дефолтного пользователя и API-ключи живут в одном месте.
 
-The same `.env` file also carries single-user local bootstrap values:
-`MEDMENTOR_DEFAULT_USERNAME`, `MEDMENTOR_DEFAULT_PASSWORD`, and
-`MEDMENTOR_DEFAULT_DISPLAY_NAME`. Startup creates or reuses the
-default local user if it does not exist yet, or load the existing one if it was
-already bootstrapped in the database.
+В этом же `.env` лежат значения локального single-user-бутстрапа:
+`MEDMENTOR_DEFAULT_USERNAME`, `MEDMENTOR_DEFAULT_PASSWORD`, `MEDMENTOR_DEFAULT_DISPLAY_NAME`.
+На старте бэкенд создаёт этого пользователя в БД (или загружает уже существующего, если
+он был забутстрапен ранее).
 
-Or export the environment variable directly:
+Альтернативно переменные можно экспортировать напрямую:
 
 ```bash
 export GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-## Quick Start with Docker Compose
+## Быстрый старт через Docker Compose
 
-1. Clone the repository:
+1. Клонируем репозиторий:
 ```bash
 git clone <repository-url>
 cd MedMentor-RAG
 ```
 
-2. Set your Gemini API key:
+2. Прописываем ключ Gemini:
 ```bash
 cp .env.example .env
-# Edit .env and add your actual API key
+# Отредактируйте .env и подставьте свой GEMINI_API_KEY.
 ```
 
-3. Start the services:
+3. Поднимаем сервисы:
 ```bash
 docker compose up --build
 ```
 
-This will start:
-- PostgreSQL with pgvector on port 5432
-- Ollama for embeddings on port 11434
-- Backend application on port 8080
+Поднимутся:
+- PostgreSQL с pgvector на порту 5432;
+- Ollama (для эмбеддингов) на порту 11434;
+- бэкенд приложения на порту 8080.
 
-Local-first auth direction:
-- Keep one local doctor account in `.env` for development.
-- On the first authenticated startup, bootstrap that user into PostgreSQL with
-  the configured display name.
-- On later startups, reuse that same DB user instead of creating duplicates.
+Локальный single-user-бутстрап:
+- В `.env` лежит одна учётка локального врача — это аккаунт для разработки.
+- На первом старте этот пользователь создаётся в PostgreSQL с указанным display name.
+- На последующих стартах используется уже созданный пользователь — дубли не создаются.
 
-4. Access the application:
+4. Открываем приложение:
 - **Swagger UI:** http://localhost:8080/swagger-ui.html
-- **API Docs:** http://localhost:8080/api-docs
-- **Health Check:** http://localhost:8080/actuator/health
+- **API-документация:** http://localhost:8080/api-docs
+- **Health-check:** http://localhost:8080/actuator/health
 
-## RAG Pipeline Overview
+## Запуск с локальным Ollama (профиль `ollama`)
 
-RAG source files live in top-level `rag-data/` and are mounted into backend at `/rag-data`.
+В дефолтном профиле чат-модель — Google Gemini, а Ollama используется только для эмбеддингов.
+Чтобы перевести и чат на локальный Ollama, активируйте профиль `ollama`. Эмбеддинги при этом
+по-прежнему берутся из Ollama (никакой дополнительной настройки эмбеддингов не требуется).
 
-Supported extensions:
-- `txt`
-- `md`
-- `markdown`
-- `json`
-- `csv`
+### 1. Подготовка Ollama
 
-Pipeline behavior:
-- startup sync indexes all source files
-- scheduled sync updates vectors when files change
-- deleted source files are removed from vector store
+Убедитесь, что Ollama запущен и нужная чат-модель скачана. Локально:
 
-Main RAG properties:
-```properties
-medmentor.rag.enabled=true
-medmentor.rag.source-path=../rag-data
-medmentor.rag.sync-interval-ms=30000
-medmentor.rag.top-k=5
+```bash
+# Установите Ollama: https://ollama.com/download
+ollama serve                       # запустить демона (если ещё не запущен)
+ollama pull qwen2.5:7b             # скачать дефолтную чат-модель профиля
+ollama pull bge-m3                 # модель для эмбеддингов (используется в любом профиле)
 ```
 
-## Running Locally (Backend only)
+Если Ollama запущен в контейнере из `docker-compose.yml`, скачивание чат-модели можно
+выполнить внутри контейнера:
 
-If you prefer to run the backend locally while using PostgreSQL in Docker:
+```bash
+docker compose up -d ollama
+docker compose exec ollama ollama pull qwen2.5:7b
+```
 
-1. Start only PostgreSQL:
+### 2. Локальный запуск бэкенда с профилем `ollama`
+
+```bash
+cd backend
+export SPRING_PROFILES_ACTIVE=ollama
+export SPRING_AI_OLLAMA_BASE_URL=http://localhost:11434   # если Ollama локальный
+# (опционально) переопределить модель/температуру:
+export MEDMENTOR_OLLAMA_CHAT_MODEL=qwen2.5:7b
+export MEDMENTOR_OLLAMA_CHAT_TEMPERATURE=0.7
+./gradlew bootRun
+```
+
+При активном профиле `ollama` переменная `GEMINI_API_KEY` не обязательна.
+
+### 3. Запуск через Docker Compose с профилем `ollama`
+
+В корневом `.env` раскомментируйте строки:
+
+```dotenv
+SPRING_PROFILES_ACTIVE=ollama
+MEDMENTOR_OLLAMA_CHAT_MODEL=qwen2.5:7b
+MEDMENTOR_OLLAMA_CHAT_TEMPERATURE=0.7
+```
+
+И поднимите стек как обычно:
+
+```bash
+docker compose up --build
+```
+
+Внутри контейнера бэкенд будет ходить за чатом по адресу `http://ollama:11434` (этот URL
+уже прописан в `docker-compose.yml` через `SPRING_AI_OLLAMA_BASE_URL`).
+
+### 4. Что именно делает профиль
+
+Файл `src/main/resources/application-ollama.properties`:
+
+- отключает автоконфигурацию Google Gemini, чтобы не требовать `GEMINI_API_KEY`;
+- включает Ollama-чат через `spring.ai.model.chat=ollama`;
+- задаёт `spring.ai.ollama.chat.options.model` и `temperature` (с переопределением через env);
+- синхронизирует `medmentor.ai.provider` и `medmentor.ai.model`, чтобы корректно отображались
+  в логах и метаданных;
+- включает `DEBUG`-логи `org.springframework.ai.ollama`.
+
+Чтобы посмотреть итоговый prompt, который реально получает модель, запустите Ollama-сервер с
+`OLLAMA_DEBUG=1` — это единственное надёжное место с RAW HTTP body. Spring AI RestClient без
+кастомного интерцептора тело запроса не логирует.
+
+## Локальный запуск (только бэкенд)
+
+Если удобнее держать БД в Docker, а бэкенд запускать локально:
+
+1. Поднять только PostgreSQL:
 ```bash
 docker compose up -d postgres-pgvector
 ```
 
-2. Build and run the backend:
+2. (Опционально) поднять Ollama для эмбеддингов:
+```bash
+docker compose up -d ollama
+```
+
+3. Собрать и запустить бэкенд с Gemini:
 ```bash
 cd backend
 export GEMINI_API_KEY=your_gemini_api_key_here
 ./gradlew bootRun
 ```
 
-## API Usage
+или с локальным Ollama-чатом:
+```bash
+cd backend
+export SPRING_PROFILES_ACTIVE=ollama
+./gradlew bootRun
+```
 
-The application provides two ways to interact with the AI:
-1. **REST API** - Simple request/response (non-streaming)
-2. **WebSocket** - Real-time streaming responses (recommended for frontend)
+## Обзор API
 
-### Option 1: REST API (Non-Streaming)
+Приложение предоставляет два способа взаимодействия с ИИ:
+1. **REST API** — простая модель request/response (без стриминга);
+2. **WebSocket** — стриминг ответов в реальном времени (рекомендуется для фронтенда).
 
-#### POST /api/ai - Process AI Chat Request
+### Вариант 1. REST API (без стриминга)
 
-Send a message to the AI patient simulator and receive a complete response.
+#### POST /api/ai — обработка запроса к ИИ
 
-**Request:**
+Отправить сообщение симулятору-пациенту и получить полный ответ.
+
+**Запрос:**
 ```bash
 curl -X POST http://localhost:8080/api/ai \
   -H "Content-Type: application/json" \
@@ -184,7 +249,7 @@ curl -X POST http://localhost:8080/api/ai \
   }'
 ```
 
-**Response:**
+**Ответ:**
 ```json
 {
   "aiMessage": "I've been feeling tired and have a persistent cough for the past week...",
@@ -193,24 +258,25 @@ curl -X POST http://localhost:8080/api/ai \
 }
 ```
 
-**Status Codes:**
-- `200 OK` - Success
-- `400 Bad Request` - Invalid input (e.g., empty message)
-- `500 Internal Server Error` - AI service error
+**HTTP-коды:**
+- `200 OK` — успех;
+- `400 Bad Request` — некорректный ввод (например, пустое сообщение);
+- `500 Internal Server Error` — ошибка AI-сервиса.
 
-### Option 2: WebSocket (Streaming - Recommended)
+### Вариант 2. WebSocket (стриминг — рекомендуемый)
 
-The WebSocket endpoint provides real-time streaming of AI responses using STOMP protocol with SockJS fallback.
+WebSocket-эндпоинт обеспечивает потоковую передачу ответов ИИ по протоколу STOMP с
+SockJS-фолбэком.
 
-**WebSocket Endpoint:** `ws://localhost:8080/ws`
+**WebSocket-эндпоинт:** `ws://localhost:8080/ws`
 
-**Client sends to:** `/app/ai/chat`
+**Клиент шлёт в:** `/app/ai/chat`
 
-**Client subscribes to:** `/topic/ai/{conversationId}`
+**Клиент подписывается на:** `/topic/ai/{conversationId}`
 
-#### Message Format
+#### Формат сообщений
 
-**Request (send to /app/ai/chat):**
+**Запрос (отправляется в `/app/ai/chat`):**
 ```json
 {
   "conversationId": "optional-conversation-id",
@@ -218,7 +284,7 @@ The WebSocket endpoint provides real-time streaming of AI responses using STOMP 
 }
 ```
 
-**Response (receive on /topic/ai/{conversationId}):**
+**Ответ (принимается на `/topic/ai/{conversationId}`):**
 ```json
 {
   "conversationId": "conversation-id",
@@ -228,31 +294,31 @@ The WebSocket endpoint provides real-time streaming of AI responses using STOMP 
 }
 ```
 
-**Message Types:**
-- `chunk` - Text chunk from AI response
-- `done` - Stream completed successfully
-- `error` - An error occurred
+**Типы сообщений:**
+- `chunk` — очередной фрагмент текста от ИИ;
+- `done` — поток успешно завершён;
+- `error` — произошла ошибка.
 
-#### Using WebSocket from Vue.js Frontend
+#### Использование WebSocket из Vue.js-фронтенда
 
-Install STOMP client libraries:
+Установить STOMP-клиент:
 ```bash
 npm install @stomp/stompjs sockjs-client
 ```
 
-**Basic connection example:**
+**Базовый пример подключения:**
 
 ```javascript
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 
-// Connect to WebSocket
+// Подключение к WebSocket
 const stompClient = new Client({
   webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
   onConnect: () => {
     console.log('Connected');
 
-    // Subscribe to AI responses
+    // Подписка на ответы ИИ
     stompClient.subscribe(`/topic/ai/${conversationId}`, (message) => {
       const chunk = JSON.parse(message.body);
 
@@ -267,7 +333,7 @@ const stompClient = new Client({
 
 stompClient.activate();
 
-// Send message
+// Отправка сообщения
 function sendMessage(text) {
   stompClient.publish({
     destination: '/app/ai/chat',
@@ -279,21 +345,23 @@ function sendMessage(text) {
 }
 ```
 
-**For complete Vue.js integration examples** (composables, error handling, reconnection logic), see the frontend documentation.
+**Подробные примеры интеграции с Vue.js** (composables, обработка ошибок, реконнект) —
+см. документацию фронтенда.
 
-### Testing with Swagger UI
+### Тестирование через Swagger UI
 
-1. Open http://localhost:8080/swagger-ui.html
-2. Expand the "AI Chat" section
-3. Click "Try it out" on the POST /api/ai endpoint
-4. Enter your request body
-5. Click "Execute"
+1. Откройте http://localhost:8080/swagger-ui.html
+2. Разверните раздел "AI Chat".
+3. Нажмите "Try it out" на `POST /api/ai`.
+4. Подставьте тело запроса.
+5. Нажмите "Execute".
 
-**Note:** Swagger UI does not support WebSocket testing. Use the Vue.js examples above or a WebSocket testing tool like Postman or websocat.
+**Внимание:** Swagger UI не поддерживает тестирование WebSocket. Используйте Vue.js-примеры
+выше или инструменты вроде Postman/websocat.
 
-### RAG Endpoints (Authenticated)
+### RAG-эндпоинты (с авторизацией)
 
-Login first (cookie session):
+Сначала логинимся (cookie-сессия):
 ```bash
 curl -i -c /tmp/medmentor.cookies \
   -H "Content-Type: application/json" \
@@ -301,24 +369,26 @@ curl -i -c /tmp/medmentor.cookies \
   http://localhost:8080/api/auth/login
 ```
 
-Search vectors:
+Поиск по векторному индексу:
 ```bash
 curl -b /tmp/medmentor.cookies \
   "http://localhost:8080/api/rag/search?query=heart%20failure%20dyspnea&topK=3"
 ```
 
-Trigger manual reindex:
+Ручная переиндексация:
 ```bash
 curl -X POST -b /tmp/medmentor.cookies \
   http://localhost:8080/api/rag/sync
 ```
 
-Why these endpoints exist:
-- `GET /api/rag/search` is a debug/verification surface to inspect retrieval quality independently from generation.
-- `POST /api/rag/sync` is an operational control for immediate reindex after bulk file updates, without waiting for scheduled polling.
-- Both endpoints help observability and safe rollout of new medical knowledge files.
+Зачем эти эндпоинты:
+- `GET /api/rag/search` — отладочная поверхность для проверки качества retrieval отдельно от
+  генерации;
+- `POST /api/rag/sync` — операционная ручка для немедленной переиндексации после массового
+  обновления файлов, без ожидания фонового полла;
+- оба помогают наблюдаемости и безопасному выкату новых файлов клинических рекомендаций.
 
-## Project Structure
+## Структура репозитория (общая)
 
 ```
 MedMentor-RAG/
@@ -326,165 +396,201 @@ MedMentor-RAG/
 │   ├── src/main/
 │   │   ├── java/ru/medmentor/
 │   │   │   ├── MedMentorRAGApplication.java
-│   │   │   ├── config/          # Configuration (AI, WebSocket, OpenAPI)
-│   │   │   ├── controller/      # REST & WebSocket controllers
-│   │   │   ├── service/         # Business logic
-│   │   │   ├── model/           # JPA entities
-│   │   │   └── dto/             # Data transfer objects
+│   │   │   ├── config/          # Конфигурация (AI, WebSocket, OpenAPI)
+│   │   │   ├── controller/      # REST- и WebSocket-контроллеры
+│   │   │   ├── service/         # Бизнес-логика
+│   │   │   ├── model/           # JPA-сущности
+│   │   │   └── dto/             # Объекты передачи данных
 │   │   └── resources/
 │   │       ├── application.properties
+│   │       ├── application-ollama.properties
 │   │       ├── schema.sql
 │   │       └── logback-spring.xml
 │   ├── build.gradle
 │   ├── Dockerfile
-│   └── logs/                    # Application logs (git-ignored)
+│   └── logs/                    # Логи приложения (в .gitignore)
 ├── docker-compose.yml
-├── data/                        # PostgreSQL data (git-ignored)
+├── data/                        # Данные PostgreSQL (в .gitignore)
 └── README.md
 ```
 
-## Configuration
+## Конфигурация
 
-Key configuration properties in `application.properties`:
+Ключевые свойства в `application.properties`:
 
-### Database
+### База данных
 ```properties
 spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/medmentor}
 spring.datasource.username=${SPRING_DATASOURCE_USERNAME:medmentor}
 spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:medmentor123}
 ```
 
-### AI Model (Gemini)
+### LLM (Gemini, профиль по умолчанию)
 ```properties
 spring.ai.google.genai.api-key=${GEMINI_API_KEY}
-spring.ai.google.genai.chat.options.model=gemini-2.5-flash
+spring.ai.google.genai.chat.options.model=gemini-3.1-flash-lite-preview
 spring.ai.google.genai.chat.options.temperature=0.7
 spring.ai.google.genai.chat.options.max-output-tokens=2048
 ```
 
-### Embeddings (Ollama)
+### LLM (Ollama, профиль `ollama`)
+
+См. `application-ollama.properties`. Основные переопределения через env:
+```bash
+SPRING_PROFILES_ACTIVE=ollama
+MEDMENTOR_OLLAMA_CHAT_MODEL=qwen2.5:7b
+MEDMENTOR_OLLAMA_CHAT_TEMPERATURE=0.7
+SPRING_AI_OLLAMA_BASE_URL=http://localhost:11434
+```
+
+### Эмбеддинги (Ollama)
 ```properties
 spring.ai.ollama.base-url=${SPRING_AI_OLLAMA_BASE_URL:http://localhost:11434}
-spring.ai.ollama.embedding.options.model=nomic-embed-text
+spring.ai.ollama.embedding.options.model=bge-m3
 spring.ai.ollama.init.pull-model-strategy=when_missing
 ```
 
-### Custom AI Configuration
+### Кастомная AI-конфигурация
 ```properties
 medmentor.ai.provider=gemini
-medmentor.ai.model=gemini-2.5-flash
+medmentor.ai.model=gemini-3.1-flash-lite-preview
 medmentor.ai.system-prompt=You are a helpful medical AI assistant...
 medmentor.ai.constant-context=
 ```
 
-## Logging
+## Логирование
 
-Logs are written to both console and file:
-- **Console:** Real-time logs
-- **File:** `backend/logs/medmentor-rag.log`
-- **Rolling Policy:** Daily rotation, 30-day history, 1GB cap
+Логи пишутся одновременно в консоль и в файл:
+- **Консоль:** логи в реальном времени;
+- **Файл:** `backend/logs/medmentor-rag.log`;
+- **Ротация:** ежедневно, история 30 дней, общий лимит 1 ГБ.
 
-Each request is tracked with a unique `requestId` for easy debugging.
+Каждый запрос сопровождается уникальным `requestId` — удобно для отладки.
 
-## Health Checks
+## Health-checks
 
-The application includes Spring Boot Actuator endpoints:
+Поднимаются эндпоинты Spring Boot Actuator:
 
 - **Health:** http://localhost:8080/actuator/health
 - **Info:** http://localhost:8080/actuator/info
 
-Health check includes database connectivity status.
+Health-check включает проверку соединения с БД.
 
-## Database Schema
+## Схема БД
 
-The application automatically creates:
-- `conversation_log` table - Stores AI chat history
-- `rag_source_files` table - Tracks indexed source files and chunk ids
-- pgvector extension + `vector_store` table for embeddings retrieval
+Приложение автоматически создаёт:
+- таблицу `conversation_log` — журнал диалогов с ИИ;
+- таблицу `rag_source_files` — состояние индексации файлов и идентификаторы чанков;
+- расширение `pgvector` + таблицу `vector_store` для retrieval по эмбеддингам.
 
-## Development Notes
+## Заметки для разработки
 
-### Adding Custom Context
+### Добавление постоянного контекста
 
-You can add constant context to every AI request by setting:
+К каждому запросу можно подмешивать константный контекст:
 ```properties
 medmentor.ai.constant-context=You are simulating a patient with specific symptoms...
 ```
 
-### Changing AI Model
+### Смена модели Gemini
 
-To use a different Gemini model:
+Чтобы использовать другую модель Gemini:
 ```properties
 spring.ai.google.genai.chat.options.model=gemini-3.1-pro-preview
 medmentor.ai.model=gemini-3.1-pro-preview
 ```
 
-### Debugging
+### Смена модели Ollama
 
-Enable detailed logging:
+Любую модель из `ollama list` можно подставить через env-переменную:
+```bash
+export MEDMENTOR_OLLAMA_CHAT_MODEL=llama3.1:8b
+SPRING_PROFILES_ACTIVE=ollama ./gradlew bootRun
+```
+
+### Отладка
+
+Включить подробное логирование:
 ```properties
 logging.level.ru.medmentor=DEBUG
 logging.level.org.springframework.ai=DEBUG
 ```
 
-## Troubleshooting
+Для профиля `ollama` отдельно полезно:
+```properties
+logging.level.org.springframework.ai.ollama=DEBUG
+```
+А итоговый prompt модели смотрите в логах самого Ollama-сервера, запущенного с
+`OLLAMA_DEBUG=1`.
 
-### Database Connection Issues
+## Траблшутинг
 
-1. Ensure PostgreSQL is running:
+### Проблемы с подключением к БД
+
+1. Проверить, что PostgreSQL поднят:
 ```bash
 docker compose ps
 ```
 
-2. Check database logs:
+2. Посмотреть логи БД:
 ```bash
 docker compose logs postgres-pgvector
 ```
 
-### AI API Issues
+### Проблемы с Gemini API
 
-1. Verify your Gemini API key is set correctly in `.env`
-2. Check the logs for API errors in `backend/logs/medmentor-rag.log`
-3. Ensure you have API quota available (Gemini offers free tier)
-4. Test API key: https://makersuite.google.com/
+1. Проверьте, что `GEMINI_API_KEY` корректно задан в `.env`.
+2. Поищите ошибки API в `backend/logs/medmentor-rag.log`.
+3. Убедитесь, что квота не исчерпана (у Gemini есть бесплатный тариф).
+4. Проверить ключ можно тут: https://makersuite.google.com/
 
-### Ollama Connection Issues
+### Проблемы с Ollama
 
-1. Ensure Ollama container is running:
+1. Убедитесь, что контейнер/демон Ollama работает:
 ```bash
 docker compose logs ollama
+# или локально:
+ollama list
 ```
 
-2. Verify Ollama is accessible:
+2. Проверить доступность Ollama:
 ```bash
 curl http://localhost:11434/api/tags
 ```
 
-3. Model will auto-download on first request (can take a few minutes)
-
-### Port Already in Use
-
-If port 8080, 5432, or 11434 is already in use, modify `docker-compose.yml`:
-```yaml
-ports:
-  - "8081:8080"  # Change external port
+3. Если используется профиль `ollama`, проверьте, что нужная чат-модель скачана:
+```bash
+ollama list | grep qwen2.5
+# при необходимости:
+ollama pull qwen2.5:7b
 ```
 
-### WebSocket Connection Issues
+4. Embedding-модель `bge-m3` скачается автоматически при первом запросе
+   (стратегия `pull-model-strategy=when_missing`).
 
-1. Check CORS configuration in `WebSocketConfig.java`
-2. Verify SockJS fallback is working (HTTP instead of WS)
-3. Test connection with browser console: `new WebSocket('ws://localhost:8080/ws')`
+### Порт уже занят
 
-## Future Enhancements
+Если порты 8080, 5432 или 11434 заняты, поправьте `docker-compose.yml`:
+```yaml
+ports:
+  - "8081:8080"  # сменить внешний порт
+```
 
-- **Phase 4:** Quiz/testing functionality with medical case scenarios
-- **Phase 5:** Vue.js frontend with chat interface
+### Проблемы с WebSocket
 
-## License
+1. Проверьте CORS-конфигурацию в `WebSocketConfig.java`.
+2. Убедитесь, что SockJS-фолбэк работает (HTTP вместо WS).
+3. Тест из консоли браузера: `new WebSocket('ws://localhost:8080/ws')`.
 
-[Add your license here]
+## Дальнейшее развитие
 
-## Contributing
+- **Phase 4:** функциональность тестирования по клиническим кейсам;
+- **Phase 5:** Vue.js-фронтенд с чат-интерфейсом.
 
-[Add contribution guidelines here]
+## Лицензия
+
+[Укажите лицензию]
+
+## Контрибьютинг
+
+[Укажите правила контрибьютинга]

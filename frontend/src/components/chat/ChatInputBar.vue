@@ -21,7 +21,7 @@ interface Props {
 
 const emit = defineEmits<{
     send: [content: string]
-    'request-exam': []
+    'request-exam': [content?: string]
 }>()
 
 const props = defineProps<Props>()
@@ -52,16 +52,22 @@ function handleSend(): void {
 }
 
 /**
- * Sends a predefined quick prompt. Action prompts (e.g. exam) also fire
- * a dedicated event so the parent can call the matching API endpoint
- * before or alongside the LLM message.
+ * Отправляет заранее заготовленный quick-prompt.
+ *
+ * Для action='exam' это чистое системное действие (как и боковая кнопка
+ * в сайдбаре): дёргаем request-exam без content, в ленте появляется только
+ * SYSTEM-карточка осмотра, реплика врача не сохраняется. Для обычных
+ * prompt'ов идёт штатный send с текстом.
  */
 function handleQuickPrompt(prompt: SimulationQuickPrompt): void {
     if (props.disabled || props.isSendPending) return
     if (prompt.action === 'exam') {
         emit('request-exam')
+        return
     }
-    emit('send', prompt.content)
+    if (prompt.content !== undefined) {
+        emit('send', prompt.content)
+    }
 }
 
 function handleKeydown(event: KeyboardEvent): void {

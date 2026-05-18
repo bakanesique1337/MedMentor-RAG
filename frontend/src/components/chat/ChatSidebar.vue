@@ -9,7 +9,7 @@ import { useAuthGateStore } from '@/stores/authGate'
 import { DIFFICULTY_PRESETS, type SimulationSession } from '@/types'
 
 const COPY = {
-    brandLogoLetter: 'M',
+    brandLogoAlt: 'MedMentor RAG',
     brandWordmark: 'MedMentor',
     brandSubtitle: 'RAG · Clinical Sim',
     casesNav: 'Кейсы',
@@ -196,10 +196,18 @@ function handleRequestExam(): void {
             class="flex items-center gap-[1rem] border-b border-[color:var(--color-dark-line)] px-[1.6rem] py-[1.4rem]"
         >
             <div
-                class="flex size-[3rem] shrink-0 items-center justify-center rounded-[0.7rem] font-serif text-[1.7rem] font-semibold italic text-[color:var(--color-ink)]"
+                class="flex size-[3.2rem] shrink-0 items-center justify-center overflow-hidden rounded-[0.7rem]"
                 style="background: linear-gradient(135deg, var(--color-dark-teal), var(--color-teal-deep)); box-shadow: 0 0 0 1px rgb(63 185 179 / 35%), 0 4px 12px rgb(63 185 179 / 20%);"
             >
-                {{ COPY.brandLogoLetter }}
+                <!-- Источник 64px используется на 32px отображении: 1x браузеры
+                     даунсемплят, на 2x retina-экранах пиксели идеально совпадают. -->
+                <img
+                    src="/MM1_64.png"
+                    :alt="COPY.brandLogoAlt"
+                    width="32"
+                    height="32"
+                    class="size-[3.2rem] object-contain"
+                >
             </div>
             <div class="min-w-0 flex-1">
                 <div class="text-[1.3rem] font-semibold leading-tight tracking-[-0.01em] text-[color:var(--color-dark-ink)]">

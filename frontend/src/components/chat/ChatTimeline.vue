@@ -2,8 +2,11 @@
 import { computed, onMounted, ref, watch } from 'vue'
 
 import ChatMessageBubble from '@/components/chat/ChatMessageBubble.vue'
+import ChatSystemBubble from '@/components/chat/ChatSystemBubble.vue'
 import ExamFindingsCard from '@/components/chat/ExamFindingsCard.vue'
 import OutOfScopeBlock from '@/components/chat/OutOfScopeBlock.vue'
+import { EXAM_CARD_MARKER } from '@/constants/chatMarkers'
+import { MESSAGE_ROLE, STREAMING_STATUS_TYPE } from '@/types'
 import type { ConversationMessage, PatientPassport, PatientVitals, StreamingStatusType } from '@/types'
 
 const COPY = {
@@ -18,7 +21,6 @@ interface Props {
     streamingContent: string
     streamingKind: StreamingStatusType | null
     patientName?: string
-    examRevealed?: boolean
     passport?: PatientPassport | null
     vitals?: PatientVitals | null
 }
@@ -26,14 +28,43 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     pendingDoctorMessage: null,
     patientName: 'Пациент',
-    examRevealed: false,
     passport: null,
     vitals: null,
 })
 
-const isStreamingActive = computed(() => props.streamingKind !== null && props.streamingKind !== 'idle')
-const isPatientStreamActive = computed(() => props.streamingKind === 'message' || props.streamingKind === 'opening')
-const isFindingStreamActive = computed(() => props.streamingKind === 'finding')
+const isStreamingActive = computed(() =>
+    props.streamingKind !== null && props.streamingKind !== STREAMING_STATUS_TYPE.IDLE,
+)
+const isPatientStreamActive = computed(() =>
+    props.streamingKind === STREAMING_STATUS_TYPE.MESSAGE
+    || props.streamingKind === STREAMING_STATUS_TYPE.OPENING,
+)
+const isFindingStreamActive = computed(() => props.streamingKind === STREAMING_STATUS_TYPE.FINDING)
+const isSystemStreamActive = computed(() => props.streamingKind === STREAMING_STATUS_TYPE.SYSTEM)
+
+/**
+ * Узнаёт, представляет ли SYSTEM-сообщение карточку осмотра, по sentinel-маркеру
+ * в контенте (см. constants/chatMarkers). Это позволяет хранить разнородные
+ * «события системы» в одной таблице и переключать рендер только на фронте.
+ */
+function isExamCardMessage(message: ConversationMessage): boolean {
+    return message.role === MESSAGE_ROLE.SYSTEM && message.content === EXAM_CARD_MARKER
+}
+
+/**
+ * Id первой по порядку SYSTEM-карточки осмотра в ленте, либо null если её нет.
+ * Используется как фильтр против дубликатов: backend гарантирует ровно одну
+ * карточку через атомарный UPDATE, но старые сессии, успевшие словить race,
+ * могут содержать два маркера в БД. Рендерим только первый.
+ */
+const firstExamCardMessageId = computed<number | null>(() => {
+    const first = props.messages.find(isExamCardMessage)
+    return first === undefined ? null : first.id
+})
+
+function shouldRenderExamCard(message: ConversationMessage): boolean {
+    return isExamCardMessage(message) && message.id === firstExamCardMessageId.value
+}
 
 const streamingMeta = ref<string>(COPY.nowFallback)
 
@@ -79,7 +110,7 @@ function scrollToBottom(): void {
 }
 
 watch(
-    () => [props.messages.length, props.streamingContent, isStreamingActive.value, props.examRevealed] as const,
+    () => [props.messages.length, props.streamingContent, isStreamingActive.value] as const,
     scrollToBottom,
     { flush: 'post' },
 )
@@ -103,6 +134,18 @@ onMounted(() => {
                     v-if="msg.role === 'MENTOR'"
                     :finding="msg.content"
                     :meta="formatTimestamp(msg.timestamp)"
+                />
+                <ExamFindingsCard
+                    v-else-if="shouldRenderExamCard(msg)"
+                    :passport="passport"
+                    :vitals="vitals"
+                />
+                <template v-else-if="isExamCardMessage(msg)">
+                    <!-- Дубль __EXAM_CARD__ из старой сессии: ничего не рендерим. -->
+                </template>
+                <ChatSystemBubble
+                    v-else-if="msg.role === 'SYSTEM'"
+                    :content="msg.content"
                 />
                 <ChatMessageBubble
                     v-else
@@ -134,10 +177,10 @@ onMounted(() => {
                 :is-streaming="true"
             />
 
-            <ExamFindingsCard
-                v-if="examRevealed && !isStreamingActive"
-                :passport="passport"
-                :vitals="vitals"
+            <ChatSystemBubble
+                v-if="isSystemStreamActive"
+                :content="streamingContent"
+                :is-streaming="true"
             />
 
             <div

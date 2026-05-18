@@ -74,6 +74,19 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
     }
 
     @Override
+    public void startSystemReply(Long sessionId, String doctorMessage) {
+        if (!simulationInFlightRegistry.markSystemInFlight(sessionId)) {
+            throw new IllegalStateException("AI response is already in flight for this session");
+        }
+        log.info("[stream] startSystemReply dispatch sessionId={} messageLen={}", sessionId, doctorMessage.length());
+        CompletableFuture.runAsync(() -> streamSystemReply(sessionId, doctorMessage))
+                .exceptionally(ex -> {
+                    log.error("[stream] streamSystemReply async task failed sessionId={}", sessionId, ex);
+                    return null;
+                });
+    }
+
+    @Override
     public void startExaminationFinding(Long sessionId, String doctorMessage) {
         if (!simulationInFlightRegistry.markFindingInFlight(sessionId)) {
             throw new IllegalStateException("AI response is already in flight for this session");
@@ -166,6 +179,44 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
     }
 
     @Transactional(noRollbackFor = RuntimeException.class)
+    protected void streamSystemReply(Long sessionId, String doctorMessage) {
+        log.info("[stream] streamSystemReply enter sessionId={}", sessionId);
+        final SimulationSession session = getSession(sessionId);
+        final MedicalCase medicalCase = caseLoaderService.getCaseById(session.getCaseId());
+        final List<ConversationMessage> history = conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(sessionId);
+        final StringBuilder buffer = new StringBuilder();
+        // Используем тот же flux, что и для ответа пациента: prompt patient-role.txt
+        // содержит явную секцию-override для лабораторных/инструментальных запросов,
+        // в которой модель переключается на роль system-нарратора и отвечает markdown.
+        final Flux<String> flux = simulationAiService.streamPatientReply(
+                medicalCase,
+                history,
+                doctorMessage,
+                warning -> publishWarning(sessionId, warning)
+        );
+
+        try {
+            flux.doOnNext(chunk -> {
+                        buffer.append(chunk);
+                        publishChunk(sessionId, chunk);
+                    })
+                    .doOnError(err -> log.error("[stream] system flux error sessionId={}", sessionId, err))
+                    .doOnComplete(() -> log.info("[stream] system flux complete sessionId={} totalLen={}", sessionId, buffer.length()))
+                    .blockLast();
+
+            saveSystemMessage(session, buffer.toString(), nextOrder(sessionId));
+            publishDone(sessionId);
+        } catch (RuntimeException exception) {
+            log.error("[stream] streamSystemReply caught exception sessionId={}", sessionId, exception);
+            publishError(sessionId, exception.getMessage());
+            throw exception;
+        } finally {
+            simulationInFlightRegistry.clearSystemInFlight(sessionId);
+            log.info("[stream] streamSystemReply exit sessionId={}", sessionId);
+        }
+    }
+
+    @Transactional(noRollbackFor = RuntimeException.class)
     protected void streamExaminationFinding(Long sessionId, String doctorMessage) {
         log.info("[stream] streamExaminationFinding enter sessionId={}", sessionId);
         final SimulationSession session = getSession(sessionId);
@@ -222,6 +273,15 @@ public class SimulationStreamingServiceImpl implements SimulationStreamingServic
         conversationMessageRepository.save(ConversationMessage.builder()
                 .session(session)
                 .role(MessageRole.MENTOR)
+                .content(content.trim())
+                .messageOrder(order)
+                .build());
+    }
+
+    private void saveSystemMessage(SimulationSession session, String content, int order) {
+        conversationMessageRepository.save(ConversationMessage.builder()
+                .session(session)
+                .role(MessageRole.SYSTEM)
                 .content(content.trim())
                 .messageOrder(order)
                 .build());

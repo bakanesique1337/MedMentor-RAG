@@ -3,7 +3,7 @@
  * ChatView — страница симуляции диалога с виртуальным пациентом.
  *
  * Роль в архитектуре: тонкий controller component, который собирает воедино
- * пять независимых композаблов и передаёт их состояние в дочерние компоненты.
+ * независимые композаблы и передаёт их состояние в дочерние компоненты.
  * Сама бизнес-логика вынесена из view, чтобы файл оставался обозримым и тестируемым.
  *
  * Композаблы и их зоны ответственности:
@@ -12,8 +12,11 @@
  *  - useSimulationStream   — буферы и состояние WebSocket-стрима модели;
  *  - useChatActions        — действия врача (send/diagnose/abandon/exam/retry)
  *                            + computed-гарды (canSend/canDiagnose/canFinish);
- *  - useChatModals         — состояние двух модалок подтверждения;
- *  - useInlineExamCard     — видимость инлайновой карточки осмотра в ленте.
+ *  - useChatModals         — состояние двух модалок подтверждения.
+ *
+ * Карточка осмотра живёт в ленте как обычное SYSTEM-сообщение с маркером
+ * EXAM_CARD_MARKER — поэтому отдельный composable для её видимости не нужен,
+ * ChatTimeline сам решает, что рендерить на месте такого сообщения.
  *
  * Жизненный цикл сессии описывается двумя независимыми полями:
  *  - state: IN_PROGRESS -> DIAGNOSIS_SELECT -> SCORING -> COMPLETED/ABANDONED;
@@ -36,7 +39,6 @@ import FinishCaseModal from '@/components/chat/FinishCaseModal.vue'
 import {VAlert, VButton, VSpinner} from '@/components/ui'
 import {useChatActions} from '@/composables/chat/useChatActions'
 import {useChatModals} from '@/composables/chat/useChatModals'
-import {useInlineExamCard} from '@/composables/chat/useInlineExamCard'
 import {useSimulationSession} from '@/composables/simulation/useSimulationSession'
 import {useSimulationSocket} from '@/composables/simulation/useSimulationSocket'
 import {useSimulationStream} from '@/composables/simulation/useSimulationStream'
@@ -121,8 +123,6 @@ const {
     closeFinishModal,
     closeDiagnosisModal,
 })
-
-const {showInlineExamCard} = useInlineExamCard(session)
 
 // Локальные computed'ы — чисто шаблонные condition'ы, не используются за пределами view.
 const isOpeningPending = computed<boolean>(() =>
@@ -281,7 +281,6 @@ onUnmounted(() => {
                         :streaming-content="streamingContent"
                         :streaming-kind="activeStreamKind"
                         :patient-name="session.patientName"
-                        :exam-revealed="showInlineExamCard"
                         :passport="session.passport"
                         :vitals="session.vitals"
                     />

@@ -52,6 +52,30 @@ public class SimulationServiceImpl implements SimulationService {
     private static final int MAX_AI_MESSAGES = 11;
 
     /**
+     * Маркер контента SYSTEM-сообщения, который фронтенд интерпретирует как
+     * «здесь должна быть отрисована карточка осмотра» вместо обычного текстового
+     * пузыря. Хранится в БД как обычное сообщение в ленте, что даёт стабильную
+     * привязку карточки к ходу диалога и переживает перезагрузку страницы.
+     */
+    public static final String EXAM_CARD_MARKER = "__EXAM_CARD__";
+
+    /**
+     * Ключевые слова, по которым свободный текст врача классифицируется как
+     * запрос лабораторных или инструментальных/визуализирующих данных.
+     * На совпадение ответ модели сохраняется с ролью SYSTEM (markdown-карточка),
+     * а не PATIENT, и рендерится фронтендом отдельным стилем.
+     */
+    private static final Pattern LAB_INSTRUMENTAL_KEYWORD_PATTERN = Pattern.compile(
+            "(\\bоак\\b|\\bоам\\b|\\bбак\\b|\\bкла\\b|\\bкщс\\b|\\bкщр\\b|"
+                    + "лаборатор|биохими|анализ[аыовм]?|показател[ьия]\\s+кров|"
+                    + "инструментальн|визуализирующ|визуализаци|исследовани[ея]|"
+                    + "\\bэкг\\b|\\bэхо[\\s-]?кг\\b|\\bузи\\b|\\bкт\\b|\\bмрт\\b|"
+                    + "рентген|флюорограф|сцинтиграф|допплер|холтер|"
+                    + "общ[ийие]\\s+анализ|клиническ[ийогом]\\s+анализ)",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS
+    );
+
+    /**
      * Russian-language keyword classifier used to detect when the doctor's free-text message
      * is asking for vitals or a physical exam. Matched as a substring against the lowercased
      * trimmed message.
@@ -59,7 +83,7 @@ public class SimulationServiceImpl implements SimulationService {
     private static final Pattern EXAM_KEYWORD_PATTERN = Pattern.compile(
             "(\\bад\\b|давлен|пульс|чсс|сатурац|spo2|spо2|температур|виталы|витальн|осмотр|"
                     + "физикальн|чдд|дыхан|аускульт|пальпац|перкус|измер.{0,10}(давлен|температур|пульс))",
-            Pattern.CASE_INSENSITIVE
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS
     );
 
     /**
@@ -70,7 +94,7 @@ public class SimulationServiceImpl implements SimulationService {
             "(пальпир|перкус|аускульт|пощуп|потрог|постуч|надав|маневр|манёвр|симптом|"
                     + "рефлекс|посвет|освет|направ|оцен[а-яё]*\\s+(?:рефлекс|реакц)|реакц[а-яё]*\\s+зрач|"
                     + "проба\\s+|\\bтест\\b|\\bпри[её]м\\b)",
-            Pattern.CASE_INSENSITIVE
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS
     );
 
     /**
@@ -87,7 +111,7 @@ public class SimulationServiceImpl implements SimulationService {
                     + "зрач|роговичн|конъюнкт|склер|тургор|"
                     + "фонар|вспышк|молоточек|молоточк|шпател|ложечк|зеркал|игл[аыоу]|ватк|"
                     + "перчатк|карандаш|линейк|нитк)",
-            Pattern.CASE_INSENSITIVE
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS
     );
 
     private final CaseLoaderService caseLoaderService;
@@ -215,18 +239,24 @@ public class SimulationServiceImpl implements SimulationService {
         }
 
         final List<ConversationMessage> conversationHistory = conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(sessionId);
-        final long userMessageCount = conversationHistory.stream().filter(message -> message.getRole() == MessageRole.DOCTOR).count();
+        // Бюджет в 10 ходов — это про диалог с пациентом. Системные действия
+        // врача (запрос анализов, инструменталки, targeted-осмотр) не считаются
+        // вопросом к пациенту и не списываются с этого бюджета: их ответы
+        // приходят с ролью SYSTEM или MENTOR, а не PATIENT.
+        final long patientFacingDoctorMessages = countPatientFacingDoctorMessages(conversationHistory);
         final long aiMessageCount = conversationHistory.stream().filter(message -> message.getRole() == MessageRole.PATIENT).count();
+        final String trimmedContent = content.trim();
+        final boolean newMessageRoutesToPatient = !isLabOrInstrumentalRequest(trimmedContent)
+                && !isTargetedExamRequest(trimmedContent);
 
-        if (userMessageCount >= MAX_USER_MESSAGES) {
+        if (newMessageRoutesToPatient && patientFacingDoctorMessages >= MAX_USER_MESSAGES) {
             throw new IllegalStateException("Maximum user message limit reached for this session");
         }
-        if (aiMessageCount >= MAX_AI_MESSAGES) {
+        if (newMessageRoutesToPatient && aiMessageCount >= MAX_AI_MESSAGES) {
             throw new IllegalStateException("Maximum AI message limit reached for this session");
         }
 
         final int nextOrder = conversationHistory.size() + 1;
-        final String trimmedContent = content.trim();
         conversationMessageRepository.save(ConversationMessage.builder()
                 .session(session)
                 .role(MessageRole.DOCTOR)
@@ -234,8 +264,11 @@ public class SimulationServiceImpl implements SimulationService {
                 .messageOrder(nextOrder)
                 .build());
 
-        if (!session.isExamRevealed() && containsExamKeyword(trimmedContent)) {
-            session.setExamRevealed(true);
+        // Авто-раскрытие осмотра по ключевым словам в реплике врача (АД, пульс,
+        // температура, осмотр и т.п.). Карточка осмотра вставляется в ленту
+        // как SYSTEM-сообщение после доктора и до ответа модели.
+        if (containsExamKeyword(trimmedContent)) {
+            revealExamAndInsertCardIfFirst(session);
         }
 
         simulationSessionRepository.save(session);
@@ -243,6 +276,11 @@ public class SimulationServiceImpl implements SimulationService {
         if (isTargetedExamRequest(trimmedContent)) {
             simulationStreamingService.startExaminationFinding(sessionId, trimmedContent);
             return new SimulationCommandResponseDto(sessionId, "FINDING_STARTED");
+        }
+
+        if (isLabOrInstrumentalRequest(trimmedContent)) {
+            simulationStreamingService.startSystemReply(sessionId, trimmedContent);
+            return new SimulationCommandResponseDto(sessionId, "SYSTEM_STARTED");
         }
 
         simulationStreamingService.startPatientReply(sessionId, trimmedContent);
@@ -266,14 +304,31 @@ public class SimulationServiceImpl implements SimulationService {
 
     @Override
     @Transactional
-    public SimulationSessionDto revealExam(String username, Long sessionId) {
+    public SimulationSessionDto revealExam(String username, Long sessionId, String doctorMessage) {
+        inputAudit.debug("revealExam user={} sessionId={} doctorMessageLen={}",
+                username, sessionId, doctorMessage == null ? 0 : doctorMessage.length());
         final UserAccount userAccount = userAccountService.getByUsername(username);
         final SimulationSession session = getOwnedSession(userAccount, sessionId);
         ensureState(session, EnumSet.of(SimulationState.IN_PROGRESS));
         ensureOpeningReady(session);
 
-        if (!session.isExamRevealed()) {
-            session.setExamRevealed(true);
+        // Если врач сопроводил действие репликой (quick-prompt из чата) —
+        // персистим её как DOCTOR-сообщение перед карточкой. Идёт первой,
+        // чтобы в ленте сложился ход DOCTOR → SYSTEM(__EXAM_CARD__).
+        if (doctorMessage != null && !doctorMessage.isBlank()) {
+            final String trimmed = doctorMessage.trim();
+            final int nextOrder = conversationMessageRepository
+                    .findBySessionIdOrderByMessageOrderAsc(sessionId)
+                    .size() + 1;
+            conversationMessageRepository.save(ConversationMessage.builder()
+                    .session(session)
+                    .role(MessageRole.DOCTOR)
+                    .content(trimmed)
+                    .messageOrder(nextOrder)
+                    .build());
+        }
+
+        if (revealExamAndInsertCardIfFirst(session)) {
             simulationSessionRepository.save(session);
         }
 
@@ -305,6 +360,95 @@ public class SimulationServiceImpl implements SimulationService {
             return false;
         }
         return TARGETED_EXAM_LOCUS_PATTERN.matcher(lowered).find();
+    }
+
+    /**
+     * Распознаёт запрос лабораторных / инструментальных / визуализирующих
+     * исследований в свободном тексте врача. На true ответ модели
+     * сохраняется как SYSTEM-сообщение (markdown), а не PATIENT.
+     */
+    private boolean isLabOrInstrumentalRequest(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+        return LAB_INSTRUMENTAL_KEYWORD_PATTERN.matcher(message.toLowerCase(Locale.ROOT)).find();
+    }
+
+    /**
+     * Считает сообщения врача, которые реально были обращены к пациенту, —
+     * то есть на которые модель ответила (или ещё ответит) репликой PATIENT.
+     * Системные действия (запрос анализов, инструменталки, targeted-осмотр)
+     * порождают ответы с ролью SYSTEM/MENTOR и в этот счёт не попадают.
+     *
+     * <p>Классификация делается по фактической истории, а не по regex — это
+     * корректно отражает выбранный маршрут даже если регулярки в коде позже
+     * изменятся.
+     */
+    private long countPatientFacingDoctorMessages(List<ConversationMessage> history) {
+        long count = 0;
+        for (int i = 0; i < history.size(); i++) {
+            if (history.get(i).getRole() != MessageRole.DOCTOR) {
+                continue;
+            }
+            final MessageRole nextResponse = findNextNonDoctorRole(history, i + 1);
+            if (nextResponse == null || nextResponse == MessageRole.PATIENT) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Находит первую следующую за {@code fromIndex} реплику не-врача в истории.
+     * Возвращает {@code null}, если такой нет (ход врача ещё без ответа).
+     */
+    private MessageRole findNextNonDoctorRole(List<ConversationMessage> history, int fromIndex) {
+        for (int j = fromIndex; j < history.size(); j++) {
+            final MessageRole role = history.get(j).getRole();
+            if (role != MessageRole.DOCTOR) {
+                return role;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Идемпотентно раскрывает осмотр для сессии: выставляет {@code examRevealed=true}
+     * и добавляет в ленту SYSTEM-сообщение с маркером {@link #EXAM_CARD_MARKER}.
+     * Если осмотр уже был раскрыт ранее (в т.ч. параллельным запросом) — карточку
+     * не вставляет повторно.
+     *
+     * <p>Race-safe: реальная проверка «я первый» делается через атомарный UPDATE
+     * на уровне БД ({@link SimulationSessionRepository#markExamRevealedIfNot}),
+     * который сериализует одновременные раскрытия через row-level lock Postgres'a.
+     * Локальный флаг {@code session.examRevealed} синхронизируется безусловно,
+     * чтобы последующий {@code save(session)} у вызывающего кода не записал
+     * устаревшее {@code false} поверх свежего {@code true} от победителя гонки.
+     *
+     * @return {@code true}, если карточка была вставлена именно этим вызовом.
+     */
+    private boolean revealExamAndInsertCardIfFirst(SimulationSession session) {
+        if (session.isExamRevealed()) {
+            return false;
+        }
+        final int updated = simulationSessionRepository.markExamRevealedIfNot(session.getId());
+        // Синхронизируем in-memory entity и для победителя, и для проигравшего гонку,
+        // чтобы любой последующий save(session) у вызывающего кода был согласован с БД.
+        session.setExamRevealed(true);
+        if (updated == 0) {
+            // Гонка: другой параллельный запрос уже раскрыл осмотр и вставил карточку.
+            return false;
+        }
+        final int order = conversationMessageRepository
+                .findBySessionIdOrderByMessageOrderAsc(session.getId())
+                .size() + 1;
+        conversationMessageRepository.save(ConversationMessage.builder()
+                .session(session)
+                .role(MessageRole.SYSTEM)
+                .content(EXAM_CARD_MARKER)
+                .messageOrder(order)
+                .build());
+        return true;
     }
 
     @Override
@@ -540,6 +684,9 @@ public class SimulationServiceImpl implements SimulationService {
         final Long sessionId = session.getId();
         if (simulationInFlightRegistry.isFindingInFlight(sessionId)) {
             return "finding";
+        }
+        if (simulationInFlightRegistry.isSystemInFlight(sessionId)) {
+            return "system";
         }
         if (simulationInFlightRegistry.isMessageInFlight(sessionId)) {
             return "message";

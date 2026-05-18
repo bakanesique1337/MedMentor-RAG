@@ -21,6 +21,7 @@
         "@tailwindcss/vite": "^4.2.0",
         "@vueuse/core": "^13.0.0",
         "lighthouse": "^12.8.2",
+        "markdown-it": "^14.1.1",
         "pinia": "^3.0.4",
         "scroll-lock": "^2.1.5",
         "sockjs-client": "^1.6.1",
@@ -30,6 +31,7 @@
     },
     "devDependencies": {
         "@tsconfig/node24": "^24.0.4",
+        "@types/markdown-it": "^14.1.2",
         "@types/node": "^24.10.13",
         "@types/sockjs-client": "^1.5.4",
         "@vitejs/plugin-vue": "^6.0.4",
@@ -41,6 +43,7 @@
         "jiti": "^2.6.1",
         "npm-run-all2": "^8.0.4",
         "postcss-html": "^1.8.0",
+        "sass-embedded": "^1.99.0",
         "stylelint": "^17.3.0",
         "stylelint-config-standard": "^40.0.0",
         "stylelint-config-tailwindcss": "^1.0.1",

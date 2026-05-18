@@ -77,6 +77,7 @@ const NAV_ITEMS = [
             <RouterLink
                 :to="{ name: ROUTES.HOME }"
                 :aria-label="COPY.homeAriaLabel"
+                class="inline-flex items-center"
             >
                 <BrandLogo :size="28" />
             </RouterLink>

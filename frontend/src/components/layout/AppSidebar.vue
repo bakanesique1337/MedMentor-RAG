@@ -7,7 +7,7 @@ import { useAuthGateStore } from '@/stores/authGate'
 import { useSidebarStore } from '@/stores/sidebar'
 
 const COPY = {
-    brandLogoLetter: 'M',
+    brandLogoAlt: 'MedMentor RAG',
     brandWordmark: 'MedMentor',
     brandSubtitle: 'RAG · Clinical Sim',
     collapseAriaLabel: 'Свернуть меню',
@@ -91,10 +91,18 @@ watch(() => route.name, (newName, oldName) => {
             :class="collapsed ? 'justify-center px-0' : ''"
         >
             <div
-                class="flex size-[3rem] shrink-0 items-center justify-center rounded-[0.7rem] font-serif text-[1.7rem] font-semibold italic text-[color:var(--color-ink)]"
+                class="flex size-[3.2rem] shrink-0 items-center justify-center overflow-hidden rounded-[0.7rem]"
                 style="background: linear-gradient(135deg, var(--color-dark-teal), var(--color-teal-deep)); box-shadow: 0 0 0 1px rgb(63 185 179 / 35%), 0 4px 12px rgb(63 185 179 / 20%);"
             >
-                {{ COPY.brandLogoLetter }}
+                <!-- Источник 64px используется на 32px отображении: 1x браузеры
+                     даунсемплят, на 2x retina-экранах пиксели идеально совпадают. -->
+                <img
+                    src="/MM1_64.png"
+                    :alt="COPY.brandLogoAlt"
+                    width="32"
+                    height="32"
+                    class="size-[3.2rem] object-contain"
+                >
             </div>
             <template v-if="!collapsed">
                 <div class="min-w-0 flex-1">

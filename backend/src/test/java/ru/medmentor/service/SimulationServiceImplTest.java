@@ -307,7 +307,7 @@ class SimulationServiceImplTest {
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(403L)).thenReturn(List.of());
         when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        final SimulationSessionDto dto = simulationService.revealExam("doctor", 403L);
+        final SimulationSessionDto dto = simulationService.revealExam("doctor", 403L, null);
 
         assertEquals(true, session.isExamRevealed());
         assertEquals(true, dto.examRevealed());
@@ -329,7 +329,7 @@ class SimulationServiceImplTest {
         when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(404L)).thenReturn(List.of());
 
-        final SimulationSessionDto dto = simulationService.revealExam("doctor", 404L);
+        final SimulationSessionDto dto = simulationService.revealExam("doctor", 404L, null);
 
         assertEquals(true, dto.examRevealed());
         verify(simulationSessionRepository, never()).save(any(SimulationSession.class));

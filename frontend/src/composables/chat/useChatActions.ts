@@ -14,6 +14,8 @@ import {
     SIMULATION_COMMAND_STATUS,
     SIMULATION_STATE,
     STREAMING_STATUS_TYPE,
+    type ActiveStreamKind,
+    type SimulationCommandStatus,
 } from '@/types'
 import {isApiError} from '@/utils/typeGuards'
 import {CHAT_ACTIONS_MESSAGES} from '@/constants/chatActionsTexts.ts'
@@ -79,6 +81,20 @@ export function useChatActions(params: UseChatActionsParams): UseChatActionsRetu
     )
 
     /**
+     * Маппинг ответа /api/simulations/:id/messages на тип активного стрима.
+     * REPLY_STARTED — обычный ответ пациента (PATIENT-сообщение в ленте);
+     * FINDING_STARTED — нарратив осмотра (MENTOR-блок);
+     * SYSTEM_STARTED — markdown-карточка лабораторки/инструменталки (SYSTEM-сообщение);
+     * остальное (OPENING_STARTED, ABANDONED) для /messages некорректны, но
+     * на всякий случай отдаём MESSAGE как наиболее безопасный дефолт.
+     */
+    function resolveStreamKindForStatus(status: SimulationCommandStatus): ActiveStreamKind {
+        if (status === SIMULATION_COMMAND_STATUS.FINDING_STARTED) return STREAMING_STATUS_TYPE.FINDING
+        if (status === SIMULATION_COMMAND_STATUS.SYSTEM_STARTED) return STREAMING_STATUS_TYPE.SYSTEM
+        return STREAMING_STATUS_TYPE.MESSAGE
+    }
+
+    /**
      * Отправляет реплику врача и переводит UI в режим ожидания ответа модели.
      * Реплика показывается оптимистично (через stream.pendingSentMessage), чтобы
      * пользователь не ждал бэкенд для появления своего сообщения в ленте.
@@ -92,9 +108,7 @@ export function useChatActions(params: UseChatActionsParams): UseChatActionsRetu
 
         try {
             const response = await api.sendMessage(sessionId.value, content)
-            const kind = response.status === SIMULATION_COMMAND_STATUS.FINDING_STARTED
-                ? STREAMING_STATUS_TYPE.FINDING
-                : STREAMING_STATUS_TYPE.MESSAGE
+            const kind = resolveStreamKindForStatus(response.status)
             stream.beginStream(kind)
             isSendPending.value = false
         } catch (err: unknown) {
@@ -172,17 +186,31 @@ export function useChatActions(params: UseChatActionsParams): UseChatActionsRetu
 
     /**
      * Раскрывает паспорт и витальные показатели через явный REST-эндпоинт.
-     * Идемпотентен: если осмотр уже раскрыт, повторный вызов подавляется.
+     * Если передан {@code content} — он будет сохранён бэкендом как DOCTOR-реплика
+     * перед SYSTEM-карточкой (используется quick-prompt'ом «Провести осмотр»);
+     * на время запроса показывается оптимистично через pendingSentMessage.
+     * Если {@code content} нет — это побочная кнопка из сайдбара, в этом случае
+     * вызов идемпотентен (после первого раскрытия повторный клик подавляется).
+     *
+     * Никакого стрима ответа пациента этот хендлер не запускает: это «системное
+     * действие», результат — только карточка в ленте.
      */
-    async function handleRequestExam(): Promise<void> {
-        if (isExamPending.value || session.value === null || session.value.examRevealed) return
+    async function handleRequestExam(content?: string): Promise<void> {
+        if (isExamPending.value || session.value === null) return
+        // Идемпотентный путь для сайдбара: повторный клик без content — no-op.
+        if (content === undefined && session.value.examRevealed) return
+
         isExamPending.value = true
+        if (content !== undefined) {
+            stream.pendingSentMessage.value = content
+        }
         try {
-            session.value = await api.revealExam(sessionId.value)
+            session.value = await api.revealExam(sessionId.value, content)
         } catch {
             pageError.value = CHAT_ACTIONS_MESSAGES.examError
         } finally {
             isExamPending.value = false
+            stream.pendingSentMessage.value = null
         }
     }
 

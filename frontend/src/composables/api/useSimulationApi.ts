@@ -135,17 +135,34 @@ export function useSimulationApi() {
     }
 
     /**
-     * Раскрывает в сессии паспорт пациента и витальные показатели.
-     * Эндпоинт идемпотентен: повторный вызов после раскрытия вернёт то же
-     * состояние и не продублирует действие в журнале сессии.
+     * Раскрывает в сессии паспорт пациента и витальные показатели и вставляет
+     * в ленту SYSTEM-карточку осмотра. Эндпоинт идемпотентен по самой карточке —
+     * повторный вызов не продублирует её.
+     *
+     * Опциональный {@code content} — реплика врача, которая будет сохранена как
+     * DOCTOR-сообщение перед карточкой (используется quick-prompt'ом «Провести
+     * осмотр» в чате). Боковая кнопка в сайдбаре вызывает без content.
+     *
+     * Запрос НЕ запускает стрим ответа пациента — это «системное действие»,
+     * а не вопрос пациенту.
      *
      * @param sessionId идентификатор сессии
+     * @param content опциональная реплика врача
      * @returns обновлённый объект сессии с раскрытыми exam-полями
      * @throws TypeError если sessionId невалиден
      */
-    async function revealExam(sessionId: number | string): Promise<SimulationSession> {
+    async function revealExam(
+        sessionId: number | string,
+        content?: string,
+    ): Promise<SimulationSession> {
         const id = toSessionId(sessionId)
-        return apiPost<SimulationSession>(`/api/simulations/${id}/actions/exam`)
+        const body = content !== undefined && content !== ''
+            ? {content}
+            : undefined
+        return apiPost<SimulationSession, { content: string }>(
+            `/api/simulations/${id}/actions/exam`,
+            body,
+        )
     }
 
     /**

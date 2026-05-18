@@ -21,6 +21,7 @@ const STREAM_ERROR_MESSAGE_BY_KIND: Record<ActiveStreamKind, string> = {
     [STREAMING_STATUS_TYPE.OPENING]: SIMULATION_STREAM_MESSAGES.openingStreamFailed,
     [STREAMING_STATUS_TYPE.FINDING]: SIMULATION_STREAM_MESSAGES.findingStreamFailed,
     [STREAMING_STATUS_TYPE.MESSAGE]: SIMULATION_STREAM_MESSAGES.messageStreamFailed,
+    [STREAMING_STATUS_TYPE.SYSTEM]: SIMULATION_STREAM_MESSAGES.systemStreamFailed,
 }
 
 /**
@@ -62,7 +63,11 @@ export function useSimulationStream(
     function resolveStreamKind(data: SimulationSession): ActiveStreamKind | null {
         if (data.streamingStatus.inFlight) {
             const type = data.streamingStatus.type
-            if (type === STREAMING_STATUS_TYPE.MESSAGE || type === STREAMING_STATUS_TYPE.FINDING) return type
+            if (
+                type === STREAMING_STATUS_TYPE.MESSAGE
+                || type === STREAMING_STATUS_TYPE.FINDING
+                || type === STREAMING_STATUS_TYPE.SYSTEM
+            ) return type
             return STREAMING_STATUS_TYPE.OPENING
         }
         if (data.openingStatus === OPENING_STATUS.PENDING || data.openingStatus === OPENING_STATUS.STREAMING) {

@@ -4,6 +4,7 @@ import { computed } from 'vue'
 const COPY = {
     wordmark: 'MedMentor',
     accent: 'RAG',
+    logoAlt: 'MedMentor RAG',
 } as const
 
 type BrandVariant = 'light' | 'dark' | 'compact'
@@ -20,11 +21,6 @@ const props = withDefaults(defineProps<Props>(), {
     showWordmark: true,
 })
 
-const markColor = computed(() => {
-    if (props.variant === 'dark') return 'var(--color-mint)'
-    return 'var(--brand-primary)'
-})
-
 const wordColor = computed(() => {
     if (props.variant === 'dark') return 'var(--color-white)'
     return 'var(--color-ink)'
@@ -34,57 +30,20 @@ const accentColor = computed(() => {
     if (props.variant === 'dark') return 'var(--color-mint)'
     return 'var(--brand-primary)'
 })
-
-const outlineFill = computed(() => {
-    if (props.variant === 'dark') return 'rgba(255,255,255,0.06)'
-    return '#fff'
-})
-
-const outlineStroke = computed(() => {
-    if (props.variant === 'dark') return 'rgba(159,198,194,0.4)'
-    return 'rgba(13,115,119,0.35)'
-})
 </script>
 
 <template>
     <div class="inline-flex items-center gap-[1rem]">
-        <svg
+        <!-- Источник 64px используется на любом размере до 32 без потерь:
+             1x браузеры даунсемплят, на 2x retina пиксели идеально совпадают. -->
+        <img
+            src="/MM1_64.png"
+            :alt="COPY.logoAlt"
             :width="size"
             :height="size"
-            viewBox="0 0 40 40"
-            fill="none"
-            aria-hidden="true"
+            :style="{ width: `${size}px`, height: `${size}px` }"
+            class="block shrink-0 rounded-[25%] object-contain"
         >
-            <rect
-                x="1"
-                y="1"
-                width="38"
-                height="38"
-                rx="10"
-                :fill="outlineFill"
-                :stroke="outlineStroke"
-                stroke-width="1"
-            />
-            <path
-                d="M9 27V13l6 10 6-10v14"
-                :stroke="markColor"
-                stroke-width="2.2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-            />
-            <circle
-                cx="28"
-                cy="16"
-                r="3"
-                :fill="markColor"
-            />
-            <path
-                d="M28 19v6M25 22h6"
-                :stroke="markColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-            />
-        </svg>
         <div
             v-if="showWordmark"
             class="font-serif text-[1.8rem] leading-none font-medium tracking-[-0.02em]"

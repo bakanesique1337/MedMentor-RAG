@@ -24,7 +24,16 @@ public interface SimulationService {
 
     SimulationCommandResponseDto abandonSession(String username, Long sessionId);
 
-    SimulationSessionDto revealExam(String username, Long sessionId);
+    /**
+     * Раскрывает осмотр в сессии и идемпотентно вставляет SYSTEM-карточку
+     * с витальными показателями и паспортом в ленту. Если передана непустая
+     * {@code doctorMessage} — сначала персистится как DOCTOR-сообщение перед
+     * карточкой; это нужно для quick-prompt из чата. Если {@code null} или
+     * пустая — карточка вставляется без сопроводительной реплики (вариант для
+     * боковой кнопки «Провести осмотр»). Никакого стрима ответа пациента
+     * этот вызов не запускает.
+     */
+    SimulationSessionDto revealExam(String username, Long sessionId, String doctorMessage);
 
     SimulationSessionDto submitDiagnosis(
             String username,

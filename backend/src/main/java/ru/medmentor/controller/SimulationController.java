@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.medmentor.dto.ActiveSimulationDto;
 import ru.medmentor.dto.SimulationCommandResponseDto;
 import ru.medmentor.dto.SimulationDiagnosisRequestDto;
+import ru.medmentor.dto.SimulationExamActionRequestDto;
 import ru.medmentor.dto.SimulationMessageRequestDto;
 import ru.medmentor.dto.SimulationSessionDto;
 import ru.medmentor.dto.StartSimulationRequestDto;
@@ -49,9 +50,11 @@ public class SimulationController {
     @PostMapping("/{sessionId}/actions/exam")
     public SimulationSessionDto revealExam(
             Authentication authentication,
-            @PathVariable Long sessionId
+            @PathVariable Long sessionId,
+            @Valid @RequestBody(required = false) SimulationExamActionRequestDto request
     ) {
-        return simulationService.revealExam(authentication.getName(), sessionId);
+        final String doctorMessage = request == null ? null : request.content();
+        return simulationService.revealExam(authentication.getName(), sessionId, doctorMessage);
     }
 
     @PostMapping("/{sessionId}/abandon")

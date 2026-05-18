@@ -41,7 +41,7 @@ export interface UseChatActionsReturn {
     handleSend: (content: string) => Promise<void>
     handleDiagnose: (payload: DiagnosePayload) => Promise<void>
     handleAbandon: () => Promise<void>
-    handleRequestExam: () => Promise<void>
+    handleRequestExam: (content?: string) => Promise<void>
     handleRetryOpening: () => Promise<void>
     handleBack: () => void
 }
@@ -60,10 +60,3 @@ export interface UseChatModalsReturn {
     closeDiagnosisModal: () => void
 }
 
-/**
- * Возврат useInlineExamCard: computed-флаг видимости
- * карточки осмотра в ленте чата.
- */
-export interface UseInlineExamCardReturn {
-    showInlineExamCard: ComputedRef<boolean>
-}

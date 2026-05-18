@@ -4,7 +4,9 @@
       "Bash(bun run:*)",
       "Bash(npx eslint:*)",
       "Bash(./gradlew compileJava)",
-      "Bash(./gradlew test *)"
+      "Bash(./gradlew test *)",
+      "Bash(./gradlew compileJava --no-daemon)",
+      "Bash(./gradlew compileJava --rerun-tasks --no-daemon)"
     ]
   },
   "enabledPlugins": {
