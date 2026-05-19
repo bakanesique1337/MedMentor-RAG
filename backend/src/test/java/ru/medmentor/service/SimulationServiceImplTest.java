@@ -107,7 +107,7 @@ class SimulationServiceImplTest {
         when(simulationSessionRepository.findById(101L)).thenReturn(Optional.of(session));
         when(simulationInFlightRegistry.isAnyResponseInFlight(101L)).thenReturn(true);
 
-        assertThrows(IllegalStateException.class, () -> simulationService.sendMessage("doctor", 101L, "How are you?"));
+        assertThrows(IllegalStateException.class, () -> simulationService.sendMessage("doctor", 101L, "How are you?", null));
         verify(conversationMessageRepository, never()).save(any(ConversationMessage.class));
         verify(simulationStreamingService, never()).startPatientReply(any(), any());
     }
@@ -273,7 +273,7 @@ class SimulationServiceImplTest {
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(401L)).thenReturn(List.of());
         when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        simulationService.sendMessage("doctor", 401L, "Какое у вас давление?");
+        simulationService.sendMessage("doctor", 401L, "Какое у вас давление?", null);
 
         assertEquals(true, session.isExamRevealed());
         verify(simulationStreamingService).startPatientReply(eq(401L), eq("Какое у вас давление?"));
@@ -290,7 +290,7 @@ class SimulationServiceImplTest {
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(402L)).thenReturn(List.of());
         when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        simulationService.sendMessage("doctor", 402L, "Расскажите подробнее, когда началось?");
+        simulationService.sendMessage("doctor", 402L, "Расскажите подробнее, когда началось?", null);
 
         assertEquals(false, session.isExamRevealed());
     }

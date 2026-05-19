@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {nextTick, ref, useTemplateRef, watch} from 'vue'
 
-import type {SimulationQuickPrompt} from '@/constants/simulationQuickPrompts'
+import type {SimulationQuickPrompt, SimulationQuickPromptKey} from '@/constants/simulationQuickPrompts'
 
 const COPY = {
     quickPromptsHint: 'Подсказки ↴',
@@ -16,10 +16,11 @@ interface Props {
     disabled: boolean
     isSendPending: boolean
     quickPrompts: readonly SimulationQuickPrompt[]
+    disabledQuickPromptKeys: ReadonlySet<SimulationQuickPromptKey>
 }
 
 const emit = defineEmits<{
-    send: [content: string]
+    send: [content: string, narratorPrompt?: string]
     'request-exam': [content?: string]
 }>()
 
@@ -56,16 +57,18 @@ function handleSend(): void {
  * Для action='exam' это чистое системное действие (как и боковая кнопка
  * в сайдбаре): дёргаем request-exam без content, в ленте появляется только
  * SYSTEM-карточка осмотра, реплика врача не сохраняется. Для обычных
- * prompt'ов идёт штатный send с текстом.
+ * prompt'ов идёт штатный send с текстом; если у prompt'а задан narratorPrompt,
+ * он уйдёт нарратору вместо content (см. SimulationQuickPrompt).
  */
 function handleQuickPrompt(prompt: SimulationQuickPrompt): void {
     if (props.disabled || props.isSendPending) return
+    if (props.disabledQuickPromptKeys.has(prompt.key)) return
     if (prompt.action === 'exam') {
         emit('request-exam')
         return
     }
     if (prompt.content !== undefined) {
-        emit('send', prompt.content)
+        emit('send', prompt.content, prompt.narratorPrompt)
     }
 }
 
@@ -86,11 +89,11 @@ function handleKeydown(event: KeyboardEvent): void {
                     v-for="prompt in quickPrompts"
                     :key="prompt.key"
                     type="button"
-                    class="rounded-full border px-4 py-2 text-[1.2rem] font-medium transition disabled:opacity-60"
+                    class="rounded-full border px-4 py-2 text-[1.2rem] font-medium transition disabled:cursor-not-allowed disabled:opacity-50"
                     :class="prompt.action === 'exam'
                         ? 'border-(--color-teal-deep) bg-brand text-white hover:bg-brand-deep'
                         : 'border-(--color-teal-soft) bg-brand-ghost text-brand-deep hover:bg-brand-soft'"
-                    :disabled="disabled"
+                    :disabled="disabled || disabledQuickPromptKeys.has(prompt.key)"
                     @click="handleQuickPrompt(prompt)"
                 >
                     {{ prompt.label }}

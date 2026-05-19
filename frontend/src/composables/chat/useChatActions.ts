@@ -98,8 +98,13 @@ export function useChatActions(params: UseChatActionsParams): UseChatActionsRetu
      * Отправляет реплику врача и переводит UI в режим ожидания ответа модели.
      * Реплика показывается оптимистично (через stream.pendingSentMessage), чтобы
      * пользователь не ждал бэкенд для появления своего сообщения в ленте.
+     *
+     * Опциональный {@code narratorPrompt} разделяет «то, что видит пользователь»
+     * (content — попадёт в ленту как DOCTOR-сообщение) и «то, что уходит модели»
+     * (narratorPrompt — формальная инструкция нарратору). Используется
+     * quick-prompt'ами лабораторной/инструментальной диагностики.
      */
-    async function handleSend(content: string): Promise<void> {
+    async function handleSend(content: string, narratorPrompt?: string): Promise<void> {
         if (!canSendMessage.value) return
 
         isSendPending.value = true
@@ -107,7 +112,7 @@ export function useChatActions(params: UseChatActionsParams): UseChatActionsRetu
         stream.pendingSentMessage.value = content
 
         try {
-            const response = await api.sendMessage(sessionId.value, content)
+            const response = await api.sendMessage(sessionId.value, content, narratorPrompt)
             const kind = resolveStreamKindForStatus(response.status)
             stream.beginStream(kind)
             isSendPending.value = false

@@ -11,6 +11,7 @@ import ru.medmentor.config.RagProperties;
 import ru.medmentor.model.ConversationMessage;
 import ru.medmentor.model.MedicalCase;
 import ru.medmentor.model.MedicalCaseFacts;
+import ru.medmentor.model.MedicalCasePassport;
 import ru.medmentor.service.prompt.LlmPrompt;
 
 import java.util.ArrayList;
@@ -307,6 +308,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
      */
     private String formatCaseForPatient(MedicalCase medicalCase) {
         final SplitFacts split = splitFacts(medicalCase.facts());
+        final MedicalCasePassport passport = medicalCase.passport();
         return """
                 patientName: %s
                 patientAge: %d
@@ -317,6 +319,9 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 symptoms: %s
                 history: %s
                 negatives: %s
+                allergies: %s
+                chronicConditions: %s
+                smoking: %s
                 """.formatted(
                 medicalCase.patientName(),
                 medicalCase.patientAge(),
@@ -326,7 +331,10 @@ public class SimulationAiServiceImpl implements SimulationAiService {
                 medicalCase.authorNote(),
                 String.join(", ", split.subjectiveSymptoms()),
                 String.join(", ", split.anamnesisHistory()),
-                String.join(", ", split.negatives())
+                String.join(", ", split.negatives()),
+                passport != null ? passport.allergies() : "(unknown)",
+                passport != null ? passport.chronicConditions() : "(unknown)",
+                passport != null ? passport.smoking() : "(unknown)"
         );
     }
 

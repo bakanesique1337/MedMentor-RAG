@@ -20,7 +20,17 @@ public interface SimulationService {
 
     Optional<ActiveSimulationDto> getActiveSession(String username);
 
-    SimulationCommandResponseDto sendMessage(String username, Long sessionId, String content);
+    /**
+     * Отправляет реплику врача в активной сессии.
+     *
+     * <p>{@code content} — текст, который сохраняется в ленте как DOCTOR-сообщение
+     * и попадает в историю, доступную пользователю. {@code narratorPrompt} —
+     * необязательная «техническая» инструкция, которая уходит нарратору вместо
+     * {@code content}; если {@code null} или пуст, нарратор получает сам
+     * {@code content}. На основе фактического промпта нарратору выбирается
+     * маршрут (обычный ответ пациента, лабораторная карточка, нарратив осмотра).
+     */
+    SimulationCommandResponseDto sendMessage(String username, Long sessionId, String content, String narratorPrompt);
 
     SimulationCommandResponseDto abandonSession(String username, Long sessionId);
 

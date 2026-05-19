@@ -95,8 +95,15 @@ export function useSimulationApi() {
      * Ответ пациента приходит отдельным стримом по WebSocket, сам POST
      * только триггерит обработку и возвращает статус команды (REPLY_STARTED).
      *
+     * Опциональный {@code narratorPrompt} разделяет «реплику в ленте» и
+     * «промпт нарратору»: бэкенд сохранит DOCTOR-сообщение с {@code content},
+     * но модели уйдёт {@code narratorPrompt}. Если не задан — нарратор
+     * получит сам {@code content}. Используется quick-prompt'ами, где
+     * формулировка для пациента и инструкция модели должны различаться.
+     *
      * @param sessionId идентификатор сессии
      * @param content текст реплики доктора (после trim/валидации на стороне UI)
+     * @param narratorPrompt опциональный технический промпт для модели-нарратора
      * @returns статус команды (например, REPLY_STARTED)
      * @throws TypeError если sessionId невалиден
      * @throws ApiError 409, если ответ ИИ уже генерируется (двойной submit)
@@ -104,11 +111,16 @@ export function useSimulationApi() {
     async function sendMessage(
         sessionId: number | string,
         content: string,
+        narratorPrompt?: string,
     ): Promise<SimulationCommandResponse> {
         const id = toSessionId(sessionId)
-        return apiPost<SimulationCommandResponse, { content: string }>(
+        const body: { content: string; narratorPrompt?: string } = {content}
+        if (narratorPrompt !== undefined && narratorPrompt !== '') {
+            body.narratorPrompt = narratorPrompt
+        }
+        return apiPost<SimulationCommandResponse, { content: string; narratorPrompt?: string }>(
             `/api/simulations/${id}/message`,
-            {content},
+            body,
         )
     }
 

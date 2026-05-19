@@ -224,11 +224,19 @@ public class SimulationServiceImpl implements SimulationService {
     }
 
     @Override
-    public SimulationCommandResponseDto sendMessage(String username, Long sessionId, String content) {
+    public SimulationCommandResponseDto sendMessage(
+            String username,
+            Long sessionId,
+            String content,
+            String narratorPrompt
+    ) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("Message content must not be blank");
         }
-        inputAudit.debug("sendMessage user={} sessionId={} content:\n{}", username, sessionId, content);
+        inputAudit.debug(
+                "sendMessage user={} sessionId={} content:\n{}\nnarratorPrompt:\n{}",
+                username, sessionId, content, narratorPrompt
+        );
 
         final UserAccount userAccount = userAccountService.getByUsername(username);
         final SimulationSession session = getOwnedSession(userAccount, sessionId);
@@ -246,8 +254,15 @@ public class SimulationServiceImpl implements SimulationService {
         final long patientFacingDoctorMessages = countPatientFacingDoctorMessages(conversationHistory);
         final long aiMessageCount = conversationHistory.stream().filter(message -> message.getRole() == MessageRole.PATIENT).count();
         final String trimmedContent = content.trim();
-        final boolean newMessageRoutesToPatient = !isLabOrInstrumentalRequest(trimmedContent)
-                && !isTargetedExamRequest(trimmedContent);
+        // Промпт нарратору отделён от того, что увидит пользователь в чате:
+        // quick-prompt может показать врачу мягкую формулировку «есть ли у вас
+        // на руках анализы?», а модели уйти технический «назначим лабораторные».
+        // Если внешнего промпта нет — нарратор получает ровно ту же реплику.
+        final String trimmedNarratorPrompt = (narratorPrompt == null || narratorPrompt.isBlank())
+                ? trimmedContent
+                : narratorPrompt.trim();
+        final boolean newMessageRoutesToPatient = !isLabOrInstrumentalRequest(trimmedNarratorPrompt)
+                && !isTargetedExamRequest(trimmedNarratorPrompt);
 
         if (newMessageRoutesToPatient && patientFacingDoctorMessages >= MAX_USER_MESSAGES) {
             throw new IllegalStateException("Maximum user message limit reached for this session");
@@ -273,17 +288,17 @@ public class SimulationServiceImpl implements SimulationService {
 
         simulationSessionRepository.save(session);
 
-        if (isTargetedExamRequest(trimmedContent)) {
-            simulationStreamingService.startExaminationFinding(sessionId, trimmedContent);
+        if (isTargetedExamRequest(trimmedNarratorPrompt)) {
+            simulationStreamingService.startExaminationFinding(sessionId, trimmedNarratorPrompt);
             return new SimulationCommandResponseDto(sessionId, "FINDING_STARTED");
         }
 
-        if (isLabOrInstrumentalRequest(trimmedContent)) {
-            simulationStreamingService.startSystemReply(sessionId, trimmedContent);
+        if (isLabOrInstrumentalRequest(trimmedNarratorPrompt)) {
+            simulationStreamingService.startSystemReply(sessionId, trimmedNarratorPrompt);
             return new SimulationCommandResponseDto(sessionId, "SYSTEM_STARTED");
         }
 
-        simulationStreamingService.startPatientReply(sessionId, trimmedContent);
+        simulationStreamingService.startPatientReply(sessionId, trimmedNarratorPrompt);
         return new SimulationCommandResponseDto(sessionId, "REPLY_STARTED");
     }
 

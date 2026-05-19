@@ -119,7 +119,8 @@ class ApiE2eTest {
                 0.70,
                 0.75,
                 0.85,
-                0.50
+                0.50,
+                0.72
         ));
 
         mockMvc.perform(get("/api/settings").session(session))

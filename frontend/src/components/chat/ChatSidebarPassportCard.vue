@@ -11,17 +11,12 @@ const LABELS = {
     cmUnit: 'см',
     kgUnit: 'кг',
     bmiLabel: 'ИМТ',
-    allergiesLabel: 'Аллергии',
-    chronicLabel: 'Хрон. забол.',
-    smokingLabel: 'Курение',
-    passportEmpty: 'Запросите осмотр, чтобы увидеть антропометрию и анамнез.',
+    passportEmpty: 'Запросите осмотр, чтобы увидеть антропометрию.',
 } as const
 
 const FALLBACK_PATIENT_INITIALS = 'ПС'
 const SEX_FEMALE_VALUES = ['female', 'жен'] as const
 const SEX_LABEL = {female: 'Ж', male: 'М'} as const
-const NOT_FOUND_VALUE = 'не выявлено'
-const NOT_SMOKING_VALUE = 'не курит'
 
 interface BmiInfo {
     value: string
@@ -114,24 +109,6 @@ const isRevealed = computed(() => props.examRevealed && props.passport !== null)
                 :alert="bmi.alert"
             >
                 {{ bmi.value }} ({{ bmi.label }})
-            </ChatSidebarDataRow>
-
-            <ChatSidebarDataRow :label="LABELS.allergiesLabel">
-                {{ passport.allergies }}
-            </ChatSidebarDataRow>
-
-            <ChatSidebarDataRow
-                :label="LABELS.chronicLabel"
-                :alert="passport.chronicConditions !== NOT_FOUND_VALUE"
-            >
-                {{ passport.chronicConditions }}
-            </ChatSidebarDataRow>
-
-            <ChatSidebarDataRow
-                :label="LABELS.smokingLabel"
-                :alert="passport.smoking !== NOT_SMOKING_VALUE"
-            >
-                {{ passport.smoking }}
             </ChatSidebarDataRow>
         </template>
 

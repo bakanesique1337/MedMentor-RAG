@@ -42,9 +42,9 @@ import {useChatModals} from '@/composables/chat/useChatModals'
 import {useSimulationSession} from '@/composables/simulation/useSimulationSession'
 import {useSimulationSocket} from '@/composables/simulation/useSimulationSocket'
 import {useSimulationStream} from '@/composables/simulation/useSimulationStream'
-import {SIMULATION_QUICK_PROMPTS} from '@/constants/simulationQuickPrompts'
+import {SIMULATION_QUICK_PROMPTS, type SimulationQuickPromptKey} from '@/constants/simulationQuickPrompts'
 import {useSidebarStore} from '@/stores/sidebar'
-import {OPENING_STATUS, SIMULATION_STATE} from '@/types'
+import {MESSAGE_ROLE, OPENING_STATUS, SIMULATION_STATE} from '@/types'
 
 const COPY = {
     sessionUnavailableTitle: 'Сессия недоступна',
@@ -122,6 +122,29 @@ const {
     fetchSession,
     closeFinishModal,
     closeDiagnosisModal,
+})
+
+// Quick-prompt'ы — одноразовые: лабораторные/инструментальные/осмотр имеют смысл
+// один раз за сессию. Признак «уже нажата» восстанавливается из серверного состояния
+// (examRevealed для осмотра, совпадение по content среди DOCTOR-сообщений для остальных),
+// чтобы кнопка оставалась disabled и после перезагрузки страницы.
+const disabledQuickPromptKeys = computed<ReadonlySet<SimulationQuickPromptKey>>(() => {
+    const used = new Set<SimulationQuickPromptKey>()
+    if (session.value === null) return used
+    if (session.value.examRevealed) {
+        used.add('physical-exam')
+    }
+    const doctorContents = new Set(
+        session.value.messages
+            .filter((message) => message.role === MESSAGE_ROLE.DOCTOR)
+            .map((message) => message.content),
+    )
+    for (const prompt of SIMULATION_QUICK_PROMPTS) {
+        if (prompt.content !== undefined && doctorContents.has(prompt.content)) {
+            used.add(prompt.key)
+        }
+    }
+    return used
 })
 
 // Локальные computed'ы — чисто шаблонные condition'ы, не используются за пределами view.
@@ -298,6 +321,7 @@ onUnmounted(() => {
                         :disabled="!canSendMessage"
                         :is-send-pending="isSendPending"
                         :quick-prompts="SIMULATION_QUICK_PROMPTS"
+                        :disabled-quick-prompt-keys="disabledQuickPromptKeys"
                         @send="handleSend"
                         @request-exam="handleRequestExam"
                     />

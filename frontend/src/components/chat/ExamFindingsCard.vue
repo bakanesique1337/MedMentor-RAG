@@ -5,7 +5,6 @@ import type {PatientPassport, PatientVitals} from '@/types'
 
 const COPY = {
     header: 'Данные осмотра · Система',
-    description: 'Эти показатели получены при объективном осмотре.',
 } as const
 
 interface Props {
@@ -58,7 +57,7 @@ const bmi = computed(() => {
     const heightM = p.heightCm / 100
     if (heightM <= 0) return null
     const value = p.weightKg / (heightM * heightM)
-    let label = 'норма'
+    let label: string
     let alert = false
     if (value < 18.5) {
         label = 'дефицит массы';
@@ -92,9 +91,6 @@ const passportRows = computed(() => {
             value: `${bmi.value.value} (${bmi.value.label})`,
             alert: bmi.value.alert
         }] : []),
-        {label: 'Аллергии', value: p.allergies, alert: p.allergies !== 'не выявлено'},
-        {label: 'Хрон. забол.', value: p.chronicConditions, alert: p.chronicConditions !== 'не выявлено'},
-        {label: 'Курение', value: p.smoking, alert: p.smoking !== 'не курит'},
     ]
 })
 </script>
@@ -110,9 +106,6 @@ const passportRows = computed(() => {
             <div class="flex items-baseline justify-between gap-4">
                 <p class="text-eyebrow font-mono text-brand-deep">
                     {{ COPY.header }}
-                </p>
-                <p class="text-eyebrow-sm text-text-tertiary">
-                    {{ COPY.description }}
                 </p>
             </div>
 

@@ -44,7 +44,12 @@ public class SimulationController {
             @PathVariable Long sessionId,
             @Valid @RequestBody SimulationMessageRequestDto request
     ) {
-        return simulationService.sendMessage(authentication.getName(), sessionId, request.content());
+        return simulationService.sendMessage(
+                authentication.getName(),
+                sessionId,
+                request.content(),
+                request.narratorPrompt()
+        );
     }
 
     @PostMapping("/{sessionId}/actions/exam")

@@ -38,7 +38,7 @@ export interface UseChatActionsReturn {
     canFinishCase: ComputedRef<boolean>
     canDiagnose: ComputedRef<boolean>
 
-    handleSend: (content: string) => Promise<void>
+    handleSend: (content: string, narratorPrompt?: string) => Promise<void>
     handleDiagnose: (payload: DiagnosePayload) => Promise<void>
     handleAbandon: () => Promise<void>
     handleRequestExam: (content?: string) => Promise<void>
