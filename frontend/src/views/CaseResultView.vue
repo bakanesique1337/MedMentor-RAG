@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import {computed, onMounted, ref} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
 
 import ResultCriterionRow from '@/components/result/ResultCriterionRow.vue'
 import ResultDiagnosisCard from '@/components/result/ResultDiagnosisCard.vue'
 import ResultKeyTurnRow from '@/components/result/ResultKeyTurnRow.vue'
 import ResultScoreRing from '@/components/result/ResultScoreRing.vue'
 import ResultSectionTitle from '@/components/result/ResultSectionTitle.vue'
-import { VAlert, VButton, VSpinner } from '@/components/ui'
-import { ROUTES } from '@/constants/routes'
-import { useSimulationApi } from '@/composables/api/useSimulationApi'
-import type { CriterionNotes, Score, SimulationSession } from '@/types'
+import {VAlert, VButton, VSpinner} from '@/components/ui'
+import {categoryDisplayLabel} from '@/constants/caseCategories'
+import {ROUTES} from '@/constants/routes'
+import {useSimulationApi} from '@/composables/api/useSimulationApi'
+import type {CriterionNotes, Score, SimulationSession} from '@/types'
 
 const COPY = {
     sessionUnavailableTitle: 'Сессия недоступна',
-    backToCasesButton: 'К списку кейсов',
-    abandonedEyebrowPrefix: 'Кейс не завершён · #',
-    abandonedTitle: 'Кейс завершён без диагноза.',
+    backToCasesButton: 'К списку задач',
+    abandonedEyebrowPrefix: 'Задача не завершёна · #',
+    abandonedTitle: 'Задача завершёна без диагноза.',
     abandonedDescription: 'Прогресс сохранён, но баллы за диагностическую точность не выставлены. Можно начать кейс заново и пройти его до конца.',
     restartButton: 'Начать заново',
     completedTitleLead: 'Разбор вашей',
@@ -30,8 +31,8 @@ const COPY = {
     yourAnswerLabel: 'Ваш ответ',
     referenceLabel: 'Эталонный диагноз',
     emptyValue: '—',
-    versionTag: 'MEDMENTOR-RAG v1.2',
-    eyebrowReviewLabel: 'Разбор кейса',
+    versionTag: 'МедМентор-RAG v0.5',
+    eyebrowReviewLabel: 'Разбор задачи',
 } as const
 
 type ScoreKey = Exclude<keyof Score, 'createdAt'>
@@ -51,11 +52,11 @@ interface CriterionDef {
 }
 
 const CRITERIA: CriterionDef[] = [
-    { label: 'Сбор анамнеза', scoreKey: 'thoroughness', notesKey: 'thoroughness' },
-    { label: 'Логика рассуждения', scoreKey: 'questioningStructure', notesKey: 'questioningStructure' },
-    { label: 'Эмпатия', scoreKey: 'empathy', notesKey: 'empathy' },
-    { label: 'Вежливость', scoreKey: 'politeness', notesKey: 'politeness' },
-    { label: 'Точность диагноза', scoreKey: 'diagnosisCorrect', notesKey: 'correctDiagnosis' },
+    {label: 'Сбор анамнеза', scoreKey: 'thoroughness', notesKey: 'thoroughness'},
+    {label: 'Логика рассуждения', scoreKey: 'questioningStructure', notesKey: 'questioningStructure'},
+    {label: 'Эмпатия', scoreKey: 'empathy', notesKey: 'empathy'},
+    {label: 'Вежливость', scoreKey: 'politeness', notesKey: 'politeness'},
+    {label: 'Точность диагноза', scoreKey: 'diagnosisCorrect', notesKey: 'correctDiagnosis'},
 ]
 
 const route = useRoute()
@@ -74,7 +75,7 @@ const criteria = computed<CriterionEntry[]>(() => {
     const score = session.value?.score
     const notes = session.value?.result?.criterionNotes ?? null
     if (!score) return []
-    return CRITERIA.map(({ label, scoreKey, notesKey }) => {
+    return CRITERIA.map(({label, scoreKey, notesKey}) => {
         const raw = score[scoreKey]
         const percent = typeof raw === 'number' && Number.isFinite(raw)
             ? Math.round(raw * 100)
@@ -106,7 +107,7 @@ const eyebrow = computed(() => {
     const parts = [
         COPY.eyebrowReviewLabel,
         `#${session.value.id}`,
-        session.value.caseCategory,
+        categoryDisplayLabel(session.value.caseCategory),
     ].filter((part) => part && part.length > 0)
     return parts.join(' · ').toUpperCase()
 })
@@ -129,7 +130,7 @@ async function fetchSession(): Promise<void> {
         const data = await simulationApi.getSession(id)
         session.value = data
         if (data.state !== 'COMPLETED' && data.state !== 'ABANDONED') {
-            router.replace({ name: ROUTES.CHAT, params: { sessionId: String(id) } })
+            router.replace({name: ROUTES.CHAT, params: {sessionId: String(id)}})
                 .catch(() => undefined)
         }
     } catch {
@@ -143,7 +144,7 @@ async function fetchSession(): Promise<void> {
  * Navigates back to the cases catalog.
  */
 function handleBackToCases(): void {
-    router.push({ name: ROUTES.CASES }).catch(() => undefined)
+    router.push({name: ROUTES.CASES}).catch(() => undefined)
 }
 
 /**
@@ -154,7 +155,7 @@ async function handleRestart(): Promise<void> {
     isRestartPending.value = true
     try {
         const response = await simulationApi.start(session.value.caseId)
-        await router.push({ name: ROUTES.CHAT, params: { sessionId: String(response.sessionId) } })
+        await router.push({name: ROUTES.CHAT, params: {sessionId: String(response.sessionId)}})
     } catch {
         pageError.value = 'Не удалось начать новый кейс. Попробуйте снова.'
     } finally {
@@ -171,7 +172,7 @@ onMounted(fetchSession)
             v-if="isLoading"
             class="flex flex-1 items-center justify-center"
         >
-            <VSpinner size="lg" />
+            <VSpinner size="lg"/>
         </div>
 
         <div
@@ -194,8 +195,12 @@ onMounted(fetchSession)
         </div>
 
         <template v-else-if="session && isAbandoned">
-            <section class="flex flex-1 items-center justify-center bg-gradient-to-b from-[color:var(--color-bg)] to-[color:var(--color-teal-ghost)] px-[2.4rem]">
-                <div class="w-full max-w-[48rem] rounded-[1.4rem] border border-[color:var(--color-line-2)] bg-white p-[3.6rem] shadow-card">
+            <section
+                class="flex flex-1 items-center justify-center bg-gradient-to-b from-[color:var(--color-bg)] to-[color:var(--color-teal-ghost)] px-[2.4rem]"
+            >
+                <div
+                    class="w-full max-w-[48rem] rounded-[1.4rem] border border-[color:var(--color-line-2)] bg-white p-[3.6rem] shadow-card"
+                >
                     <p class="text-eyebrow text-[color:var(--color-danger-bright)]">
                         {{ COPY.abandonedEyebrowPrefix }}{{ session.id }}
                     </p>
@@ -227,7 +232,9 @@ onMounted(fetchSession)
         </template>
 
         <template v-else-if="session && isCompleted">
-            <section class="border-b border-[color:var(--color-line)] bg-gradient-to-b from-[color:var(--color-teal-ghost)] to-[color:var(--color-bg)] px-[2.8rem] py-[2.8rem]">
+            <section
+                class="border-b border-[color:var(--color-line)] bg-gradient-to-b from-[color:var(--color-teal-ghost)] to-[color:var(--color-bg)] px-[2.8rem] py-[2.8rem]"
+            >
                 <div class="mx-auto w-full max-w-[96rem]">
                     <div class="mb-[1.6rem] flex flex-wrap items-baseline justify-between gap-[2rem]">
                         <p class="text-eyebrow text-brand">{{ eyebrow }}</p>
@@ -244,13 +251,15 @@ onMounted(fetchSession)
                     <div class="flex flex-wrap items-center gap-[2.8rem]">
                         <div class="min-w-0 flex-1">
                             <h1 class="font-serif text-[3rem] font-medium leading-[1.15] tracking-[-0.025em] text-text-primary">
-                                {{ COPY.completedTitleLead }} <em class="italic text-brand">{{ COPY.completedTitleAccent }}</em>
+                                {{ COPY.completedTitleLead }} <em class="italic text-brand">{{
+                                    COPY.completedTitleAccent
+                                }}</em>
                             </h1>
                             <p class="mt-[0.4rem] max-w-[56rem] text-[1.3rem] leading-[1.55] text-text-secondary">
                                 {{ COPY.completedDescription }}
                             </p>
                         </div>
-                        <ResultScoreRing :score="overallScore" />
+                        <ResultScoreRing :score="overallScore"/>
                     </div>
                 </div>
             </section>
@@ -285,7 +294,9 @@ onMounted(fetchSession)
 
                 <template v-if="session.result?.keyTurns?.length">
                     <ResultSectionTitle>{{ COPY.sectionKeyTurns }}</ResultSectionTitle>
-                    <div class="mb-[2.4rem] rounded-[1.2rem] border border-[color:var(--color-line)] bg-white py-[0.4rem]">
+                    <div
+                        class="mb-[2.4rem] rounded-[1.2rem] border border-[color:var(--color-line)] bg-white py-[0.4rem]"
+                    >
                         <ResultKeyTurnRow
                             v-for="(turn, index) in session.result.keyTurns"
                             :key="`${turn.turn}-${index}`"
@@ -297,7 +308,9 @@ onMounted(fetchSession)
 
                 <template v-if="session.result?.missedFindings?.length">
                     <ResultSectionTitle>{{ COPY.sectionMissed }}</ResultSectionTitle>
-                    <div class="mb-[2.4rem] rounded-[1.2rem] border border-[color:var(--color-line)] bg-white px-[1.8rem] py-[1.4rem]">
+                    <div
+                        class="mb-[2.4rem] rounded-[1.2rem] border border-[color:var(--color-line)] bg-white px-[1.8rem] py-[1.4rem]"
+                    >
                         <ul class="m-0 list-disc space-y-[0.4rem] pl-[1.8rem] text-[1.35rem] leading-[1.65] text-text-primary">
                             <li
                                 v-for="(item, index) in session.result.missedFindings"
@@ -311,7 +324,9 @@ onMounted(fetchSession)
 
                 <template v-if="session.result?.summary">
                     <ResultSectionTitle>{{ COPY.sectionRecommendations }}</ResultSectionTitle>
-                    <div class="mb-[1.6rem] rounded-[1.2rem] border border-[color:rgb(13_115_119_/_0.2)] bg-gradient-to-br from-[color:var(--color-teal-ghost)] to-[color:var(--color-teal-soft)] px-[1.8rem] py-[1.6rem]">
+                    <div
+                        class="mb-[1.6rem] rounded-[1.2rem] border border-[color:rgb(13_115_119_/_0.2)] bg-gradient-to-br from-[color:var(--color-teal-ghost)] to-[color:var(--color-teal-soft)] px-[1.8rem] py-[1.6rem]"
+                    >
                         <p class="font-serif text-[1.55rem] italic leading-[1.5] text-text-primary">
                             «{{ session.result.summary }}»
                         </p>
@@ -340,14 +355,16 @@ onMounted(fetchSession)
                                 width="12"
                                 height="12"
                                 viewBox="0 0 12 12"
-                            ><path
-                                d="M2 6h8M7 3l3 3-3 3"
-                                stroke="currentColor"
-                                stroke-width="1.4"
-                                fill="none"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            /></svg>
+                            >
+                                <path
+                                    d="M2 6h8M7 3l3 3-3 3"
+                                    stroke="currentColor"
+                                    stroke-width="1.4"
+                                    fill="none"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                />
+                            </svg>
                         </template>
                     </VButton>
                 </div>

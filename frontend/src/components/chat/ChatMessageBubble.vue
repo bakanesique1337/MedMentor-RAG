@@ -6,30 +6,45 @@
  * (или ExamFindingsCard для маркера __EXAM_CARD__). MENTOR-сообщения
  * рендерит OutOfScopeBlock. Диспетчеризация по ролям живёт в ChatTimeline.
  */
-import { computed } from 'vue'
+import {computed} from 'vue'
 
-import type { MessageRole } from '@/types'
-import { renderMarkdown } from '@/utils/markdown'
+import {avatarGradient, DEFAULT_AVATAR_VARIANT} from '@/constants/avatar'
+import type {AvatarVariant, MessageRole} from '@/types'
+import {renderMarkdown} from '@/utils/markdown'
 
 const COPY = {
-    doctorAvatar: 'Вы',
-    doctorRole: 'Вы — Студент',
     patientRole: 'Пациент',
 } as const
+
+const DOCTOR_FALLBACK_INITIALS = 'Вы'
 
 interface Props {
     role: MessageRole
     content: string
     isStreaming?: boolean
     patientInitials?: string
+    doctorInitials?: string
+    doctorAvatarVariant?: AvatarVariant
 }
 
 const props = withDefaults(defineProps<Props>(), {
     isStreaming: false,
     patientInitials: 'ПС',
+    doctorInitials: DOCTOR_FALLBACK_INITIALS,
+    doctorAvatarVariant: DEFAULT_AVATAR_VARIANT,
 })
 
 const isDoctor = computed(() => props.role === 'DOCTOR')
+
+/**
+ * Стиль аватара доктора — динамический градиент из выбранного пользователем
+ * варианта (см. `useUserProfileStore.avatarVariant`). Box-shadow оставляем
+ * нейтральным, чтобы совпадал со всеми вариантами палитры.
+ */
+const doctorAvatarStyle = computed(() => ({
+    background: avatarGradient(props.doctorAvatarVariant),
+    boxShadow: '0 2px 8px rgb(10 31 31 / 0.18)',
+}))
 
 /**
  * HTML-версия контента сообщения, отрендеренная из markdown.
@@ -47,18 +62,21 @@ const renderedContent = computed(() => renderMarkdown(props.content))
         <div
             class="flex size-[3.2rem] shrink-0 items-center justify-center rounded-full text-[1.1rem] font-bold text-white"
             :style="isDoctor
-                ? 'background: linear-gradient(135deg, var(--color-teal-deep), #062e30); box-shadow: 0 2px 8px rgb(13 115 119 / 0.25);'
+                ? doctorAvatarStyle
                 : 'background: linear-gradient(135deg, #3a4a48, #1e2e2c); box-shadow: 0 1px 3px rgb(10 31 31 / 0.15);'"
         >
-            {{ isDoctor ? COPY.doctorAvatar : patientInitials }}
+            {{ isDoctor ? doctorInitials : patientInitials }}
         </div>
 
         <div
             class="flex max-w-[70%] flex-col"
             :class="isDoctor ? 'items-end' : 'items-start'"
         >
-            <p class="mb-[0.4rem] text-eyebrow-sm text-text-secondary">
-                {{ isDoctor ? COPY.doctorRole : COPY.patientRole }}
+            <p
+                v-if="!isDoctor"
+                class="mb-[0.4rem] text-eyebrow-sm text-text-secondary"
+            >
+                {{ COPY.patientRole }}
             </p>
             <div
                 class="chat-md break-words px-[1.4rem] py-[1.1rem] text-[1.4rem] leading-[1.5]"
@@ -135,10 +153,21 @@ const renderedContent = computed(() => renderMarkdown(props.content))
         line-height: 1.25;
     }
 
-    :deep(h1) { font-size: 1.6rem; }
-    :deep(h2) { font-size: 1.5rem; }
-    :deep(h3) { font-size: 1.45rem; }
-    :deep(h4) { font-size: 1.4rem; }
+    :deep(h1) {
+        font-size: 1.6rem;
+    }
+
+    :deep(h2) {
+        font-size: 1.5rem;
+    }
+
+    :deep(h3) {
+        font-size: 1.45rem;
+    }
+
+    :deep(h4) {
+        font-size: 1.4rem;
+    }
 
     :deep(ul),
     :deep(ol) {
@@ -146,12 +175,25 @@ const renderedContent = computed(() => renderMarkdown(props.content))
         padding-left: 1.8rem;
     }
 
-    :deep(ul) { list-style: disc; }
-    :deep(ol) { list-style: decimal; }
-    :deep(li + li) { margin-top: 0.2rem; }
+    :deep(ul) {
+        list-style: disc;
+    }
 
-    :deep(strong) { font-weight: 600; }
-    :deep(em) { font-style: italic; }
+    :deep(ol) {
+        list-style: decimal;
+    }
+
+    :deep(li + li) {
+        margin-top: 0.2rem;
+    }
+
+    :deep(strong) {
+        font-weight: 600;
+    }
+
+    :deep(em) {
+        font-style: italic;
+    }
 
     :deep(code) {
         padding: 0.1rem 0.4rem;

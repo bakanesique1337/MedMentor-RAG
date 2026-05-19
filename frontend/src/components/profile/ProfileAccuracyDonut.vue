@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import {computed} from 'vue'
 
-import type { AccuracyBuckets } from '@/utils/profileAggregations'
+import type {AccuracyBuckets} from '@/utils/profileAggregations'
 
 const COPY = {
     eyebrow: 'Точность диагностики',
     totalLeading: 'ВСЕГО',
-    totalTrailing: 'КЕЙСОВ',
+    totalTrailing: 'ЗАДАЧИ',
     centerCaption: 'ВЕРНЫХ · %',
     legendCorrect: 'Верный диагноз',
     legendPartial: 'Частично верный',
@@ -70,9 +70,9 @@ interface LegendItem {
 }
 
 const legend = computed<LegendItem[]>(() => [
-    { color: 'var(--brand-primary)', label: COPY.legendCorrect, count: props.buckets.correct, pct: correctPct.value },
-    { color: '#e8b54a', label: COPY.legendPartial, count: props.buckets.partial, pct: partialPct.value },
-    { color: '#c77566', label: COPY.legendWrong, count: props.buckets.wrong, pct: wrongPct.value },
+    {color: 'var(--brand-primary)', label: COPY.legendCorrect, count: props.buckets.correct, pct: correctPct.value},
+    {color: '#e8b54a', label: COPY.legendPartial, count: props.buckets.partial, pct: partialPct.value},
+    {color: '#c77566', label: COPY.legendWrong, count: props.buckets.wrong, pct: wrongPct.value},
 ])
 
 const dashArrayCorrect = computed<string>(() => `${segments.value.correct} ${CIRCUMFERENCE}`)
@@ -165,7 +165,8 @@ const dashArrayWrong = computed<string>(() => `${segments.value.wrong} ${CIRCUMF
                     font-size="9.5"
                     letter-spacing="1.3"
                     fill="var(--color-ink-3)"
-                >{{ COPY.centerCaption }}</text>
+                >{{ COPY.centerCaption }}
+                </text>
             </svg>
 
             <div class="flex min-w-0 flex-1 flex-col gap-[1.6rem]">

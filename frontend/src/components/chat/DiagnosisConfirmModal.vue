@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import {computed, ref, watch} from 'vue'
 
 import MmArrow from '@/components/common/MmArrow.vue'
-import { VButton, VInput, VModal, VRange, VTextarea } from '@/components/ui'
+import {VButton, VInput, VModal, VRange, VTextarea} from '@/components/ui'
 
 const COPY = {
-    eyebrowPrefix: 'Final diagnosis · Case #',
+    eyebrowPrefix: 'Задача #',
     titleLead: 'Подтвердите',
     titleAccent: 'диагноз',
     description: 'После подтверждения симуляция завершится, и модель сравнит ваш ответ с эталоном.',
@@ -103,7 +103,7 @@ function handleConfirm(): void {
             <p class="mt-[0.6rem] text-[1.3rem] text-text-secondary">
                 {{ COPY.description }}
             </p>
-            <div class="-mx-[3.2rem] mt-[1.6rem] h-[1px] bg-[color:var(--color-line)]" />
+            <div class="-mx-[3.2rem] mt-[1.6rem] h-[1px] bg-[color:var(--color-line)]"/>
         </template>
 
         <div
@@ -203,18 +203,20 @@ function handleConfirm(): void {
                             width="12"
                             height="12"
                             viewBox="0 0 12 12"
-                        ><path
-                            d="M2 6l3 3 5-6"
-                            stroke="currentColor"
-                            stroke-width="1.6"
-                            fill="none"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        /></svg>
+                        >
+                            <path
+                                d="M2 6l3 3 5-6"
+                                stroke="currentColor"
+                                stroke-width="1.6"
+                                fill="none"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
                     </template>
                     {{ COPY.submitButton }}
                     <template #trailing>
-                        <MmArrow :size="10" />
+                        <MmArrow :size="10"/>
                     </template>
                 </VButton>
             </div>

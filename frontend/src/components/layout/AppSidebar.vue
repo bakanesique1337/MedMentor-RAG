@@ -11,7 +11,7 @@ import {ROUTES} from '@/constants/routes'
 import {useSidebarStore} from '@/stores/sidebar'
 
 const LABELS = {
-    casesNav: 'Все кейсы',
+    casesNav: 'Все задачи',
     activeSimulationNav: 'Активная симуляция',
 } as const
 
@@ -95,7 +95,7 @@ watch(() => route.name, (newName, oldName) => {
                 @click="navigateToActive"
             >
                 <template #icon>
-                    <VPlayIcon />
+                    <VPlayIcon/>
                 </template>
             </SidebarNavButton>
         </nav>

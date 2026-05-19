@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import {computed, onMounted, onUnmounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
 
-import { ROUTES } from '@/constants/routes'
-import { useAuthGateStore } from '@/stores/authGate'
+import {ROUTES} from '@/constants/routes'
+import {useAuthGateStore} from '@/stores/authGate'
 
 const COPY = {
     initialClock: '--:--:--',
@@ -14,7 +14,7 @@ const COPY = {
     titleLead: 'Запрошенная страница',
     titleAccent: 'не найдена',
     titleTail: '.',
-    description: 'Маршрутизатор выполнил поиск по симптомам URL и не нашёл соответствующего пациента в базе кейсов. Возможно, ссылка устарела, либо адрес введён с опечаткой. Рекомендуем вернуться к каталогу или продолжить обучение с другой страницы.',
+    description: 'Маршрутизатор выполнил поиск по симптомам URL и не нашёл соответствующего пациента в базе задач. Возможно, ссылка устарела, либо адрес введён с опечаткой. Рекомендуем вернуться к каталогу или продолжить обучение с другой страницы.',
     monitorEyebrow: 'Кардиомонитор маршрута',
     vitalHrLabel: 'HR',
     vitalHrValue: '— —',
@@ -32,7 +32,6 @@ const COPY = {
     profileTitle: 'Мой профиль',
     profileSubtitle: 'Прогресс, статистика, настройки',
     homeTitle: 'На главную',
-    homeSubtitle: 'MedMentor RAG · лендинг продукта',
     loginTitle: 'Войти в аккаунт',
     loginSubtitle: 'Открыть каталог кейсов и профиль',
 } as const
@@ -40,7 +39,7 @@ const COPY = {
 interface DxItem {
     key: string
     title: string
-    subtitle: string
+    subtitle?: string
     icon: 'cases' | 'profile' | 'home' | 'login'
     onClick: () => void
 }
@@ -82,21 +81,21 @@ onUnmounted(() => {
  * Navigates to the home (landing) view.
  */
 function handleHome(): void {
-    router.push({ name: ROUTES.HOME }).catch(() => undefined)
+    router.push({name: ROUTES.HOME}).catch(() => undefined)
 }
 
 /**
  * Navigates to the cases catalog.
  */
 function handleCases(): void {
-    router.push({ name: ROUTES.CASES }).catch(() => undefined)
+    router.push({name: ROUTES.CASES}).catch(() => undefined)
 }
 
 /**
  * Navigates to the user's profile.
  */
 function handleProfile(): void {
-    router.push({ name: ROUTES.PROFILE }).catch(() => undefined)
+    router.push({name: ROUTES.PROFILE}).catch(() => undefined)
 }
 
 /**
@@ -126,7 +125,6 @@ const dxItems = computed<DxItem[]>(() => {
             {
                 key: 'home',
                 title: COPY.homeTitle,
-                subtitle: COPY.homeSubtitle,
                 icon: 'home',
                 onClick: handleHome,
             },
@@ -137,7 +135,6 @@ const dxItems = computed<DxItem[]>(() => {
         {
             key: 'home',
             title: COPY.homeTitle,
-            subtitle: COPY.homeSubtitle,
             icon: 'home',
             onClick: handleHome,
         },
@@ -151,7 +148,6 @@ const dxItems = computed<DxItem[]>(() => {
     ]
 })
 
-const dxCountLabel = computed(() => `${dxItems.value.length} ${COPY.countSuffix}`)
 </script>
 
 <template>
@@ -188,7 +184,7 @@ const dxCountLabel = computed(() => `${dxItems.value.length} ${COPY.countSuffix}
                 <!-- Left: hero copy -->
                 <div class="px-[2.2rem] py-[2.8rem] sm:px-[3.6rem] sm:py-[3.6rem]">
                     <div class="mb-[1.2rem] inline-flex items-center gap-[0.8rem] text-eyebrow text-brand">
-                        <span class="inline-block h-[0.6rem] w-[0.6rem] rounded-full bg-brand" />
+                        <span class="inline-block h-[0.6rem] w-[0.6rem] rounded-full bg-brand"/>
                         {{ COPY.diagnosticEyebrow }}
                     </div>
 
@@ -212,7 +208,9 @@ const dxCountLabel = computed(() => `${dxItems.value.length} ${COPY.countSuffix}
                 </div>
 
                 <!-- Right: monitor + diagnostic list -->
-                <div class="border-t border-[color:var(--color-line)] bg-[color:var(--color-cream-warm)]/40 px-[2.2rem] py-[2.4rem] sm:px-[3rem] lg:border-l lg:border-t-0">
+                <div
+                    class="border-t border-[color:var(--color-line)] bg-[color:var(--color-cream-warm)]/40 px-[2.2rem] py-[2.4rem] sm:px-[3rem] lg:border-l lg:border-t-0"
+                >
                     <div class="mb-[1.4rem] text-eyebrow text-text-secondary">
                         {{ COPY.monitorEyebrow }}
                     </div>
@@ -283,13 +281,12 @@ const dxCountLabel = computed(() => `${dxItems.value.length} ${COPY.countSuffix}
                     </div>
 
                     <!-- Diagnostic list -->
-                    <div class="mt-[1.8rem] rounded-[1rem] border border-[color:var(--color-line)] bg-white px-[1.6rem] py-[1.4rem]">
+                    <div
+                        class="mt-[1.8rem] rounded-[1rem] border border-[color:var(--color-line)] bg-white px-[1.6rem] py-[1.4rem]"
+                    >
                         <div class="mb-[1rem] flex items-center justify-between">
                             <div class="text-eyebrow text-text-secondary">
                                 {{ COPY.diffNavEyebrow }}
-                            </div>
-                            <div class="font-mono text-[1.05rem] tracking-[0.04em] text-text-tertiary">
-                                {{ dxCountLabel }}
                             </div>
                         </div>
 
@@ -305,7 +302,9 @@ const dxCountLabel = computed(() => `${dxItems.value.length} ${COPY.countSuffix}
                                     class="group flex w-full items-center gap-[1.2rem] py-[1rem] text-left transition-[padding] duration-[140ms]"
                                     @click="item.onClick"
                                 >
-                                    <span class="inline-flex h-[2.8rem] w-[2.8rem] shrink-0 items-center justify-center rounded-[0.7rem] bg-brand-ghost text-brand">
+                                    <span
+                                        class="inline-flex h-[2.8rem] w-[2.8rem] shrink-0 items-center justify-center rounded-[0.7rem] bg-brand-ghost text-brand"
+                                    >
                                         <!-- cases -->
                                         <svg
                                             v-if="item.icon === 'cases'"
@@ -419,11 +418,17 @@ const dxCountLabel = computed(() => `${dxItems.value.length} ${COPY.countSuffix}
                                     </span>
 
                                     <span class="min-w-0 flex-1">
-                                        <span class="block text-[1.3rem] font-medium text-text-primary">{{ item.title }}</span>
-                                        <span class="mt-[0.1rem] block text-[1.15rem] text-text-tertiary">{{ item.subtitle }}</span>
+                                        <span class="block text-[1.3rem] font-medium text-text-primary">{{
+                                            item.title
+                                        }}</span>
+                                        <span class="mt-[0.1rem] block text-[1.15rem] text-text-tertiary">{{
+                                            item.subtitle
+                                        }}</span>
                                     </span>
 
-                                    <span class="dx-arrow text-[color:rgb(10_31_31_/_0.18)] transition-[color,transform] duration-[140ms] group-hover:text-brand">
+                                    <span
+                                        class="dx-arrow text-[color:rgb(10_31_31_/_0.18)] transition-[color,transform] duration-[140ms] group-hover:text-brand"
+                                    >
                                         <svg
                                             width="14"
                                             height="14"
@@ -452,9 +457,13 @@ const dxCountLabel = computed(() => `${dxItems.value.length} ${COPY.countSuffix}
 
 <style scoped>
 @keyframes mm-flatline-draw {
-    from { stroke-dashoffset: 800; }
+    from {
+        stroke-dashoffset: 800;
+    }
 
-    to { stroke-dashoffset: 0; }
+    to {
+        stroke-dashoffset: 0;
+    }
 }
 
 @keyframes mm-blip-pulse {
@@ -474,9 +483,8 @@ const dxCountLabel = computed(() => `${dxItems.value.length} ${COPY.countSuffix}
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background-image:
-        linear-gradient(to right, rgb(125 184 182 / 8%) 1px, transparent 1px),
-        linear-gradient(to bottom, rgb(125 184 182 / 8%) 1px, transparent 1px);
+    background-image: linear-gradient(to right, rgb(125 184 182 / 8%) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(125 184 182 / 8%) 1px, transparent 1px);
     background-size: 1.4rem 1.4rem;
 }
 

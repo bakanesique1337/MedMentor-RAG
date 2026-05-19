@@ -6,14 +6,18 @@ import ChatSystemBubble from '@/components/chat/ChatSystemBubble.vue'
 import ExamFindingsCard from '@/components/chat/ExamFindingsCard.vue'
 import OutOfScopeBlock from '@/components/chat/OutOfScopeBlock.vue'
 import { EXAM_CARD_MARKER } from '@/constants/chatMarkers'
+import { useUserProfileStore } from '@/stores/userProfile'
 import { MESSAGE_ROLE, STREAMING_STATUS_TYPE } from '@/types'
 import type { ConversationMessage, PatientPassport, PatientVitals, StreamingStatusType } from '@/types'
 
 const COPY = {
     fallbackInitial: 'П',
+    doctorFallbackInitials: 'Вы',
     emptyState: 'Диалог появится здесь, как только пациент начнёт говорить.',
     nowFallback: '--:--',
 } as const
+
+const userProfile = useUserProfileStore()
 
 interface Props {
     messages: ConversationMessage[]
@@ -101,6 +105,22 @@ const patientInitials = computed(() =>
 )
 
 /**
+ * Инициалы доктора из стора профиля пользователя. До прихода настроек или
+ * для незаполненного имени — возвращаем «Вы», чтобы аватар не схлопывался.
+ */
+const doctorInitials = computed<string>(() => {
+    const letters = userProfile.displayName
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((p) => p[0] ?? '')
+        .join('')
+        .toUpperCase()
+    return letters || COPY.doctorFallbackInitials
+})
+
+const doctorAvatarVariant = computed(() => userProfile.avatarVariant)
+
+/**
  * Scrolls the timeline container to the bottom.
  */
 function scrollToBottom(): void {
@@ -152,6 +172,8 @@ onMounted(() => {
                     :role="msg.role"
                     :content="msg.content"
                     :patient-initials="patientInitials"
+                    :doctor-initials="doctorInitials"
+                    :doctor-avatar-variant="doctorAvatarVariant"
                 />
             </template>
 
@@ -160,6 +182,8 @@ onMounted(() => {
                 role="DOCTOR"
                 :content="pendingDoctorMessage"
                 :patient-initials="patientInitials"
+                :doctor-initials="doctorInitials"
+                :doctor-avatar-variant="doctorAvatarVariant"
             />
 
             <ChatMessageBubble
@@ -168,6 +192,8 @@ onMounted(() => {
                 :content="streamingContent"
                 :is-streaming="true"
                 :patient-initials="patientInitials"
+                :doctor-initials="doctorInitials"
+                :doctor-avatar-variant="doctorAvatarVariant"
             />
 
             <OutOfScopeBlock
