@@ -15,6 +15,7 @@ import type {
     SimulationSession,
 } from '@/types'
 import {isActiveSimulation} from '@/utils/typeGuards'
+import {LLM_REQUEST_TIMEOUT_MS} from '@/constants/api'
 
 import type {DiagnosePayload, GetSessionOptions} from './types'
 import {apiGet, apiPost, toSessionId} from './useApi'
@@ -140,9 +141,11 @@ export function useSimulationApi() {
         payload: DiagnosePayload,
     ): Promise<SimulationSession> {
         const id = toSessionId(sessionId)
+
         return apiPost<SimulationSession, DiagnosePayload>(
             `/api/simulations/${id}/diagnose`,
             payload,
+            {signal: AbortSignal.timeout(LLM_REQUEST_TIMEOUT_MS)},
         )
     }
 

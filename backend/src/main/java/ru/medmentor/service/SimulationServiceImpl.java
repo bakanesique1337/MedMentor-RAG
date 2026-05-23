@@ -486,7 +486,11 @@ public class SimulationServiceImpl implements SimulationService {
                 username, sessionId, diagnosis, confidence, rationale);
 
         final UserAccount userAccount = userAccountService.getByUsername(username);
-        final SimulationSession session = getOwnedSession(userAccount, sessionId);
+        // Pessimistic lock на сессию: вызов LLM занимает десятки
+        // секунд, и без lock'а двойной POST /diagnose на ту же сессию (двойной
+        // клик / reload вкладки / вторая вкладка) проскакивает ensureState и
+        // приводит к UNIQUE(session_id) на user_scores при коммите второго.
+        final SimulationSession session = getOwnedSessionForUpdate(userAccount, sessionId);
         final MedicalCase medicalCase = caseLoaderService.getCaseById(session.getCaseId());
         ensureState(session, EnumSet.of(SimulationState.IN_PROGRESS, SimulationState.DIAGNOSIS_SELECT));
         ensureOpeningReady(session);
@@ -569,6 +573,15 @@ public class SimulationServiceImpl implements SimulationService {
 
     private SimulationSession getOwnedSession(UserAccount userAccount, Long sessionId) {
         final SimulationSession session = simulationSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Unknown session id: " + sessionId));
+        if (!session.getUser().getId().equals(userAccount.getId())) {
+            throw new IllegalArgumentException("Session does not belong to the authenticated user");
+        }
+        return session;
+    }
+
+    private SimulationSession getOwnedSessionForUpdate(UserAccount userAccount, Long sessionId) {
+        final SimulationSession session = simulationSessionRepository.findByIdForUpdate(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Unknown session id: " + sessionId));
         if (!session.getUser().getId().equals(userAccount.getId())) {
             throw new IllegalArgumentException("Session does not belong to the authenticated user");
