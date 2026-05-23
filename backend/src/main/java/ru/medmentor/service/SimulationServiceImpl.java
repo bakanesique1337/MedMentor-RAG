@@ -224,6 +224,7 @@ public class SimulationServiceImpl implements SimulationService {
     }
 
     @Override
+    @Transactional
     public SimulationCommandResponseDto sendMessage(
             String username,
             Long sessionId,
