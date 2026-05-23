@@ -135,7 +135,10 @@ class SimulationServiceImplTest {
                 .build();
 
         when(userAccountService.getByUsername("doctor")).thenReturn(user);
-        when(simulationSessionRepository.findById(200L)).thenReturn(Optional.of(session));
+        // submitDiagnosis takes a row-lock via findByIdForUpdate (see
+        // SimulationServiceImpl#getOwnedSessionForUpdate), so plain findById
+        // stubs are no longer enough for this code path.
+        when(simulationSessionRepository.findByIdForUpdate(200L)).thenReturn(Optional.of(session));
         when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
         when(simulationInFlightRegistry.isAnyResponseInFlight(200L)).thenReturn(false);
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(200L)).thenReturn(List.of());
@@ -190,7 +193,7 @@ class SimulationServiceImplTest {
                 .build();
 
         when(userAccountService.getByUsername("doctor")).thenReturn(user);
-        when(simulationSessionRepository.findById(300L)).thenReturn(Optional.of(session));
+        when(simulationSessionRepository.findByIdForUpdate(300L)).thenReturn(Optional.of(session));
         when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
         when(simulationInFlightRegistry.isAnyResponseInFlight(300L)).thenReturn(false);
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(300L)).thenReturn(List.of());
