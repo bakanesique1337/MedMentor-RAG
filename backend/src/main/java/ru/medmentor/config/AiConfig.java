@@ -10,6 +10,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import ru.medmentor.service.PromptTemplateService;
 
+import java.util.List;
+
 @Configuration
 public class AiConfig {
 
@@ -39,8 +41,16 @@ public class AiConfig {
             @Qualifier("ollamaChatModel") ChatModel chatModel,
             PromptTemplateService promptTemplateService
     ) {
+        // Стоп-последовательности страхуют от «второго круга» в лаб/инструментальных
+        // ответах: после `**Заключение.** …` qwen3 любит поставить `---` и начать
+        // дублирующий `### …`-раздел. `repeat_penalty` не ловит это, потому что
+        // первый раздел уже выпал из окна `repeat_last_n`. Stop-токены физически
+        // обрывают поток на разделителе. Применимо только к patient-role.txt; в
+        // session-opening / score-review / examination-finding `\n---` и `\n\n###`
+        // не встречаются, табличный `|---|---|` начинается с `|` и не матчится.
         final OllamaChatOptions defaultOptions = OllamaChatOptions.builder()
                 .disableThinking()
+                .stop(List.of("\n---", "\n\n###"))
                 .build();
         return ChatClient.builder(chatModel)
                 .defaultSystem(promptTemplateService.getGlobalSystemPrompt())

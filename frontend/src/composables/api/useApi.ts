@@ -80,7 +80,10 @@ const useSharedFetch = createFetch({
     options: {
         beforeFetch({options}) {
             options.credentials = 'include'
-            options.signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+
+            if (options.signal === undefined || options.signal === null) {
+                options.signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+            }
             return {options}
         },
         async onFetchError(ctx) {

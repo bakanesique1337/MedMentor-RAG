@@ -1,6 +1,8 @@
 package ru.medmentor.repository;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,6 +23,18 @@ public interface SimulationSessionRepository extends JpaRepository<SimulationSes
     List<SimulationSession> findByUserIdAndStateOrderByCreatedAtDesc(Long userId, SimulationState state);
 
     List<SimulationSession> findByUserIdOrderByCreatedAtDesc(Long userId);
+
+    /**
+     * Загружает сессию с эксклюзивным row-level lock (SELECT ... FOR UPDATE).
+     * Параллельные вызовы для того же {@code id} сериализуются: второй ждёт
+     * коммита первой транзакции и видит уже актуальное состояние.
+     *
+     * <p>Нужен для {@code submitDiagnosis}: вызов LLM-оценки занимает десятки
+     * секунд на локальной Ollama, а транзакция метода держится всё это время.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from SimulationSession s where s.id = :id")
+    Optional<SimulationSession> findByIdForUpdate(@Param("id") Long id);
 
     /**
      * Атомарно выставляет {@code exam_revealed=true} ровно один раз для сессии.

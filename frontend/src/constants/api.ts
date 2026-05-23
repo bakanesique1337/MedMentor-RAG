@@ -17,3 +17,10 @@ export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undef
  * Таймаут HTTP-запросов в миллисекундах.
  */
 export const REQUEST_TIMEOUT_MS = 15000
+
+/**
+ * Таймаут для LLM-эндпоинтов, которые синхронно ждут ответа модели.
+ * Локальная Ollama на score-review отвечает 30-50 сек; берём двукратный запас,
+ * чтобы пиковая загрузка GPU не приводила к ложным таймаутам на фронте.
+ */
+export const LLM_REQUEST_TIMEOUT_MS = 120000
