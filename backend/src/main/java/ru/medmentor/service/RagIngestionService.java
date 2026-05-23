@@ -42,6 +42,7 @@ public class RagIngestionService {
     private static final Logger log = LoggerFactory.getLogger(RagIngestionService.class);
 
     private final RagChunkingService ragChunkingService;
+    private final RagMarkdownChunkingService ragMarkdownChunkingService;
     private final RagProperties ragProperties;
     private final RagSourceFileRepository ragSourceFileRepository;
     private final RagSourceParserService ragSourceParserService;
@@ -51,12 +52,14 @@ public class RagIngestionService {
 
     public RagIngestionService(
             RagChunkingService ragChunkingService,
+            RagMarkdownChunkingService ragMarkdownChunkingService,
             RagProperties ragProperties,
             RagSourceFileRepository ragSourceFileRepository,
             RagSourceParserService ragSourceParserService,
             VectorStore vectorStore
     ) {
         this.ragChunkingService = ragChunkingService;
+        this.ragMarkdownChunkingService = ragMarkdownChunkingService;
         this.ragProperties = ragProperties;
         this.ragSourceFileRepository = ragSourceFileRepository;
         this.ragSourceParserService = ragSourceParserService;
@@ -132,12 +135,7 @@ public class RagIngestionService {
             }
 
             final String parsedContent = parseFileContent(sourceFile);
-            final List<String> chunks = ragChunkingService.chunkText(
-                    parsedContent,
-                    ragProperties.getChunkSize(),
-                    ragProperties.getChunkOverlap(),
-                    ragProperties.getMinChunkSize()
-            );
+            final List<String> chunks = chunkContent(sourceFile, parsedContent);
             if (chunks.isEmpty()) {
                 if (existingState != null) {
                     deleteVectorChunks(existingState.getChunkIds());
@@ -226,6 +224,30 @@ public class RagIngestionService {
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to scan RAG source directory: " + sourceRoot, exception);
         }
+    }
+
+    /**
+     * Picks a chunker by file extension: markdown files go through the
+     * heading-aware {@link RagMarkdownChunkingService} (drops describing
+     * sections, prefixes chunks with the heading path); everything else
+     * falls back to the byte-budget {@link RagChunkingService}.
+     */
+    private List<String> chunkContent(Path sourceFile, String parsedContent) {
+        final String fileName = sourceFile.getFileName().toString().toLowerCase(Locale.ROOT);
+        if (fileName.endsWith(".md") || fileName.endsWith(".markdown")) {
+            return ragMarkdownChunkingService.chunkMarkdown(
+                    parsedContent,
+                    ragProperties.getChunkSize(),
+                    ragProperties.getChunkOverlap(),
+                    ragProperties.getMinChunkSize()
+            );
+        }
+        return ragChunkingService.chunkText(
+                parsedContent,
+                ragProperties.getChunkSize(),
+                ragProperties.getChunkOverlap(),
+                ragProperties.getMinChunkSize()
+        );
     }
 
     private boolean isSupportedExtension(Path filePath) {

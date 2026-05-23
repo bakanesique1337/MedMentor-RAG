@@ -493,12 +493,15 @@ public class SimulationAiServiceImpl implements SimulationAiService {
     }
 
     /**
-     * Front-loads the embedding query with the case's correct diagnosis (repeated
-     * `medmentor.rag.diagnosis-query-weight` times) followed by the full diagnosis
-     * options list. The repetition is the standard heuristic for biasing dense
-     * embeddings toward a specific term when the embedder has no native term
-     * weights. The string never reaches the LLM — it is only used to build the
-     * embedding vector for vector-store similarity search.
+     * Front-loads the embedding query with the case's correct diagnosis, repeated
+     * `medmentor.rag.diagnosis-query-weight` times. Repetition is the standard
+     * heuristic for biasing dense embeddings toward a specific term when the
+     * embedder has no native term weights. The diagnosis options list is
+     * deliberately NOT included — listing the differentials pulls chunks from
+     * the sibling-disease files (herpes simplex, varicella, etc.) into the top
+     * K, even though the simulation is only ever about the correct diagnosis.
+     * The string never reaches the LLM — it only builds the embedding vector
+     * for vector-store similarity search.
      */
     private String buildDiagnosisRagHeader(MedicalCase medicalCase) {
         final int weight = Math.max(1, ragProperties.getDiagnosisQueryWeight());
@@ -506,9 +509,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
         for (int i = 0; i < weight; i++) {
             header.append(medicalCase.correctDiagnosis()).append('\n');
         }
-        header.append("Possible diagnoses: ")
-                .append(String.join(", ", medicalCase.diagnosisOptions()))
-                .append("\n\n");
+        header.append('\n');
         return header.toString();
     }
 
@@ -592,7 +593,7 @@ public class SimulationAiServiceImpl implements SimulationAiService {
             String selectedDiagnosis
     ) {
         final MedicalCaseFacts facts = medicalCase.facts();
-        return """
+        return buildDiagnosisRagHeader(medicalCase) + """
                 scoring medical interview
                 patient age: %d
                 patient sex: %s
