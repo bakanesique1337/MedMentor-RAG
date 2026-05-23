@@ -2,6 +2,7 @@ package ru.medmentor.config;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -38,8 +39,12 @@ public class AiConfig {
             @Qualifier("ollamaChatModel") ChatModel chatModel,
             PromptTemplateService promptTemplateService
     ) {
+        final OllamaChatOptions defaultOptions = OllamaChatOptions.builder()
+                .disableThinking()
+                .build();
         return ChatClient.builder(chatModel)
                 .defaultSystem(promptTemplateService.getGlobalSystemPrompt())
+                .defaultOptions(defaultOptions)
                 .build();
     }
 

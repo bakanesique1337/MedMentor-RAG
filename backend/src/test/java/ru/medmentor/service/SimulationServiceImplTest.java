@@ -305,6 +305,9 @@ class SimulationServiceImplTest {
         when(simulationSessionRepository.findById(403L)).thenReturn(Optional.of(session));
         when(caseLoaderService.getCaseById("case-1")).thenReturn(medicalCase);
         when(conversationMessageRepository.findBySessionIdOrderByMessageOrderAsc(403L)).thenReturn(List.of());
+        // The service uses an atomic UPDATE to win the race against parallel reveals;
+        // return 1 to simulate "this caller is the winner" so save(session) is invoked.
+        when(simulationSessionRepository.markExamRevealedIfNot(403L)).thenReturn(1);
         when(simulationSessionRepository.save(any(SimulationSession.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         final SimulationSessionDto dto = simulationService.revealExam("doctor", 403L, null);
