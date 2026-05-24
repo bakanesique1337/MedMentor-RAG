@@ -1,10 +1,13 @@
 package ru.medmentor.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.ollama.api.OllamaChatOptions;
 import org.springframework.ai.transformer.splitter.TokenTextSplitter;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -15,6 +18,8 @@ import java.util.List;
 @Configuration
 public class AiConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(AiConfig.class);
+
     /**
      * Default ChatClient backed by Google Gemini (active when the "ollama" profile is NOT enabled).
      * Профиль по умолчанию: чат через Google Gemini.
@@ -23,8 +28,10 @@ public class AiConfig {
     @Profile("!ollama")
     public ChatClient chatClient(
             @Qualifier("googleGenAiChatModel") ChatModel chatModel,
-            PromptTemplateService promptTemplateService
+            PromptTemplateService promptTemplateService,
+            @Value("${spring.ai.google.genai.chat.options.model:unknown}") String model
     ) {
+        log.info("Active chat provider: gemini (model={})", model);
         return ChatClient.builder(chatModel)
                 .defaultSystem(promptTemplateService.getGlobalSystemPrompt())
                 .build();
@@ -39,8 +46,10 @@ public class AiConfig {
     @Profile("ollama")
     public ChatClient chatClientOllama(
             @Qualifier("ollamaChatModel") ChatModel chatModel,
-            PromptTemplateService promptTemplateService
+            PromptTemplateService promptTemplateService,
+            @Value("${spring.ai.ollama.chat.options.model:unknown}") String model
     ) {
+        log.info("Active chat provider: ollama (model={})", model);
         // Стоп-последовательности страхуют от «второго круга» в лаб/инструментальных
         // ответах: после `**Заключение.** …` qwen3 любит поставить `---` и начать
         // дублирующий `### …`-раздел. `repeat_penalty` не ловит это, потому что
