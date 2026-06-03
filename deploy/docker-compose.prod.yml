@@ -1,0 +1,55 @@
+services:
+  postgres-pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: medmentor-postgres
+    environment:
+      POSTGRES_DB: ${MEDMENTOR_POSTGRES_DB}
+      POSTGRES_USER: ${MEDMENTOR_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${MEDMENTOR_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${MEDMENTOR_POSTGRES_USER} -d ${MEDMENTOR_POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [ medmentor-network ]
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/bakanesique1337/medmentor-backend:latest
+    container_name: medmentor-backend
+    env_file: [ ./.env ]
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-pgvector:5432/${MEDMENTOR_POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${MEDMENTOR_POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MEDMENTOR_POSTGRES_PASSWORD}
+      MEDMENTOR_CASES_PATH: /cases
+      MEDMENTOR_RAG_SOURCE_PATH: /rag-data
+      LOG_DIR: /app/logs
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./cases:/cases:ro
+      - ./rag-data:/rag-data:ro
+    depends_on:
+      postgres-pgvector:
+        condition: service_healthy
+    networks: [ medmentor-network ]
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/bakanesique1337/medmentor-frontend:latest
+    container_name: medmentor-frontend
+    ports:
+      - "127.0.0.1:8081:80"
+    depends_on: [ backend ]
+    networks: [ medmentor-network ]
+    restart: unless-stopped
+
+networks:
+  medmentor-network:
+    driver: bridge
