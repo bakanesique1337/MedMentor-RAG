@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  postgres-pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: medmentor-postgres
+    environment:
+      POSTGRES_DB: ${MEDMENTOR_POSTGRES_DB:-medmentor}
+      POSTGRES_USER: ${MEDMENTOR_POSTGRES_USER:-medmentor}
+      POSTGRES_PASSWORD: ${MEDMENTOR_POSTGRES_PASSWORD:-medmentor123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medmentor -d medmentor"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - medmentor-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: medmentor-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - medmentor-network
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medmentor-backend
+    env_file:
+      - ./.env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-pgvector:5432/${MEDMENTOR_POSTGRES_DB:-medmentor}
+      SPRING_DATASOURCE_USERNAME: ${MEDMENTOR_POSTGRES_USER:-medmentor}
+      SPRING_DATASOURCE_PASSWORD: ${MEDMENTOR_POSTGRES_PASSWORD:-medmentor123}
+      SPRING_AI_OLLAMA_BASE_URL: ${SPRING_AI_OLLAMA_BASE_URL:-http://ollama:11434}
+      MEDMENTOR_CASES_PATH: /cases
+      MEDMENTOR_RAG_SOURCE_PATH: /rag-data
+      LOG_DIR: /app/logs
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/logs:/app/logs
+      - ./cases:/cases:ro
+      - ./rag-data:/rag-data:ro
+    depends_on:
+      postgres-pgvector:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    networks:
+      - medmentor-network
+    restart: unless-stopped
+
+volumes:
+  ollama-data:
+
+networks:
+  medmentor-network:
+    driver: bridge

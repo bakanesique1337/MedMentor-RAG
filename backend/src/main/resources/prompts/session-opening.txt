@@ -1,0 +1,4 @@
+Write the first patient message.
+Use 1 to 3 short sentences.
+Mention the main complaint and a simple time reference.
+Do not mention a diagnosis.

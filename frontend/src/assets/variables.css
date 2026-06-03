@@ -1,0 +1,44 @@
+:root {
+    --color-white: #fff;
+
+    --color-ink: #0a1f1f;
+    --color-ink-2: #1b3434;
+    --color-ink-3: #4a6060;
+    --color-ink-4: #7a8f8f;
+
+    --color-teal: #0d7377;
+    --color-teal-deep: #0a5a5d;
+    --color-teal-bright: #14a8a0;
+    --color-teal-faint: rgb(13 115 119 / 0.08);
+    --color-teal-ghost: #e8f2f1;
+    --color-teal-soft: #d5e9e8;
+
+    --color-mint: #9fc6c2;
+    --color-cream: #efeae0;
+    --color-cream-warm: #e8f2f1;
+    --color-sand: #efe6d6;
+    --color-bg: #f4f7f7;
+    --color-paper: #fff;
+
+    --color-amber: #b58a4e;
+    --color-amber-soft: #f5ead0;
+    --color-amber-text: #8a6612;
+
+    --color-rose-soft: #f5dcd6;
+    --color-rose-text: #8a2e20;
+    --color-danger: #8a2e20;
+    --color-danger-bright: #c44a38;
+
+    --color-line: rgb(10 31 31 / 0.08);
+    --color-line-2: rgb(10 31 31 / 0.14);
+
+    /* Dark sidebar palette (used by AppSidebar and ChatSidebar) */
+    --color-dark-bg: #0e2e2e;
+    --color-dark-raised: #164040;
+    --color-dark-ink: #eaf4f3;
+    --color-dark-ink-2: #8fb3b2;
+    --color-dark-ink-3: #557575;
+    --color-dark-line: rgb(234 244 243 / 0.08);
+    --color-dark-line-strong: rgb(234 244 243 / 0.16);
+    --color-dark-teal: #3fb9b3;
+}

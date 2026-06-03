@@ -1,0 +1,48 @@
+.page-enter-active,
+.page-leave-active {
+    transition:
+        opacity var(--duration-page) var(--ease-spring),
+        filter var(--duration-page) var(--ease-spring);
+    will-change: opacity, filter;
+}
+
+.page-leave-active {
+    position: absolute;
+    inset: 0;
+    z-index: var(--z-raised);
+    pointer-events: none;
+}
+
+.page-enter-from {
+    opacity: 0;
+    filter: blur(var(--blur-page));
+}
+
+.page-enter-to {
+    opacity: 1;
+    filter: blur(0);
+}
+
+.page-leave-from {
+    opacity: 1;
+    filter: blur(0);
+}
+
+.page-leave-to {
+    opacity: 0;
+    filter: blur(var(--blur-page));
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-enter-active,
+    .page-leave-active {
+        transition: opacity 80ms linear;
+    }
+
+    .page-enter-from,
+    .page-leave-from,
+    .page-enter-to,
+    .page-leave-to {
+        filter: none;
+    }
+}

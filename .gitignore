@@ -1,0 +1,29 @@
+build/
+.DS_Store
+**/.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.playwright-mcp/
+.claude
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+out/
+
+### VS Code ###
+.vscode/
+
+### Data folder (PostgreSQL volumes) ###
+data/
+
+### Environment variables ###
+.env
+
+### RAG Data ###
+rag-data/*

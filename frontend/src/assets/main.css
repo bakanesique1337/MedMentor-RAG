@@ -1,0 +1,128 @@
+@import "tailwindcss" source("../");
+
+@import "./variables.css";
+@import "./base.css";
+@import "./typography.css";
+@import "./utilities.css";
+@import "./transitions.css";
+
+[data-theme="light"] {
+    --surface-base: var(--color-bg);
+    --surface-paper: var(--color-paper);
+    --surface-cream: var(--color-cream);
+    --surface-cream-warm: var(--color-cream-warm);
+    --surface-ink: var(--color-ink);
+
+    --text-primary: var(--color-ink);
+    --text-secondary: var(--color-ink-3);
+    --text-tertiary: var(--color-ink-4);
+    --text-inverse: var(--color-dark-ink);
+
+    --border-subtle: var(--color-line);
+    --border-default: var(--color-line-2);
+
+    --brand-primary: var(--color-teal);
+    --brand-primary-deep: var(--color-teal-deep);
+    --brand-primary-bright: var(--color-teal-bright);
+    --brand-primary-faint: var(--color-teal-faint);
+    --brand-primary-ghost: var(--color-teal-ghost);
+    --brand-primary-soft: var(--color-teal-soft);
+    --brand-mint: var(--color-mint);
+
+    --status-warning: var(--color-amber);
+    --status-warning-soft: var(--color-amber-soft);
+    --status-warning-text: var(--color-amber-text);
+    --status-danger: var(--color-danger);
+    --status-danger-bright: var(--color-danger-bright);
+    --status-danger-soft: var(--color-rose-soft);
+
+    --shadow-card: 0 1px 3px rgb(10 31 31 / 0.08);
+    --shadow-card-elevated: 0 20px 60px -30px rgb(10 31 31 / 0.25), 0 1px 0 rgb(255 255 255 / 0.6) inset;
+    --shadow-primary: 0 6px 18px rgb(13 115 119 / 0.28);
+    --shadow-primary-strong: 0 8px 24px rgb(13 115 119 / 0.3);
+    --shadow-modal: 0 40px 80px -20px rgb(10 31 31 / 0.4);
+    --shadow-ink-cta: 0 4px 14px rgb(10 31 31 / 0.18);
+    --shadow-hover-card: 0 14px 34px rgb(8 72 75 / 0.08);
+    --shadow-float: 0 24px 40px -16px rgb(10 31 31 / 0.32);
+}
+
+@theme inline {
+    --color-surface-base: var(--surface-base);
+    --color-surface-paper: var(--surface-paper);
+    --color-surface-cream: var(--surface-cream);
+    --color-surface-cream-warm: var(--surface-cream-warm);
+    --color-surface-ink: var(--surface-ink);
+
+    --color-text-primary: var(--text-primary);
+    --color-text-secondary: var(--text-secondary);
+    --color-text-tertiary: var(--text-tertiary);
+    --color-text-inverse: var(--text-inverse);
+
+    --color-border-subtle: var(--border-subtle);
+    --color-border-default: var(--border-default);
+
+    --color-brand: var(--brand-primary);
+    --color-brand-deep: var(--brand-primary-deep);
+    --color-brand-bright: var(--brand-primary-bright);
+    --color-brand-faint: var(--brand-primary-faint);
+    --color-brand-ghost: var(--brand-primary-ghost);
+    --color-brand-soft: var(--brand-primary-soft);
+    --color-brand-mint: var(--brand-mint);
+
+    --color-status-warning: var(--status-warning);
+    --color-status-warning-soft: var(--status-warning-soft);
+    --color-status-warning-text: var(--status-warning-text);
+    --color-status-danger: var(--status-danger);
+    --color-status-danger-bright: var(--status-danger-bright);
+    --color-status-danger-soft: var(--status-danger-soft);
+
+    --color-dark-bg: var(--color-dark-bg);
+    --color-dark-raised: var(--color-dark-raised);
+    --color-dark-ink: var(--color-dark-ink);
+    --color-dark-ink-2: var(--color-dark-ink-2);
+    --color-dark-ink-3: var(--color-dark-ink-3);
+    --color-dark-line: var(--color-dark-line);
+    --color-dark-line-strong: var(--color-dark-line-strong);
+    --color-dark-teal: var(--color-dark-teal);
+
+    --shadow-card: var(--shadow-card);
+    --shadow-card-elevated: var(--shadow-card-elevated);
+    --shadow-primary: var(--shadow-primary);
+    --shadow-primary-strong: var(--shadow-primary-strong);
+    --shadow-modal: var(--shadow-modal);
+    --shadow-ink-cta: var(--shadow-ink-cta);
+    --shadow-hover-card: var(--shadow-hover-card);
+    --shadow-float: var(--shadow-float);
+}
+
+@theme {
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
+    --font-mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+
+    --radius-sm: 0.7rem;
+    --radius-md: 1rem;
+    --radius-lg: 1.4rem;
+    --radius-xl: 2rem;
+    --radius-full: 9999px;
+
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1440px;
+
+    --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-out: cubic-bezier(0.2, 0.6, 0.2, 1);
+    --ease-spring: cubic-bezier(0.32, 0.72, 0.24, 1);
+
+    --duration-page: 260ms;
+    --blur-page: 8px;
+
+    --z-base: 0;
+    --z-raised: 10;
+    --z-sticky: 50;
+    --z-overlay: 80;
+    --z-modal: 100;
+    --z-tooltip: 200;
+}
