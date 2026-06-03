@@ -1,0 +1,15 @@
+medmentor.live {
+    encode zstd gzip
+
+    # Backend: REST API + SockJS/WebSocket (/ws/info, /ws/<server>/<session>/websocket, ...)
+    # Caddy auto-upgrades WebSocket connections and streams SockJS HTTP fallbacks.
+    @backend path /api/* /ws /ws/*
+    handle @backend {
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    # Everything else: the Vue SPA (nginx container serving static dist with history-fallback)
+    handle {
+        reverse_proxy 127.0.0.1:8081
+    }
+}
