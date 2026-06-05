@@ -26,6 +26,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-pgvector:5432/${MEDMENTOR_POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${MEDMENTOR_POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${MEDMENTOR_POSTGRES_PASSWORD}
+      SPRING_AI_OLLAMA_BASE_URL: http://host.docker.internal:11434
       MEDMENTOR_CASES_PATH: /cases
       MEDMENTOR_RAG_SOURCE_PATH: /rag-data
       LOG_DIR: /app/logs
@@ -38,6 +39,8 @@ services:
     depends_on:
       postgres-pgvector:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks: [ medmentor-network ]
     restart: unless-stopped
 
