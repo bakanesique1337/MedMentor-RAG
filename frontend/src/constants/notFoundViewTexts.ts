@@ -13,7 +13,7 @@ export const NOTFOUND_HERO_TEXTS = {
     titleLead: 'Запрошенная страница',
     titleAccent: 'не найдена',
     titleTail: '.',
-    description: 'Маршрутизатор выполнил поиск по симптомам URL и не нашёл соответствующего пациента в базе задач. Возможно, ссылка устарела, либо адрес введён с опечаткой. Рекомендуем вернуться к каталогу или продолжить обучение с другой страницы.',
+    description: 'Маршрутизатор выполнил поиск по симптомам URL и не нашёл соответствующего пациента в базе задач. Возможно, ссылка устарела, либо адрес введён с опечаткой',
 } as const
 
 export const NOTFOUND_MONITOR_TEXTS = {
@@ -29,9 +29,9 @@ export const NOTFOUND_MONITOR_TEXTS = {
 
 export const NOTFOUND_NAV_TEXTS = {
     eyebrow: 'Дифференциальная навигация',
-    casesTitle: 'Каталог кейсов',
+    casesTitle: 'Каталог задач',
     casesSubtitle: 'Клинические задачи для тренировки',
-    profileTitle: 'Мой профиль',
+    profileTitle: 'Профиль',
     profileSubtitle: 'Прогресс, статистика, настройки',
     homeTitle: 'На главную',
     loginTitle: 'Войти в аккаунт',

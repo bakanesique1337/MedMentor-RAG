@@ -22,13 +22,11 @@ import {useCasesApi} from '@/composables/api/useCasesApi'
 import {useProfileApi} from '@/composables/api/useProfileApi'
 import {useSimulationApi} from '@/composables/api/useSimulationApi'
 import {ALL_CATEGORIES, useCasesFilter} from '@/composables/cases/useCasesFilter'
-import {usePluralize} from '@/composables/shared/usePluralize'
 import {categoryDisplayLabel} from '@/constants/caseCategories'
 import {
     CASES_ALERTS_TEXTS,
     CASES_EMPTY_STATE_TEXTS,
     CASES_FILTERS_TEXTS,
-    CASES_HERO_PLURAL_FORMS,
     CASES_HERO_TEXTS,
 } from '@/constants/casesViewTexts'
 import {HTTP_STATUS_CONFLICT} from '@/constants/http'
@@ -78,9 +76,6 @@ const SKELETON_KEYS = Array.from({length: 6}, (_, i) => `skeleton-card-${i}`)
 const totalCount = computed<number>(() => cases.value.length)
 const completedCount = computed<number>(() => stats.value?.completedSessions ?? 0)
 const averageTotalScore = computed<number | null>(() => stats.value?.averageTotalScore ?? null)
-
-const casesNoun = usePluralize(totalCount, CASES_HERO_PLURAL_FORMS.cases)
-const specializationsNoun = usePluralize(() => orderedCategories.value.length, CASES_HERO_PLURAL_FORMS.specializations)
 
 /**
  * Загружает полный список доступных клинических задач одним запросом.
@@ -195,23 +190,15 @@ onMounted(() => {
                 style="background: linear-gradient(180deg, var(--color-teal-ghost) 0%, var(--color-bg) 100%);"
             >
                 <div class="mx-auto w-full max-w-480">
-                    <p class="mb-4 font-mono text-[1.1rem] font-semibold uppercase tracking-[0.14em] text-brand">
-                        {{ CASES_HERO_TEXTS.catalogPrefix }} &middot; {{ totalCount }} {{ casesNoun }} &middot;
-                        {{ orderedCategories.length }} {{ specializationsNoun }}
-                    </p>
-
-                    <div class="flex flex-wrap items-end justify-between gap-[2.8rem]">
+                    <div class="flex flex-wrap items-center justify-between gap-[2.8rem]">
                         <div class="flex min-w-0 flex-1 basis-2xl flex-col">
                             <h1
-                                class="mb-[0.6rem] font-serif text-[3.4rem] font-medium leading-[1.1] tracking-[-0.02em] text-text-primary"
+                                class="font-serif text-[3.4rem] font-medium leading-[1.1] tracking-[-0.02em] text-text-primary"
                             >
                                 {{ CASES_HERO_TEXTS.titleLead }} <em
                                     class="text-accent-italic"
                                 >{{ CASES_HERO_TEXTS.titleAccent }}</em>
                             </h1>
-                            <p class="max-w-248 text-[1.35rem] leading-[1.55] text-text-secondary">
-                                {{ CASES_HERO_TEXTS.description }}
-                            </p>
                         </div>
 
                         <CasesStatStrip
@@ -288,7 +275,7 @@ onMounted(() => {
                 </div>
 
                 <template v-else-if="!pageError">
-                    <!-- Фильтры по категории (медицинской специализации) -->
+                    <!-- Фильтры по категории -->
                     <div class="mb-[1.2rem] flex flex-wrap gap-[0.8rem]">
                         <CategoryChip
                             :label="CASES_FILTERS_TEXTS.allChip"
@@ -314,7 +301,7 @@ onMounted(() => {
                         <p
                             class="font-mono text-[1.1rem] uppercase tracking-[0.06em] text-text-secondary"
                         >
-                            {{ CASES_FILTERS_TEXTS.foundLabel }} &middot;
+                            {{ CASES_FILTERS_TEXTS.foundLabel }}
                             <span class="font-semibold text-text-primary tabular">{{ filteredCases.length }}</span>
                             {{ CASES_FILTERS_TEXTS.foundOf }} {{ totalCount }}
                         </p>

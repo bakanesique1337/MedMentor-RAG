@@ -257,7 +257,7 @@ onMounted(fetchSession)
                 </div>
             </section>
 
-            <section class="mx-auto w-full max-w-384 px-[2.8rem] py-[2.4rem] pb-[3.6rem]">
+            <section class="mx-auto w-full max-w-384 py-[2.4rem] pb-[3.6rem]">
                 <ResultSectionTitle>{{ RESULT_SECTION_TITLES.diagnosisCompare }}</ResultSectionTitle>
 
                 <div class="mb-[2.4rem] grid grid-cols-1 gap-[1.2rem] sm:grid-cols-2">

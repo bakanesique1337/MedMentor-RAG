@@ -2,7 +2,7 @@
   "id": "infection-pneumococcal-meningitis-001",
   "version": 1,
   "category": "Infections",
-  "title": "Сильная головная боль и лихорадка у молодой женщины",
+  "title": "Сильная головная боль",
   "difficulty": "hard",
   "tags": [
     "головная боль",
@@ -13,8 +13,8 @@
   ],
   "patientName": "А. А.",
   "patientAge": 28,
-  "patientSex": "женский",
-  "patientBrief": "Сильная головная боль и лихорадка около суток с болью в шее, светобоязнью и рвотой.",
+  "patientSex": "female",
+  "patientBrief": "Со вчерашнего дня — сильная головная боль, лихорадка и повторная рвота; самочувствие резко ухудшилось.",
   "passport": {
     "heightCm": 168,
     "weightKg": 58,

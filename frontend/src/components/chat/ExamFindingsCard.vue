@@ -44,7 +44,7 @@ const vitalRows = computed<VitalRow[]>(() => {
     const dia = parseInt(diaRaw ?? '0', 10)
     return [
         {label: 'ЧСС', value: `${v.heartRate} уд/мин`, alert: outOfRange('hr', v.heartRate)},
-        {label: 'АД', value: `${v.bloodPressure} mmHg`, alert: bpOutOfRange(sys, dia)},
+        {label: 'АД', value: `${v.bloodPressure} мм.рт.ст.`, alert: bpOutOfRange(sys, dia)},
         {label: 'ЧДД', value: `${v.respiratoryRate} /мин`, alert: outOfRange('rr', v.respiratoryRate)},
         {label: 'SpO₂', value: `${v.spo2} %`, alert: outOfRange('spo2', v.spo2)},
         {label: 'Темп.', value: `${v.temperatureC.toFixed(1)} °C`, alert: outOfRange('temp', v.temperatureC)},

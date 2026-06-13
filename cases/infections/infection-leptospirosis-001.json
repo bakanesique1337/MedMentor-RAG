@@ -2,7 +2,7 @@
   "id": "infection-leptospirosis-001",
   "version": 1,
   "category": "Infections",
-  "title": "Лихорадка, кашель и миалгии у работника мясокомбината",
+  "title": "Затяжная лихорадка",
   "difficulty": "hard",
   "tags": [
     "лихорадка",
@@ -13,8 +13,8 @@
   ],
   "patientName": "А. В.",
   "patientAge": 42,
-  "patientSex": "мужской",
-  "patientBrief": "Около двух недель — лихорадка, кашель, выраженная ломота в теле и слабость; работает на мясокомбинате.",
+  "patientSex": "male",
+  "patientBrief": "Около двух недель — лихорадка с ознобами, сухой кашель, головная боль и сильная ломота в теле.",
   "passport": {
     "heightCm": 178,
     "weightKg": 84,

@@ -3,10 +3,12 @@ import {computed} from 'vue'
 
 import ChatSidebarDataRow from '@/components/chat/ChatSidebarDataRow.vue'
 import ChatSidebarSection from '@/components/chat/ChatSidebarSection.vue'
+import {usePluralize} from '@/composables/shared/usePluralize'
 import type {PatientPassport} from '@/types'
 
+const YEARS_FORMS = ['г.', 'г.', 'л.'] as const
+
 const LABELS = {
-    yearsSuffix: 'г.',
     passportEyebrow: 'Паспорт пациента',
     cmUnit: 'см',
     kgUnit: 'кг',
@@ -48,6 +50,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const yearsSuffix = usePluralize(() => props.patientAge, YEARS_FORMS)
 
 const patientInitials = computed(() => {
     const initials = props.patientName
@@ -93,7 +97,7 @@ const isRevealed = computed(() => props.examRevealed && props.passport !== null)
                     {{ patientName }}
                 </p>
                 <p class="text-[1.1rem] text-dark-ink-2">
-                    {{ patientAge }}&nbsp;{{ LABELS.yearsSuffix }} &middot; {{ sexLabel }}
+                    {{ patientAge }}&nbsp;{{ yearsSuffix }} &middot; {{ sexLabel }}
                     <template v-if="isRevealed && passport">
                         &middot; {{ passport.heightCm }}&nbsp;{{ LABELS.cmUnit }} &middot;
                         {{ passport.weightKg }}&nbsp;{{ LABELS.kgUnit }}

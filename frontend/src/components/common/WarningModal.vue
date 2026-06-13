@@ -2,6 +2,8 @@
 import {onClickOutside, onKeyStroke, useScrollLock} from '@vueuse/core'
 import {computed, ref, watch} from 'vue'
 
+import VWarningTriangleIcon from '@/components/icons/VWarningTriangleIcon.vue'
+
 interface Props {
     modelValue: boolean
     eyebrow?: string
@@ -143,33 +145,7 @@ const CLOSE_ARIA_LABEL = 'Закрыть'
                             class="flex size-[3.2rem] shrink-0 items-center justify-center rounded-full bg-white"
                             style="color: var(--color-amber);"
                         >
-                            <svg
-                                width="18"
-                                height="18"
-                                viewBox="0 0 22 22"
-                                fill="none"
-                                aria-hidden="true"
-                            >
-                                <path
-                                    d="M11 3L2 19h18L11 3z"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="1.6"
-                                    stroke-linejoin="round"
-                                />
-                                <path
-                                    d="M11 10v4"
-                                    stroke="currentColor"
-                                    stroke-width="1.6"
-                                    stroke-linecap="round"
-                                />
-                                <circle
-                                    cx="11"
-                                    cy="16.5"
-                                    r="0.9"
-                                    fill="currentColor"
-                                />
-                            </svg>
+                            <VWarningTriangleIcon />
                         </div>
                         <div
                             class="flex-1 text-[1.3rem] leading-[1.55]"

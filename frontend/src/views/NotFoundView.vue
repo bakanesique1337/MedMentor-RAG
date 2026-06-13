@@ -85,12 +85,6 @@ const dxItems = computed<DxItem[]>(() => {
                 icon: markRaw(VUserIcon),
                 onClick: handleProfile,
             },
-            {
-                key: 'home',
-                title: NOTFOUND_NAV_TEXTS.homeTitle,
-                icon: markRaw(VHomeIcon),
-                onClick: handleHome,
-            },
         ]
     }
 
@@ -137,7 +131,7 @@ const dxItems = computed<DxItem[]>(() => {
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr]">
-                <div class="px-[2.2rem] py-[2.8rem] sm:px-[3.6rem] sm:py-[3.6rem]">
+                <div class="px-[2.2rem] py-[2.8rem] sm:px-[2.4rem] sm:py-[2.4rem]">
                     <div class="mb-[1.2rem] inline-flex items-center gap-[0.8rem] text-eyebrow text-brand">
                         <span class="inline-block h-[0.6rem] w-[0.6rem] rounded-full bg-brand"/>
                         {{ NOTFOUND_HERO_TEXTS.eyebrow }}

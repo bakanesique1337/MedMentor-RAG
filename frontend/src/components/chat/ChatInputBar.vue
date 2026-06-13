@@ -1,16 +1,24 @@
 <script setup lang="ts">
-import {nextTick, ref, useTemplateRef, watch} from 'vue'
+import {computed, nextTick, onMounted, ref, useTemplateRef, watch} from 'vue'
 
 import type {SimulationQuickPrompt, SimulationQuickPromptKey} from '@/constants/simulationQuickPrompts'
+import {useAppConfig} from '@/composables/shared/useAppConfig'
 
 const COPY = {
-    quickPromptsHint: 'Подсказки ↴',
-    placeholder: 'Задайте вопрос пациенту или опишите действие...',
+    quickPromptsHint: 'Подсказки',
+    placeholder: 'Задайте вопрос пациенту...',
     sending: 'Отправка...',
     send: 'Отправить',
-    keyboardHint: 'Enter — отправить · Shift + Enter — новая строка',
-    versionTag: 'MedMentor-RAG v0.5',
+    keyboardHint: 'Enter — отправить, Shift + Enter — новая строка',
 } as const
+
+const {config: appConfig, appName, ensureLoaded} = useAppConfig()
+
+const versionTag = computed<string>(() =>
+    appConfig.value?.model ? `${appConfig.value.model}` : appName,
+)
+
+onMounted(ensureLoaded)
 
 interface Props {
     disabled: boolean
@@ -145,7 +153,7 @@ function handleKeydown(event: KeyboardEvent): void {
                 <span class="flex flex-wrap items-center gap-x-[1.2rem] gap-y-[0.2rem]">
                     <span>{{ COPY.keyboardHint }}</span>
                 </span>
-                <span class="font-mono">{{ COPY.versionTag }}</span>
+                <span class="font-mono">{{ versionTag }}</span>
             </div>
         </div>
     </div>

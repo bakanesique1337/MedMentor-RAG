@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import {computed} from 'vue'
 
 const COPY = {
     completed: 'Завершено',
     of: 'из',
-    averageScore: 'Ср. балл',
+    averageScore: 'Средний балл',
     scoreOutOf: '/100',
     fallbackAverage: '0',
 } as const
@@ -29,14 +29,14 @@ const averageDisplay = computed<string>(() => {
 </script>
 
 <template>
-    <div class="flex gap-[1rem]">
+    <div class="flex gap-4">
         <div
-            class="min-w-[9.6rem] rounded-[1rem] border border-[color:rgb(13_115_119_/_0.18)] bg-white/60 px-[1.4rem] py-[1rem] backdrop-blur-[6px]"
+            class="min-w-[9.6rem] rounded-[1rem] border border-[rgb(13_115_119/0.18)] bg-white/60 px-[1.4rem] py-4 backdrop-blur-[6px]"
         >
             <p class="mb-[0.4rem] font-mono text-[0.95rem] font-semibold uppercase tracking-[0.12em] text-text-secondary">
                 {{ COPY.completed }}
             </p>
-            <div class="flex items-baseline gap-[0.4rem]">
+            <div class="flex items-baseline justify-center gap-[0.4rem]">
                 <span class="font-serif text-[2.4rem] font-medium leading-none text-text-primary tabular">
                     {{ completedDisplay }}
                 </span>
@@ -45,12 +45,12 @@ const averageDisplay = computed<string>(() => {
         </div>
 
         <div
-            class="min-w-[9.6rem] rounded-[1rem] border border-[color:rgb(13_115_119_/_0.18)] bg-white/60 px-[1.4rem] py-[1rem] backdrop-blur-[6px]"
+            class="min-w-[9.6rem] rounded-[1rem] border border-[rgb(13_115_119/0.18)] bg-white/60 px-[1.4rem] py-4 backdrop-blur-[6px]"
         >
             <p class="mb-[0.4rem] font-mono text-[0.95rem] font-semibold uppercase tracking-[0.12em] text-text-secondary">
                 {{ COPY.averageScore }}
             </p>
-            <div class="flex items-baseline gap-[0.4rem]">
+            <div class="flex items-baseline justify-center gap-[0.4rem]">
                 <span class="font-serif text-[2.4rem] font-medium leading-none text-text-primary tabular">
                     {{ averageDisplay }}
                 </span>

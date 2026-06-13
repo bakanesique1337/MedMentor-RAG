@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import {computed} from 'vue'
 
+import {usePluralize} from '@/composables/shared/usePluralize'
 import type {AccuracyBuckets} from '@/utils/profileAggregations'
 
 const COPY = {
     eyebrow: 'Точность диагностики',
     totalLeading: 'ВСЕГО',
-    totalTrailing: 'ЗАДАЧИ',
+    totalTrailingForms: ['ЗАДАЧА', 'ЗАДАЧИ', 'ЗАДАЧ'],
     centerCaption: 'ВЕРНЫХ · %',
     legendCorrect: 'Верный диагноз',
     legendPartial: 'Частично верный',
@@ -18,6 +19,8 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+
+const totalTrailing = usePluralize(() => props.buckets.total, COPY.totalTrailingForms)
 
 const RADIUS = 62
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
@@ -89,7 +92,7 @@ const dashArrayWrong = computed<string>(() => `${segments.value.wrong} ${CIRCUMF
             <p class="font-mono text-[1.05rem] tracking-[0.04em] text-text-tertiary">
                 {{ COPY.totalLeading }}
                 <span class="ml-[0.4rem] font-medium text-text-primary">{{ buckets.total }}</span>
-                {{ COPY.totalTrailing }}
+                {{ totalTrailing }}
             </p>
         </div>
 

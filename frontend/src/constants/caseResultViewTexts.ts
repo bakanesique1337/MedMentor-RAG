@@ -24,7 +24,7 @@ export const RESULT_HERO_TEXTS = {
     eyebrowLabel: 'Разбор задачи',
     titleLead: 'Разбор вашей',
     titleAccent: 'диагностики',
-    description: 'Модель оценила ход рассуждения, полноту анамнеза и точность диагноза. Режим только для чтения.',
+    description: 'Модель оценила ход рассуждения, полноту анамнеза и точность диагноза',
 } as const
 
 export const RESULT_SECTION_TITLES = {

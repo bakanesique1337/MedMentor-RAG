@@ -11,7 +11,7 @@ const LABELS = {
     vitalHrLabel: 'ЧСС',
     vitalHrUnit: 'уд/мин',
     vitalBpLabel: 'АД',
-    vitalBpUnit: 'mmHg',
+    vitalBpUnit: 'мм.рт.ст.',
     vitalSpo2Label: 'SpO₂',
     vitalSpo2Unit: '%',
     vitalTempLabel: 'Темп.',
@@ -42,18 +42,6 @@ function handleRequestExam(): void {
 
 <template>
     <ChatSidebarSection :label="LABELS.vitalsEyebrow">
-        <template
-            v-if="isRevealed"
-            #aside
-        >
-            <span
-                class="flex items-center gap-[0.4rem] text-[0.95rem] font-mono uppercase tracking-[0.06em] text-dark-teal"
-            >
-                <span class="size-2 rounded-full bg-dark-teal anim-pulse"/>
-                {{ LABELS.liveTag }}
-            </span>
-        </template>
-
         <template v-if="isRevealed && vitals">
             <ChatSidebarDataRow
                 :label="LABELS.vitalHrLabel"

@@ -2,7 +2,7 @@
   "id": "gastroenterology-gerd-erosive-001",
   "version": 1,
   "category": "Gastroenterology",
-  "title": "Изжога, ночная отрыжка и эпизод мелены у мужчины 48 лет",
+  "title": "Упорная изжога",
   "difficulty": "hard",
   "tags": [
     "изжога",
@@ -13,8 +13,8 @@
   ],
   "patientName": "Т. А.",
   "patientAge": 48,
-  "patientSex": "мужской",
-  "patientBrief": "В течение 2 лет — частая выраженная изжога после еды и ночью, отрыжка пищей, утренняя тошнота. Несколько дней назад — однократный эпизод чёрного жидкого стула.",
+  "patientSex": "male",
+  "patientBrief": "Два года мучает частая изжога после еды и по ночам, отрыжка пищей и утренняя тошнота.",
   "passport": {
     "heightCm": 175,
     "weightKg": 63,

@@ -2,7 +2,7 @@
   "id": "infection-ecoli-o157-001",
   "version": 1,
   "category": "Infections",
-  "title": "Кровянистая диарея у пожилой женщины",
+  "title": "Кровянистая диарея",
   "difficulty": "medium",
   "tags": [
     "кровянистая диарея",
@@ -13,8 +13,8 @@
   ],
   "patientName": "Т. И.",
   "patientAge": 68,
-  "patientSex": "женский",
-  "patientBrief": "Внезапные сильные боли в животе и частый стул малыми порциями с примесью крови в течение суток.",
+  "patientSex": "female",
+  "patientBrief": "Сутки — сильные схваткообразные боли в животе и частый жидкий стул малыми порциями с примесью крови.",
   "passport": {
     "heightCm": 162,
     "weightKg": 70,

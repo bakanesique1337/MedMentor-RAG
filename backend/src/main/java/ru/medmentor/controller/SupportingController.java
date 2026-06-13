@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.medmentor.config.AiProperties;
+import ru.medmentor.dto.AppConfigDto;
 import ru.medmentor.dto.CaseCardDto;
 import ru.medmentor.dto.HistorySessionDto;
 import ru.medmentor.dto.SimulationSessionDto;
@@ -26,10 +28,21 @@ public class SupportingController {
 
     private final SimulationService simulationService;
     private final UserAccountService userAccountService;
+    private final AiProperties aiProperties;
 
-    public SupportingController(SimulationService simulationService, UserAccountService userAccountService) {
+    public SupportingController(
+            SimulationService simulationService,
+            UserAccountService userAccountService,
+            AiProperties aiProperties
+    ) {
         this.simulationService = simulationService;
         this.userAccountService = userAccountService;
+        this.aiProperties = aiProperties;
+    }
+
+    @GetMapping("/config")
+    public AppConfigDto config() {
+        return new AppConfigDto(aiProperties.getProvider(), aiProperties.getModel());
     }
 
     @GetMapping("/cases")

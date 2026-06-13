@@ -8,14 +8,12 @@ const COPY = {
     eyebrowPrefix: 'Задача #',
     titleLead: 'Подтвердите',
     titleAccent: 'диагноз',
-    description: 'После подтверждения симуляция завершится, и модель сравнит ваш ответ с эталоном.',
     diagnosisLabel: 'Формулировка диагноза',
-    diagnosisPlaceholder: 'Например: Острая респираторная вирусная инфекция',
+    diagnosisPlaceholder: 'Острая респираторная вирусная инфекция',
     rationaleLabel: 'Обоснование',
     rationaleHint: 'что натолкнуло на гипотезу',
     rationalePlaceholder: 'Кратко опишите ход рассуждения...',
     confidenceLabel: 'Уверенность',
-    immutabilityNote: 'После подтверждения изменения невозможны.',
     cancelButton: 'Отмена',
     submitButton: 'Подтвердить и завершить',
 } as const
@@ -65,13 +63,6 @@ watch(
 )
 
 /**
- * Closes the modal without submitting.
- */
-function handleCancel(): void {
-    isOpen.value = false
-}
-
-/**
  * Emits the diagnose event with the submitted payload.
  */
 function handleConfirm(): void {
@@ -100,15 +91,12 @@ function handleConfirm(): void {
             <h2 class="mt-[0.8rem] font-serif text-[2.6rem] font-medium leading-[1.15] tracking-[-0.02em] text-text-primary">
                 {{ COPY.titleLead }} <em class="italic text-brand">{{ COPY.titleAccent }}</em>
             </h2>
-            <p class="mt-[0.6rem] text-[1.3rem] text-text-secondary">
-                {{ COPY.description }}
-            </p>
-            <div class="-mx-[3.2rem] mt-[1.6rem] h-[1px] bg-[color:var(--color-line)]"/>
+            <div class="-mx-[3.2rem] mt-[1.6rem] h-px bg-(--color-line)"/>
         </template>
 
         <div
             v-if="conflictMessage"
-            class="mb-[1.4rem] rounded-[0.8rem] border border-[color:rgb(181_138_78_/_0.3)] bg-[color:var(--color-amber-soft)] px-[1.4rem] py-[1rem] text-[1.3rem] text-[color:var(--color-amber-text)]"
+            class="mb-[1.4rem] rounded-[0.8rem] border border-[rgb(181_138_78/0.3)] bg-(--color-amber-soft) px-[1.4rem] py-4 text-[1.3rem] text-(--color-amber-text)"
         >
             {{ conflictMessage }}
         </div>
@@ -157,40 +145,7 @@ function handleConfirm(): void {
         </div>
 
         <template #footer>
-            <div class="flex items-center gap-[1rem]">
-                <p class="flex flex-1 items-center gap-[0.6rem] text-[1.15rem] text-[color:var(--color-teal-deep)]">
-                    <svg
-                        width="12"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        class="shrink-0"
-                    >
-                        <circle
-                            cx="6"
-                            cy="6"
-                            r="5"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1"
-                        />
-                        <path
-                            d="M6 3v3M6 8v0.5"
-                            stroke="currentColor"
-                            stroke-width="1.1"
-                            stroke-linecap="round"
-                        />
-                    </svg>
-                    {{ COPY.immutabilityNote }}
-                </p>
-                <VButton
-                    variant="secondary"
-                    shape="rect"
-                    size="sm"
-                    :disabled="isPending"
-                    @click="handleCancel"
-                >
-                    {{ COPY.cancelButton }}
-                </VButton>
+            <div class="flex items-center gap-4">
                 <VButton
                     shape="rect"
                     size="sm"
@@ -198,22 +153,6 @@ function handleConfirm(): void {
                     :disabled="isSubmitDisabled"
                     @click="handleConfirm"
                 >
-                    <template #leading>
-                        <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 12 12"
-                        >
-                            <path
-                                d="M2 6l3 3 5-6"
-                                stroke="currentColor"
-                                stroke-width="1.6"
-                                fill="none"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                        </svg>
-                    </template>
                     {{ COPY.submitButton }}
                     <template #trailing>
                         <MmArrow :size="10"/>

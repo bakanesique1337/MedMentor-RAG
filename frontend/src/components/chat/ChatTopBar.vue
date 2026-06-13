@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed} from 'vue'
 
-import type {SimulationSession, SimulationState} from '@/types'
+import type {SimulationSession} from '@/types'
 
 const LABELS = {
     backAriaLabel: 'Назад к задачам',
@@ -26,33 +26,9 @@ const emit = defineEmits<{
     diagnose: []
 }>()
 
-const STATE_LABEL: Record<SimulationState, string> = {
-    CASE_BROWSE: 'Каталог',
-    CASE_SELECTED: 'Задача выбрана',
-    CASE_STARTED: 'Запуск',
-    IN_PROGRESS: 'Симуляция активна',
-    DIAGNOSIS_SELECT: 'Выбор диагноза',
-    SCORING: 'Оценка',
-    COMPLETED: 'Завершено',
-    ABANDONED: 'Прервана',
-}
-
-const STATE_TONE: Record<SimulationState, 'brand' | 'amber' | 'mint'> = {
-    CASE_BROWSE: 'brand',
-    CASE_SELECTED: 'brand',
-    CASE_STARTED: 'brand',
-    IN_PROGRESS: 'brand',
-    DIAGNOSIS_SELECT: 'amber',
-    SCORING: 'amber',
-    COMPLETED: 'mint',
-    ABANDONED: 'amber',
-}
-
 const doctorTurns = computed(() =>
     props.session.messages.filter((m) => m.role === 'DOCTOR').length,
 )
-
-const tone = computed(() => STATE_TONE[props.session.state])
 
 function handleBack(): void {
     emit('back')
@@ -98,25 +74,6 @@ function handleDiagnose(): void {
         </span>
 
         <div class="flex-1"/>
-
-        <span
-            class="hidden items-center gap-[0.6rem] rounded-full px-4 py-[0.4rem] text-eyebrow-sm md:inline-flex"
-            :class="{
-                'bg-brand-ghost text-brand-deep': tone === 'brand',
-                'bg-(--color-amber-soft) text-(--color-amber-text)': tone === 'amber',
-                'bg-(--color-mint)/40 text-(--color-ink)': tone === 'mint',
-            }"
-        >
-            <span
-                class="h-[0.6rem] w-[0.6rem] rounded-full anim-pulse"
-                :class="{
-                    'bg-brand': tone === 'brand',
-                    'bg-(--color-amber)': tone === 'amber',
-                    'bg-(--color-ink)': tone === 'mint',
-                }"
-            />
-            {{ STATE_LABEL[session.state] }}
-        </span>
 
         <span class="hidden font-mono text-[1.15rem] tracking-[0.04em] text-text-tertiary lg:inline">
             {{ LABELS.turnLabel }} {{ String(doctorTurns).padStart(2, '0') }}

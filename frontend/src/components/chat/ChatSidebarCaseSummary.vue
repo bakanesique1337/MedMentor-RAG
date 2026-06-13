@@ -46,12 +46,9 @@ const difficultyDots = computed(() => {
         <p class="mb-[0.6rem] text-[1.05rem] font-mono font-semibold tracking-widest text-dark-teal">
             {{ categoryLabel }}
         </p>
-        <h2 class="mb-[0.8rem] font-serif text-[2.2rem] font-medium leading-[1.15] tracking-[-0.01em] text-dark-ink">
+        <h2 class="mb-[1.2rem] font-serif text-[2.2rem] font-medium leading-[1.15] tracking-[-0.01em] text-dark-ink">
             {{ caseTitle }}
         </h2>
-        <p class="mb-[1.4rem] text-[1.2rem] leading-normal text-dark-ink-2">
-            {{ patientName }}, {{ patientAge }}&nbsp;{{ LABELS.yearsSuffix }}
-        </p>
 
         <div class="mb-[1.8rem] flex gap-[0.8rem]">
             <ChatSidebarStatTile :label="LABELS.difficultyLabel">

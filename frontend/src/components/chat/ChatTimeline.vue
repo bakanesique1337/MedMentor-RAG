@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import {computed, onMounted, ref, watch} from 'vue'
 
 import ChatMessageBubble from '@/components/chat/ChatMessageBubble.vue'
 import ChatSystemBubble from '@/components/chat/ChatSystemBubble.vue'
 import ExamFindingsCard from '@/components/chat/ExamFindingsCard.vue'
 import OutOfScopeBlock from '@/components/chat/OutOfScopeBlock.vue'
-import { EXAM_CARD_MARKER } from '@/constants/chatMarkers'
-import { useUserProfileStore } from '@/stores/userProfile'
-import { MESSAGE_ROLE, STREAMING_STATUS_TYPE } from '@/types'
-import type { ConversationMessage, PatientPassport, PatientVitals, StreamingStatusType } from '@/types'
+import {EXAM_CARD_MARKER} from '@/constants/chatMarkers'
+import {useUserProfileStore} from '@/stores/userProfile'
+import {MESSAGE_ROLE, STREAMING_STATUS_TYPE} from '@/types'
+import type {ConversationMessage, PatientPassport, PatientVitals, StreamingStatusType} from '@/types'
 
 const COPY = {
     fallbackInitial: 'П',
@@ -132,7 +132,7 @@ function scrollToBottom(): void {
 watch(
     () => [props.messages.length, props.streamingContent, isStreamingActive.value] as const,
     scrollToBottom,
-    { flush: 'post' },
+    {flush: 'post'},
 )
 
 onMounted(() => {
@@ -145,7 +145,7 @@ onMounted(() => {
         ref="timelineRef"
         class="flex flex-1 flex-col overflow-y-auto px-[2.4rem] py-[1.2rem]"
     >
-        <div class="mx-auto flex w-full max-w-[84rem] flex-col">
+        <div class="mx-auto flex w-full max-w-336 flex-col">
             <template
                 v-for="msg in messages"
                 :key="msg.id"
@@ -157,11 +157,11 @@ onMounted(() => {
                 />
                 <ExamFindingsCard
                     v-else-if="shouldRenderExamCard(msg)"
-                    :passport="passport"
-                    :vitals="vitals"
+                    :passport="passport || null"
+                    :vitals="vitals || null"
                 />
                 <template v-else-if="isExamCardMessage(msg)">
-                    <!-- Дубль __EXAM_CARD__ из старой сессии: ничего не рендерим. -->
+
                 </template>
                 <ChatSystemBubble
                     v-else-if="msg.role === 'SYSTEM'"
@@ -211,7 +211,7 @@ onMounted(() => {
 
             <div
                 v-if="messages.length === 0 && !isStreamingActive"
-                class="flex flex-1 items-center justify-center py-[4rem] text-center"
+                class="flex flex-1 items-center justify-center py-16 text-center"
             >
                 <p class="text-[1.35rem] text-text-tertiary">
                     {{ COPY.emptyState }}

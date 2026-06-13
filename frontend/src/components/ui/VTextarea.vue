@@ -69,6 +69,9 @@ const textareaClass = computed(() =>
         props.inputClass,
     ),
 )
+
+// Keep the control from collapsing below its declared row count when resized.
+const textareaStyle = computed(() => ({ minHeight: `${props.rows}lh` }))
 </script>
 
 <template>
@@ -96,6 +99,7 @@ const textareaClass = computed(() =>
                     :aria-describedby="describedBy"
                     :aria-invalid="fieldInvalid || undefined"
                     :class="textareaClass"
+                    :style="textareaStyle"
                 />
             </div>
         </template>

@@ -346,3 +346,11 @@ export interface ApiError {
     status: number;
     fieldErrors?: Record<string, string>;
 }
+
+/**
+ * Конфигурация приложения
+ */
+export interface AppConfig {
+    provider: string;
+    model: string;
+}

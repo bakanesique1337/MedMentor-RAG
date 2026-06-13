@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import {computed} from 'vue'
 
-import type { DayActivity } from '@/utils/profileAggregations'
+import type {DayActivity} from '@/utils/profileAggregations'
 
 const COPY = {
-    eyebrow: 'Активность · 30 дней',
+    eyebrow: 'Активность за 30 дней',
     minutesSuffix: 'мин.',
     timelineStart: '30 дн. назад',
     timelineMiddle: '15 дн.',
@@ -46,7 +46,7 @@ const bars = computed<Bar[]>(() => {
 </script>
 
 <template>
-    <div class="rounded-[1.4rem] border border-[color:var(--color-line)] bg-white px-[2rem] pb-[1.6rem] pt-[1.8rem]">
+    <div class="rounded-lg border border-(--color-line) bg-white px-8 pb-[1.6rem] pt-[1.8rem]">
         <div class="mb-[1.8rem] flex items-end justify-between gap-[1.6rem]">
             <div class="min-w-0">
                 <p class="mb-[0.6rem] text-eyebrow text-text-tertiary">
@@ -61,7 +61,7 @@ const bars = computed<Bar[]>(() => {
             </div>
         </div>
 
-        <div class="flex h-[9rem] items-end gap-[0.2rem]">
+        <div class="flex h-36 items-end gap-[0.2rem]">
             <div
                 v-for="bar in bars"
                 :key="bar.key"
@@ -70,7 +70,7 @@ const bars = computed<Bar[]>(() => {
             >
                 <div
                     v-if="bar.isEmpty"
-                    class="h-[0.2rem] rounded-[0.1rem] bg-[color:rgb(13_115_119_/_0.18)]"
+                    class="h-[0.2rem] rounded-[0.1rem] bg-[rgb(13_115_119/0.18)]"
                 />
                 <div
                     v-else
